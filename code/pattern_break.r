@@ -12,22 +12,40 @@ sigma <- rnorm(nDev - 1, 1, 0.1)
 devFac <- c(1.4, 1.35, 1.25, 1.2, 1.1, 1.07, 1.05, 1.01)
 initSigma <- 100
 
-genMackData <- function(nDev, sigma, devFac, nCoh = nDev, initDist = rnorm, ...) {
+genMackData <- function(nDev, sigma, devFac, initMean, initStd, outlier = False) {
     # generate synthetic claims triangle satisfying assumptions of Mack's method
-    distParams <- list(...)
-    initCol <- initDist(nCoh, distParams[[1]], distParams[[2]])
+    initCol <- rnorm(nDev, initMean, initStd)
 
-    claimsTriangle <- matrix(ncol = nDev, nrow = nCoh) %>%
+    claimsTriangle <- matrix(ncol = nDev, nrow = nDev) %>%
         data.frame()
     claimsTriangle[, 1] <- initCol
-    for (idx in 2:nDev) {
-        prevClaims <- claimsTriangle[1:(nDev - idx + 1), idx - 1]
-        newCol <- mvrnorm(
-            1,
-            devFac[idx - 1] * prevClaims,
-            diag(prevClaims * sigma[idx - 1]**2, nrow = length(prevClaims)))
-        claimsTriangle[1:(nDev - idx + 1), idx] <- newCol
+    if (outlier) {
+        for (colIdx in 2:(outlier[2] - 1)) {
+            for (rowIdx in 1:outlier[1]) {
+                prevC <- claimsTriangle[rowIdx, colIdx - 1]
+                claimsTriangle[rowIdx, colIdx] <-
+                    rnorm(1, devFac[colIdx - 1] * prevC, sigma[colIdx - 1] * sqrt(prevC))
+            }
+        }
+
+
+        for (colIdx in 2:nDev) {
+            for (rowIdx in 1:nDev) {
+                prevC <- claimsTriangle[rowIdx, colIdx - 1]
+                claimsTriangle[rowIdx, colIdx] <-
+                    rnorm(1, devFac[colIdx - 1] * prevC, sigma[colIdx - 1] * sqrt(prevC))
+            }
+        }
+    } else {
+        for (colIdx in 2:nDev) {
+            for (rowIdx in 1:nDev) {
+                prevC <- claimsTriangle[rowIdx, colIdx - 1]
+                claimsTriangle[rowIdx, colIdx] <-
+                    rnorm(1, devFac[colIdx - 1] * prevC, sigma[colIdx - 1] * sqrt(prevC))
+            }
+        }
     }
+    
     return(claimsTriangle)
 }
 
@@ -69,8 +87,6 @@ bootReserve <- function(inputTriangle, nBoot) {
         residBoot <- list()
         residSample <- sample(unlist(resids), replace = TRUE)
         for (j in 1:(nDev - 1)) {
-            print(j)
-            print(resids)
             residBoot[[j]] <- residSample[1:(nDev - j)]
             residSample <- residSample[-1:-(nDev - j)]
         }
@@ -87,23 +103,30 @@ bootReserve <- function(inputTriangle, nBoot) {
 
         #complete triangle
         bootTriangle <- inputTriangle
-        for (idx in 1:(nDev - 1)) {
-            latest <- bootTriangle[row(bootTriangle) + col(bootTriangle) == nDev + idx]
-            newDiag <- -1
-                while (!prod(newDiag > 0)) {
-                    newDiag <- mvrnorm(
+        for (diagIdx in 1:(nDev-1)) {
+            for (rowIdx in (diagIdx + 1):nDev){
+                colIdx <- nDev + diagIdx + 1 - rowIdx
+                bootTriangle[rowIdx, colIdx] <- 
+                    rnorm(
                         1,
-                        fBoot[idx:(nDev - 1)] * latest[1:(nDev - idx)],
-                        diag(latest[1:(nDev - idx)] * sigmaBoot[idx:(nDev - 1)]**2, nrow = length(latest[1:(nDev - idx)])))
-                }
-            bootTriangle[row(bootTriangle) + col(bootTriangle) == nDev + idx + 1] <- newDiag
+                        bootTriangle[rowIdx, colIdx - 1]*fBoot[colIdx - 1],
+                        sqrt(bootTriangle[rowIdx, colIdx - 1])*sigmaBoot[colIdx - 1] 
+                    )
+            }
         }
-        reserveBoot <- c(reserveBoot, sum(bootTriangle[, nDev]) - sum(inputTriangle[row(inputTriangle) + col(inputTriangle) == nDev + 1]))
+        latest <- 
+            bootTriangle[col(bootTriangle) + row(bootTriangle) == nDev + 1]
+        reserve <- sum(bootTriangle[, nDev] - latest)
+        reserveBoot <- c(reserveBoot, reserve)
+
     }
     return(reserveBoot)
 }
 
-res <- bootReserve(claimsTriangle, 1e3)
+reserve <- bootReserve(claimsTriangle, 1e3)
+reserve %<>% tibble(reserve = .)
+ggplot(data = reserve) +
+    geom_histogram(aes(reserve))
 
 #what happens if the stationarity assumption is violated by a single cohort
 
