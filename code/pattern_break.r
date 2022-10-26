@@ -45,7 +45,6 @@ genMackData <- function(nDev, sigma, devFac, initMean, initStd, outlier = False)
             }
         }
     }
-    
     return(claimsTriangle)
 }
 

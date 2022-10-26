@@ -219,11 +219,7 @@ for(iBoot in 1:nBoot){
   for(iDiag in 1:(nDevYears - 1)){
     for(iRow in (1 + iDiag):(nDevYears)){
       selCol <- nDevYears - iRow + iDiag + 1
-      paidMatrix_boot[iRow, selCol] <-
-          rnorm(1,
-              mean = paidMatrix_boot[iRow, selCol - 1] * f_boot_vec[selCol - 1],
-              sd = sqrt(paidMatrix_boot[iRow, selCol - 1] * sigma_boot_vec[selCol - 1]))
-      print(paidMatrix_boot[iRow, selCol])
+      paidMatrix_boot[iRow, selCol] <- rnorm(1, mean = paidMatrix_boot[iRow, selCol - 1]*f_boot_vec[selCol - 1], sd = sqrt(paidMatrix_boot[iRow, selCol - 1]*sigma_boot_vec[selCol - 1]))
     }
   }
   reserveBoot[iBoot] <- sum(paidMatrix_boot[, nDevYears] - obsDiag)
