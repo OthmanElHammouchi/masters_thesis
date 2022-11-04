@@ -1,5 +1,5 @@
-bootReserve <- function(inputTriangle, nBoot) {
-
+reserveBoot <- function(inputTriangle, nBoot) {
+    inputTriangle %<>% unname(inputTriangle)
     nDev <- ncol(inputTriangle)
 
     mackResults <- suppressWarnings(MackChainLadder(inputTriangle))
@@ -7,17 +7,24 @@ bootReserve <- function(inputTriangle, nBoot) {
     devFacs <- mackResults$f[-nDev]
     sigma <- mackResults$sigma
 
-    F_list <- list()
+    indivDevFacs <- list()
     prevCs <- list()
     resids <- list()
 
     for (idx in 1:(nDev - 1)) {
-        F_list[[idx]] <- unname(inputTriangle[1:(nDev - idx), idx + 1] / inputTriangle[1:(nDev - idx), idx])
-        prevCs[[idx]] <- unname(inputTriangle[1:(nDev - idx), idx])
-        resids[[idx]] <- (F_list[[idx]] - devFacs[idx]) * sqrt(prevCs[[idx]]) / sigma[idx]
+        indivDevFacs[[idx]] <- inputTriangle[1:(nDev - idx), idx + 1] / inputTriangle[1:(nDev - idx), idx]
+        prevCs[[idx]] <- inputTriangle[1:(nDev - idx), idx]
+        resids[[idx]] <- (indivDevFacs[[idx]] - devFacs[idx]) * sqrt(prevCs[[idx]]) / sigma[idx]
     }
 
-    reserveBoot <- c()
+    results <- tibble(
+        indivDevFacBoot = list(),
+        devFacBoot = list(),
+        sigmaBoot = list(),
+        triangleBoot = list(),
+        reserve = numeric()
+    )
+
     for (iBoot in 1:nBoot) {
 
         #sample residuals and put them in proper list format
@@ -29,42 +36,50 @@ bootReserve <- function(inputTriangle, nBoot) {
         }
 
         #compute bootstrapped quantities
-        FBoot <- list()
-        fBoot <- c()
+        indivDevFacBoot <- list()
+        devFacBoot <- c()
         sigmaBoot <- c()
         for (j in 1:(nDev - 1)) {
-            FBoot[[j]] <- devFacs[j] + (residBoot[[j]] * sigma[j]) / sqrt(prevCs[[j]])
-            fBoot[j] <- sum(FBoot[[j]] * prevCs[[j]]) / sum(prevCs[[j]])
-            sigmaBoot[j] <- mean(prevCs[[j]] * (FBoot[[j]] - fBoot[j])**2)
+            indivDevFacBoot[[j]] <- devFacs[j] + (residBoot[[j]] * sigma[j]) / sqrt(prevCs[[j]])
+            devFacBoot[j] <- sum(indivDevFacBoot[[j]] * prevCs[[j]]) / sum(prevCs[[j]])
+            sigmaBoot[j] <- mean(prevCs[[j]] * (indivDevFacBoot[[j]] - devFacBoot[j])**2)
         }
 
         #complete the triangle
-        bootTriangle <- inputTriangle
+        triangleBoot <- inputTriangle
         for (diagIdx in 1:(nDev - 1)) {
             for (rowIdx in (diagIdx + 1):nDev){
                 colIdx <- nDev + diagIdx + 1 - rowIdx
-                withCallingHandlers(
-                    warning = function(cdn) {
-                        cat(paste0(
-                            "Previous value: ", bootTriangle[rowIdx, colIdx - 1], 
-                            "\nSigma: ", sigmaBoot[colIdx - 1], "\n"))},
-                    {bootTriangle[rowIdx, colIdx] <-
+                #off-diagonal elements satisfy i + j = I + 1 + (diagonal number)
+                triangleBoot[rowIdx, colIdx] <-
                         rnorm(
                             1,
-                            bootTriangle[rowIdx, colIdx - 1] * fBoot[colIdx - 1],
-                            sqrt(bootTriangle[rowIdx, colIdx - 1]) * sigmaBoot[colIdx - 1]
-                        )}
-                )
+                            triangleBoot[rowIdx, colIdx - 1] * devFacBoot[colIdx - 1],
+                            sqrt(triangleBoot[rowIdx, colIdx - 1]) * sigmaBoot[colIdx - 1])
+                if (triangleBoot[rowIdx, colIdx] < 0) {
+                    browser()
+                }
                 }
             }
-        #if the triangle contains undefined values, the simulated reserve became negative at some point, and we throw away the triangle
-        if (!(NA %in% bootTriangle) && !(NaN %in% bootTriangle)) {
-            latest <- bootTriangle[col(bootTriangle) + row(bootTriangle) == nDev + 1]
-            reserve <- sum(bootTriangle[, nDev] - latest)
-            reserveBoot <- c(reserveBoot, reserve)
+        #if the triangle contains undefined values, the simulated reserve became negative at some point,
+        # and we throw away the triangle
+        if (!(NA %in% triangleBoot) && !(NaN %in% triangleBoot)) {
+            latest <- triangleBoot[col(triangleBoot) + row(triangleBoot) == nDev + 1]
+            reserve <- sum(triangleBoot[, nDev] - latest)
+        } else {
+            reserve <- NA
         }
+    # browser()
+    results %<>% add_row(
+        indivDevFacBoot = list(indivDevFacBoot),
+        devFacBoot = list(devFacBoot),
+        sigmaBoot = list(sigmaBoot),
+        triangleBoot = list(triangleBoot),
+        reserve = reserve)
+  
     }
-    return(reserveBoot)
+
+    return(results)
 }
 
 singleOutlier <- function(nDev, initMean, initStd, devFac, sigma, outlierColIdx, outlierRowIdx, pert = 1.1) {
@@ -114,18 +129,18 @@ bootReserveGamma <- function(inputTriangle, nBoot) {
     devFacs <- mackResults$f[-nDev]
     sigma <- mackResults$sigma
 
-    F_list <- list()
+    indivDevFacs <- list()
     prevCs <- list()
     resids <- list()
 
     for (idx in 1:(nDev - 1)) {
-        F_list[[idx]] <- unname(inputTriangle[1:(nDev - idx), idx + 1] / inputTriangle[1:(nDev - idx), idx])
+        indivDevFacs[[idx]] <- unname(inputTriangle[1:(nDev - idx), idx + 1] / inputTriangle[1:(nDev - idx), idx])
         prevCs[[idx]] <- unname(inputTriangle[1:(nDev - idx), idx])
 
         mean <- devFacs[idx - 1] ** 2 * prevCs[[idx]] / sigma[idx - 1] ** 2
-        std <- devFac[idx - 1] * prevCs[[idx]] / sigma[idx - 1] ** 2
+        std <- devFacs[idx - 1] * prevCs[[idx]] / sigma[idx - 1] ** 2
 
-        resids[[idx]] <- (F_list[[idx]] - mean) / std
+        resids[[idx]] <- (indivDevFacs[[idx]] - mean) / std
     }
 
     #sample residuals and put them in proper list format
@@ -144,7 +159,7 @@ bootReserveGamma <- function(inputTriangle, nBoot) {
         sigmaBoot <- c()
         for (j in 1:(nDev - 1)) {
             mean <- devFacs[idx - 1] ** 2 * prevCs[[idx]] / sigma[idx - 1] ** 2
-            std <- devFac[idx - 1] * prevCs[[idx]] / sigma[idx - 1]**2
+            std <- devFacs[idx - 1] * prevCs[[idx]] / sigma[idx - 1]**2
 
             FBoot[[j]] <- residBoot[[j]] * std + mean
             fBoot[j] <- sum(FBoot[[j]] * prevCs[[j]]) / sum(prevCs[[j]])
@@ -158,11 +173,12 @@ bootReserveGamma <- function(inputTriangle, nBoot) {
                 colIdx <- nDev + diagIdx + 1 - rowIdx
                 bootTriangle[rowIdx, colIdx] <-
                     rgamma(1,
-                    devFac[colIdx - 1]**2 * bootTriangle[rowIdx, colIdx - 1] / sigma[colIdx - 1]**2,
-                    devFac[colIdx - 1] / (sigma[colIdx - 1]**2))
+                    devFacs[colIdx - 1]**2 * bootTriangle[rowIdx, colIdx - 1] / sigma[colIdx - 1]**2,
+                    devFacs[colIdx - 1] / (sigma[colIdx - 1]**2))
                 }
             }
-        #if the triangle contains undefined values, the simulated reserve became negative at some point, and we throw away the triangle
+        #if the triangle contains undefined values, the simulated reserve became negative at some point,
+        # and we throw away the triangle
         if (!(NA %in% bootTriangle) && !(NaN %in% bootTriangle)) {
             latest <- bootTriangle[col(bootTriangle) + row(bootTriangle) == nDev + 1]
             reserve <- sum(bootTriangle[, nDev] - latest)
