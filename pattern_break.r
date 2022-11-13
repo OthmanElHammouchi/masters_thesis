@@ -1,81 +1,66 @@
-reserveBoot <- function(inputTriangle, nBoot, ..., resids_type = "raw", bootstrap_type = "conditional", exclude_residuals = NULL) {
+reserveBoot <- function(inputTriangle, nBoot, ..., resids_type = "raw", bootstrap_type = "conditional", distribution = "normal", exclude_residuals = NULL) {
 
     inputTriangle <- unname(inputTriangle)
     nDev <- ncol(inputTriangle)
 
     devFacs <- c()
     sigma <- c()
-
-    for (j in 1:(nDev - 1)) {
-        model <- lm(
-            y ~ x + 0,
-            weights = 1 / inputTriangle[1:(nDev - j), j],
-            data = data.frame(x = inputTriangle[1:(nDev - j), j],
-                y = inputTriangle[1:(nDev - j), j + 1])
-        )
-
-        devFacs[j] <- unname(model$coefficients)
-        
-        if (j != (nDev - 1)) sigma[j] <- summary(model)$sigma
-        else sigma[j] <- min(sigma[(length(sigma) - 1)]**2, sigma[length(sigma)]**2, sigma[length(sigma)]**4 / sigma[(length(sigma) - 1)]**2)
-
-    }
-
-    # purrr::map(1:(nDev - 1), function(j) {
-
-    #     model <- lm(
-    #         y ~ x + 0,
-    #         weights = 1 / inputTriangle[1:(nDev - j), j],
-    #         data = data.frame(x = inputTriangle[1:(nDev - j), j],
-    #             y = inputTriangle[1:(nDev - j), j + 1])
-    #     )
-    #     devFacs[j] <<- unname(model$coefficients)
-    #     indivDevFacs <<- inputTriangle[1:(nDev - j), j + 1] / inputTriangle[1:(nDev - j), j]
-
-    #     if (j != (nDev - 1)) sigma[j] <<- summary(model)$sigma
-    #     else sigma[j] <<- min(sigma[(length(sigma) - 1)]**2, sigma[length(sigma)]**2, sigma[length(sigma)]**4 / sigma[(length(sigma) - 1)]**2)
-    # })
-
-
     indivDevFacs <- list()
     prevCs <- list()
 
-    for (colIdx in 1:(nDev - 1)) {
-        indivDevFacs[[colIdx]] <- inputTriangle[1:(nDev - colIdx), colIdx + 1] / inputTriangle[1:(nDev - colIdx), colIdx]
-        prevCs[[colIdx]] <- inputTriangle[1:(nDev - colIdx), colIdx]
-    }
+    purrr::map(1:(nDev - 1), function(colIdx) {
 
-    if (!(resids_type == "parametric")) {
+        model <- lm(
+            y ~ x + 0,
+            weights = 1 / inputTriangle[1:(nDev - colIdx), colIdx],
+            data = data.frame(x = inputTriangle[1:(nDev - colIdx), colIdx],
+                y = inputTriangle[1:(nDev - colIdx), colIdx + 1])
+        )
+        devFacs[colIdx] <<- unname(model$coefficients)
+
+        if (colIdx != (nDev - 1)) sigma[colIdx] <<- summary(model)$sigma
+        else sigma[colIdx] <<- min(sigma[(length(sigma) - 1)]**2, sigma[length(sigma)]**2, sigma[length(sigma)]**4 / sigma[(length(sigma) - 1)]**2)
+
+        indivDevFacs[[colIdx]] <<- inputTriangle[1:(nDev - colIdx), colIdx + 1] / inputTriangle[1:(nDev - colIdx), colIdx]
+        prevCs[[colIdx]] <<- inputTriangle[1:(nDev - colIdx), colIdx]
+    })
+
+
+    if (resids_type == "raw") {
+
         resids <- list()
-        if (resids_type == "scaled") {
-            scaleFactors <- list()
-        }
 
-        for (colIdx in 1:(nDev - 1)) {
-            if (resids_type == "raw") {
-                resids[[colIdx]] <- (indivDevFacs[[colIdx]] - devFacs[colIdx]) * sqrt(prevCs[[colIdx]]) / sigma[colIdx]
-            } else if (resids_type == "scaled") {
-                factors <- sqrt(1 - prevCs[[colIdx]] / sum(prevCs[[colIdx]]))
-                scaleFactors[[colIdx]] <- if (length(factors) > 1) factors else 1
-                resids[[colIdx]] <- (indivDevFacs[[colIdx]] - devFacs[colIdx]) * sqrt(prevCs[[colIdx]]) / (sigma[colIdx] * scaleFactors[[colIdx]])
-            }
-        }
+        purrr::map(1:(nDev - 1), function(colIdx) {
 
-        # remove residuals for the excluded points
-        if (!is.null(exclude_residuals)) {
-            for (point in exclude_residuals) {
-                resids[[point[2]]] <- resids[[point[2]]][-point[1]]
-            }
+            resids[[colIdx]] <<- (indivDevFacs[[colIdx]] - devFacs[colIdx]) * sqrt(prevCs[[colIdx]]) / sigma[colIdx]
+        })
+
+    } else if (resids_type == "scaled") {
+
+        scaleFactors <- list()
+        resids <- list()
+
+        purrr::map(1:(nDev - 1), function(colIdx) {
+
+            factors <- sqrt(1 - prevCs[[colIdx]] / sum(prevCs[[colIdx]]))
+
+            scaleFactors[[colIdx]] <<- if (length(factors) > 1) factors else 1
+
+            resids[[colIdx]] <<- (indivDevFacs[[colIdx]] - devFacs[colIdx]) * sqrt(prevCs[[colIdx]]) / (sigma[colIdx] * scaleFactors[[colIdx]])
+        })
+
+    }
+
+
+    # remove residuals for the excluded points if there are any
+    if (!is.null(exclude_residuals)) {
+        for (point in exclude_residuals) {
+            resids[[point[2]]] <- resids[[point[2]]][-point[1]]
         }
     }
-    res <- tibble::tibble(
-        indivDevFacBoot = list(),
-        devFacBoot = list(),
-        sigmaBoot = list(),
-        triangleBoot = list(),
-        reserve = numeric()
-    )
 
+    reserve <- c()
+    nNaN <- 0
     for (iBoot in 1:nBoot) {
 
         if (!(resids_type == "parametric")) {
@@ -101,32 +86,32 @@ reserveBoot <- function(inputTriangle, nBoot, ..., resids_type = "raw", bootstra
         sigmaBoot <- c()
 
         if (bootstrap_type == "conditional") {
-            for (colIdx in 1:(nDev - 1)) {
-                if ((resids_type == "raw") || (resids_type == "parametric")) {
-                    indivDevFacBoot[[colIdx]] <- devFacs[colIdx] + (residBoot[[colIdx]] * sigma[colIdx]) / sqrt(prevCs[[colIdx]])
-                } else if (resids_type == "scaled") {
-                    indivDevFacBoot[[colIdx]] <- devFacs[colIdx] + (scaleFactors[[colIdx]] * residBoot[[colIdx]] * sigma[colIdx]) / sqrt(prevCs[[colIdx]])
+            purrr::map(1:(nDev - 1), function(colIdx) {
+                if (resids_type == "scaled") {
+                    indivDevFacBoot[[colIdx]] <<- devFacs[colIdx] + (scaleFactors[[colIdx]] * residBoot[[colIdx]] * sigma[colIdx]) / sqrt(prevCs[[colIdx]])
+                } else {
+                    indivDevFacBoot[[colIdx]] <<- devFacs[colIdx] + (residBoot[[colIdx]] * sigma[colIdx]) / sqrt(prevCs[[colIdx]])
                 }
 
-                devFacBoot[colIdx] <- sum(indivDevFacBoot[[colIdx]] * prevCs[[colIdx]]) / sum(prevCs[[colIdx]])
+                devFacBoot[colIdx] <<- sum(indivDevFacBoot[[colIdx]] * prevCs[[colIdx]]) / sum(prevCs[[colIdx]])
 
                 if (colIdx != nDev - 1) {
                     df <- nDev - colIdx - 1
-                    sigmaBoot[colIdx] <- sqrt(sum((prevCs[[colIdx]] * (indivDevFacBoot[[colIdx]] - devFacs[colIdx])**2) / df))
+                    sigmaBoot[colIdx] <<- sqrt(sum((prevCs[[colIdx]] * (indivDevFacBoot[[colIdx]] - devFacs[colIdx])**2) / df))
                 } else {
-                    sigmaBoot[colIdx] <- min(
+                    sigmaBoot[colIdx] <<- min(
                         sigmaBoot[(length(sigmaBoot) - 1)]**2,
                         sigmaBoot[length(sigmaBoot)]**2,
                         sigmaBoot[length(sigmaBoot)]**4 / sigmaBoot[(length(sigmaBoot) - 1)]**2
                     )
                 }
-            }
+            })
         } else if (bootstrap_type == "unconditional") {
 
-            if ((resids_type == "raw") || (resids_type == "parametric")) {
-                indivDevFacBoot[[1]] <- devFacs[1] + (residBoot[[1]] * sigma[1]) / sqrt(prevCs[[1]])
-            } else if (resids_type == "scaled") {
+            if (resids_type == "scaled") {
                 indivDevFacBoot[[1]] <- devFacs[1] + (scaleFactors[[1]] * residBoot[[1]] * sigma[1]) / sqrt(prevCs[[1]])
+            } else {
+            indivDevFacBoot[[1]] <- devFacs[1] + (residBoot[[1]] * sigma[1]) / sqrt(prevCs[[1]])
             }
 
             devFacBoot[1] <- sum(indivDevFacBoot[[1]] * prevCs[[1]]) / sum(prevCs[[1]])
@@ -137,12 +122,13 @@ reserveBoot <- function(inputTriangle, nBoot, ..., resids_type = "raw", bootstra
             newCs <- list(inputTriangle[, 1])
 
             for (colIdx in 2:(nDev - 1)) {
+
                 newCs[[colIdx]] <- newCs[[colIdx - 1]][-length(newCs[[colIdx - 1]])] * devFacs[colIdx] +
                     sigma[colIdx] * sqrt(newCs[[colIdx - 1]][-length(newCs[[colIdx - 1]])]) * residBoot[[colIdx - 1]]
-                if ((resids_type == "raw") || (resids_type == "parametric")) {
-                    indivDevFacBoot[[colIdx]] <- devFacs[colIdx] + (residBoot[[colIdx]] * sigma[colIdx]) / sqrt(prevCs[[colIdx]])
-                } else if (resids_type == "scaled") {
+                if (resids_type == "scaled") {
                     indivDevFacBoot[[colIdx]] <- devFacs[colIdx] + (scaleFactors[[colIdx]] * residBoot[[colIdx]] * sigma[colIdx]) / sqrt(prevCs[[colIdx]])
+                } else {
+                    indivDevFacBoot[[colIdx]] <- devFacs[colIdx] + (residBoot[[colIdx]] * sigma[colIdx]) / sqrt(prevCs[[colIdx]])
                 }
 
                 devFacBoot[colIdx] <- sum(indivDevFacBoot[[colIdx]] * prevCs[[colIdx]]) / sum(prevCs[[colIdx]])
@@ -159,39 +145,48 @@ reserveBoot <- function(inputTriangle, nBoot, ..., resids_type = "raw", bootstra
                 }
             }
         }
-        # complete the triangle
-        triangleBoot <- inputTriangle
-        for (diagIdx in 1:(nDev - 1)) {
-            for (rowIdx in (diagIdx + 1):nDev) {
-                colIdx <- nDev + diagIdx + 1 - rowIdx
-                # off-diagonal elements satisfy i + j = I + 1 + (diagonal number)
-                triangleBoot[rowIdx, colIdx] <-
-                    rnorm(
-                        1,
-                        triangleBoot[rowIdx, colIdx - 1] * devFacBoot[colIdx - 1],
-                        sqrt(triangleBoot[rowIdx, colIdx - 1]) * sigmaBoot[colIdx - 1])
+
+        if (distribution == "normal") {
+            # complete the triangle
+            triangleBoot <- inputTriangle
+            for (diagIdx in 1:(nDev - 1)) {
+                for (rowIdx in (diagIdx + 1):nDev) {
+                    colIdx <- nDev + diagIdx + 1 - rowIdx
+                    # off-diagonal elements satisfy i + j = I + 1 + (diagonal number)
+                    triangleBoot[rowIdx, colIdx] <-
+                        rnorm(
+                            1,
+                            triangleBoot[rowIdx, colIdx - 1] * devFacBoot[colIdx - 1],
+                            sqrt(triangleBoot[rowIdx, colIdx - 1]) * sigmaBoot[colIdx - 1])
+                }
+            }
+        } else if (distribution == "gamma") {
+            triangleBoot <- inputTriangle
+            for (diagIdx in 1:(nDev - 1)) {
+                for (rowIdx in (diagIdx + 1):nDev) {
+                    colIdx <- nDev + diagIdx + 1 - rowIdx
+                    alpha <- devFacs[colIdx - 1]**2 * triangleBoot[rowIdx, colIdx - 1] / sigma[colIdx - 1]**2
+                    beta <- devFacs[colIdx - 1] / (sigma[colIdx - 1]**2)
+                    triangleBoot[rowIdx, colIdx] <-
+                        rgamma(1, shape = alpha, rate = beta)
+                }
             }
         }
 
         # if the triangle contains undefined values, the simulated reserve became negative at some point, and we throw away the triangle
-        if (!(NA %in% triangleBoot) && !(NaN %in% triangleBoot)) {
+        if (!(NaN %in% triangleBoot)) {
             latest <- triangleBoot[col(triangleBoot) + row(triangleBoot) == nDev + 1]
-            reserve <- sum(triangleBoot[, nDev] - latest)
+            reserve[iBoot] <- sum(triangleBoot[, nDev] - latest)
         } else {
-            reserve <- NA
+            reserve[iBoot] <- NaN
+            nNaN <- nNaN + 1
         }
-
-        res <- dplyr::add_row(res,
-            indivDevFacBoot = list(indivDevFacBoot),
-            devFacBoot = list(devFacBoot),
-            sigmaBoot = list(sigmaBoot),
-            triangleBoot = list(triangleBoot),
-            reserve = reserve)
     }
-    return(res)
+    attr(reserve, "nNaN") <- nNaN
+    return(reserve)
 }
 
-singleOutlier <- function(outlierColIdx, outlierRowIdx, pert, ..., nDev, initMean, initStd, devFacs, sigma) {
+singleOutlier <- function(outlierColIdx, outlierRowIdx, factor, ..., nDev, initMean, initStd, devFacs, sigma) {
 
     initCol <- rnorm(nDev, initMean, initStd)
 
@@ -217,7 +212,7 @@ singleOutlier <- function(outlierColIdx, outlierRowIdx, pert, ..., nDev, initMea
     prevC <- claimsTriangle[outlierRowIdx, outlierColIdx - 1]
     claimsTriangle[outlierRowIdx, outlierColIdx] <-
         rnorm(1,
-            pert * devFacs[outlierColIdx - 1] * prevC,
+            factor * devFacs[outlierColIdx - 1] * prevC,
             sigma[outlierColIdx - 1] * sqrt(prevC))
 
     if (outlierColIdx < nDev) {

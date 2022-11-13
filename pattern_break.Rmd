@@ -1,42 +1,69 @@
 ---
-title: "Pattern break experiments"
+title: "Pattern break detection"
 author: "Othman El Hammouchi"
+output: "pdf_document"
+header_includes:
+    - \usepackage{amsmath}
 ---
-```{r}
-here::i_am("pattern_break.Rmd")
-library(tidyverse)
-library(MASS)
-library(ggplot2)
-library(magrittr)
-library(ChainLadder)
-library(here)
-library(knitr)
-library(gridExtra)
+```{r, echo = FALSE}
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(MASS)
+    library(ggplot2)
+    library(magrittr)
+    library(ChainLadder)
+    library(here)
+    library(knitr)
+    library(gridExtra)
+    library(patchwork)
 
-library(iterators)
-library(parallel)
-library(doParallel)
-library(foreach)
+    library(iterators)
+    library(parallel)
+    library(doParallel)
+    library(foreach)
 
-registerDoParallel()
+    registerDoParallel()
 
-source(here("pattern_break.r"))
+    source(here("pattern_break.r"))
+})
+
+suppressMessages({
+    here::i_am("pattern_break.Rmd")
+    knitr::opts_chunk$set(echo = FALSE)
+})
 ```
 
-We start by generating a claims triangle which satisfies the assumptions of Mack's method. For realism, we borrow the determining parameters from a real dataset, the UKMotor data from the `ChainLadder` package.
+\section{Introduction}
+
+Stochastic claims reserving methods in non-life insurance are based on models whose underlying assumptions are difficult to verify using classical statistical inference owing to the limited amount of data that's typically available. A possible way to remedy this, which we will explore in this notebook, is through the use of bootstrap simulation. The idea is to start from a sythetic triangle which is constructed to perfectly satisfy some set of assumptions, and then to gauge the sensitivity of the simulated reserve to deviations from said assumptions. We will do this by applying various violations and studying the effect on the bootstrapped predictive distribution. If a significant effect is observed, this suggests a method for identifying observations in real claims data which do not conform to the given model.
+
+\section{Perturbing a single observation}
+
+Let's start by considering the underlying model of Mack's method, which is one the most popular reserving techniques. It makes the following assumptions:
+
+\begin{gather}
+\mathbb{E}[C_{ij} \ \Vert \ C_{i, j - 1}, \dots, C_{i1}] = \mathbb{E}[C_{ij} \ \Vert \ C_{i, j - 1}] = f_{j - 1} C_{i, j - 1} \\
+\mathrm{Var}[C_{ij} \ \Vert \ C_{i, j - 1}, \dots, C_{i1}] = \mathrm{Var}[C_{ij} \ \Vert \ C_{i, j - 1}] = \sigma_{j - 1}^2 C_{i, j - 1}
+\end{gather},
+for $i \in \{ 0, \dots, I \}$ and
+\begin{equation}
+\{ C_{i, 0}, \dots, C_{i, I - i} \}, \{ C_{i', 0}, \dots, C_{i', I - i'} \} \ \text{independent for} \ i \neq i' \,.
+\end{equation}
+
+The first violation we consider is of the mean assumption. We can repeat the simulation for every possible point and a range of perturbations between 0.5 and 1.5. 
+
+triangle conforming to Mack's assumptions. For added realism, we borrow the development factors and $\sigma_j$-parameters from a real dataset, the UKMotor data from the `ChainLadder` package.
 
 ```{r}
+set.seed(5)
+
 nDev <- ncol(UKMotor)
 benchmark <- MackChainLadder(UKMotor)
 sigma <- benchmark$sigma
 devFacs <- benchmark$f[-nDev]
 initMean <- mean(UKMotor[, 1])
 initStd <- sd(UKMotor[, 1])
-```
 
-The generated triangle is given below.
-
-```{r}
 initCol <- rnorm(nDev, initMean, initStd)
 
 claimsTriangle <- matrix(ncol = nDev, nrow = nDev)
@@ -61,38 +88,44 @@ res <- MackChainLadder(claimsTriangle)
 print(res$f)
 ```
 
-\section{Perturbing a single observation}
+-- Describe that there are multiple ways of doing the bootstrap, depending on how parameter estimation error is quantified, assumptions on the residuals and choice of distribution for incorporating process error --
 
-We study the effect of perturbing a single observation and propagating this forward. The following function generates such data given a desired outlier column and row and a perturbation factor. We can repeat the simulation for every possible point and a range of perturbations between 0.5 and 1.5. 
+-- Describe the first class of experiments: we perturb a single observation by drawing from a normal distribution whose mean is multiplied with a given factor. This corresponds to scaling the mean of the corresponding individual development factor from the link ratio adhered to by the rest of the column by that factor. --
 
-```{r}
+```{r, eval = FALSE, echo = FALSE}
+
+# sequential version of computations in the next chunk; remove 'eval = FALSE' if your setup does not support multithreading
+
 results <- tibble(
     row = numeric(),
     col = numeric(),
     pert = numeric(),
-    triangle = list(),
     reserve = list()
 )
 
 for (colIdx in 2:nDev) {
     for (rowIdx in 1:(nDev + 1 - colIdx)) {
         for (pert in seq(0.5, 1.5, by = 0.25)) {
+
             triangle <- singleOutlier(colIdx, rowIdx, pert,
                 nDev = nDev,
                 initMean = initMean,
                 initStd = initStd,
                 devFacs = devFacs,
                 sigma = sigma)
-            reserve <- reserveBoot(triangle, 1e3)$reserve %>% list()
-            triangle %<>% list()
-            results %<>% add_row(row = rowIdx, col = colIdx, triangle = triangle, pert = pert, reserve = reserve)
+
+            reserve <- reserveBoot(triangle, 1e3) %>%
+                tibble(reserve = .) %>%
+                list()
+
+            results %<>% add_row(row = rowIdx, col = colIdx, pert = pert, reserve = reserve)
         }
     }
 }
 ```
+```{r, cache = TRUE}
 
-```{r}
-results <- foreach(colIdx = 2:nDev, .combine = "rbind", .errorhandling = "pass") %:%
+results <- foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "pass") %:%
     foreach(pert = seq(0.5, 1.5, by = 0.25), .combine = "rbind") %dopar% {
 
         rowResult <- tibble()
@@ -105,7 +138,7 @@ results <- foreach(colIdx = 2:nDev, .combine = "rbind", .errorhandling = "pass")
                 devFacs = devFacs,
                 sigma = sigma)
 
-            reserve <- reserveBoot(triangle, 1e3, exclude_residuals = list(c(rowIdx, colIdx)))$reserve
+            reserve <- reserveBoot(triangle, 1e3, distribution = "normal")
 
             rowResult <- bind_rows(rowResult, tibble(col = colIdx, row = rowIdx, pert = pert, reserve = list(tibble(reserve = reserve))))
         }
@@ -116,24 +149,23 @@ results <- foreach(colIdx = 2:nDev, .combine = "rbind", .errorhandling = "pass")
 stopImplicitCluster()
 ```
 
-Now let's take a look at the bootstrap mean as a function of the perturbation for different rows and columns.
+-- Describe what the plots indicate:
 
 ```{r}
-results <- results %>%
-    mutate(mean = map(reserve, function(df) mean(df$reserve, na.rm = TRUE))) %>%
-    unnest_auto(mean)
-```
-
-```{r}
-results <- results %>%
-    mutate(mean = map(reserve, mean, na.rm = TRUE)) %>%
-    unnest_auto(mean)
+results <- mutate(results,
+    mean = map_dbl(reserve, function(df) mean(df$reserve, na.rm = TRUE)))
 ```
 
 ```{r}
 ggplot(data = results) +
     geom_point(aes(pert, mean)) +
-    facet_wrap(vars(col))
+    facet_wrap(vars(col)) +
+    labs(
+        x = "Perturbation factor",
+        y = "Bootstrap reserve mean"
+    ) +
+    ggtitle("Reserve estimates for different perturbed columns") +
+    theme(plot.title = element_text(hjust = 0.5, size = 30, face = "bold"))
 ```
 
 ```{r}
@@ -142,115 +174,56 @@ ggplot(data = results) +
     facet_wrap(vars(row))
 ```
 
-Surprisingly, the plots show a higher mean both for smaller and larger perturbations.
-
 Now we want to go in the reverse direction: if we start from a perturbed triangle, does removal of the outlying observation create a significant difference in the reserve?
 
 ```{r}
 rowIdx <- 2
 colIdx <- 3
+factor <- 0.7
 
-distortedTriangle <- singleOutlier(colIdx, rowIdx, 0.7,
+distortedTriangle <- singleOutlier(colIdx, rowIdx, factor,
     nDev = nDev,
     initMean = initMean,
     initStd = initStd,
     devFacs = devFacs,
     sigma = sigma)
 
-reserveBoot(distortedTriangle, 1e3, exclude_residuals = list(c(rowIdx, colIdx)))
 ```
 
 ```{r}
-rowIdx <- 2
-colIdx <- 3
+results <- foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "stop") %dopar% {
+    rowResult <- tibble()
+    for (rowIdx in 1:(nDev + 1 - colIdx)) {
 
-distortedTriangle <- singleOutlier(colIdx, rowIdx, 0.7,
-    nDev = nDev,
-    initMean = initMean,
-    initStd = initStd,
-    devFacs = devFacs,
-    sigma = sigma)
+        exclude_residuals <- list(c(rowIdx, colIdx))
+        reserve <- reserveBoot(distortedTriangle, 1e3, exclude_residuals = exclude_residuals)
 
-reserveByExclusion <- tibble(
-    row = integer(),
-    col = integer(),
-    reserve = list()
-)
-for (j in 1:(nDev - 1)) {
-    for (i in 1:(nDev + 1 - j)) {
-        exclude_residuals <- list(c(i, j))
-        reserve <- list(reserveBoot(distortedTriangle, 1e3, exclude_residuals = exclude_residuals)$reserve)
-        reserveByExclusion <- add_row(
-            reserveByExclusion,
-            row = i,
-            col = j,
-            reserve = reserve)
+        rowResult <- bind_rows(rowResult, tibble(col = colIdx, row = rowIdx, reserve = list(tibble(reserve = reserve))))
     }
+    rowResult
 }
-```
-
-```{r}
-plots <- list()
-
-for (j in 1:(nDev - 1)) {
-    for (i in 1:(nDev + 1 - j)) {
-
-        plot <- reserveByExclusion %>%
-            filter(row == i & col == j) %>%
-            dplyr::select(reserve) %>%
-            unnest_auto(reserve) %>%
-            ggplot(data = .) +
-            geom_histogram(aes(x = reserve)) +
-            ggtitle(paste0("Row: ", i, ", Col: ", j))
-
-        plots <- c(plots, list(plot))
-    }
-}
-
-do.call("grid.arrange", c(plots, ncol = 3))
-```
-
-```{r}
-quantiles <- c()
-
-for (j in 1:(nDev - 1)) {
-    for (i in 1:(nDev + 1 - j)) {
-        f <- reserveByExclusion %>%
-            filter(row == i & col == j) %>%
-            dplyr::select(reserve) %>%
-            unlist() %>%
-            ecdf()
-        quantiles <- c(f(25000), quantiles)
-    }
-}
-
-reserveByExclusion$quantiles <- 1 - quantiles
-
-reserveByExclusion %>% dplyr::arrange(quantiles) %>%
-    print(n = 27)
 ```
 
 \subsection{Gamma distribution}
 
 The problem with using the above normal model is that it allows for negative samples during the bootstrap simulation. To avoid this, we can use a different distribution which still respects Mack's assumptions. If we take for instance $C_{ij} \sim \Gamma(\alpha, \beta)$, then we must choose $\alpha, \beta$ to satisfy
-
-$$
+\begin{displaymath}
 \begin{cases}
 \frac{\alpha}{\beta} = f_{j-1} C_{i, j-1} \\
 \frac{\alpha}{\beta^2} = \sigma^2_{j-1} C_{i, j-1} \,,
 \end{cases}
-$$
-
+\end{displaymath}
 giving the values
-
-$$
+\begin{gather*}
 \alpha = \frac{f_{j-1}^2 C_{i, j-1}}{\sigma_{j-1}^2} \\
 \beta = \frac{f_{j-1}}{\sigma_{j-1}^2} \,,
-$$
-
+\end{gather*}
 for the distribution parameters.
 
-```{r}
+```{r, eval = FALSE}
+
+# sequential version of computations in the next chunk; remove 'eval = FALSE' if your setup does not support multithreading
+
 results <- tibble(
     row = numeric(),
     col = numeric(),
@@ -270,20 +243,45 @@ for (colIdx in 2:nDev) {
     }
 }
 ```
+```{r, cache = TRUE}
 
-```{r}
+results <- foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "pass") %:%
+    foreach(pert = seq(0.5, 1.5, by = 0.25), .combine = "rbind") %dopar% {
+
+        rowResult <- tibble()
+
+        for (rowIdx in 1:(nDev + 1 - colIdx)) {
+            triangle <- singleOutlier(colIdx, rowIdx, pert,
+                nDev = nDev,
+                initMean = initMean,
+                initStd = initStd,
+                devFacs = devFacs,
+                sigma = sigma)
+
+            reserve <- reserveBoot(triangle, 1e3, distribution = "normal")
+
+            rowResult <- bind_rows(rowResult, tibble(col = colIdx, row = rowIdx, pert = pert, reserve = list(tibble(reserve = reserve))))
+        }
+
+        rowResult
+    }
+
+stopImplicitCluster()
+```
+
+```{r, eval = FALSE}
 results %<>%
     mutate(mean = map(reserve, mean, na.rm = TRUE)) %>%
     unnest_auto(mean)
 ```
 
-```{r}
+```{r, eval = FALSE}
 ggplot(data = results) +
     geom_point(aes(pert, mean)) +
     facet_wrap(vars(col))
 ```
 
-```{r}
+```{r, eval = FALSE}
 ggplot(data = results) +
     geom_point(aes(pert, mean)) +
     facet_wrap(vars(row))
