@@ -92,37 +92,6 @@ print(res$f)
 
 -- Describe the first class of experiments: we perturb a single observation by drawing from a normal distribution whose mean is multiplied with a given factor. This corresponds to scaling the mean of the corresponding individual development factor from the link ratio adhered to by the rest of the column by that factor. --
 
-```{r, eval = FALSE, echo = FALSE}
-
-# sequential version of computations in the next chunk; remove 'eval = FALSE' if your setup does not support multithreading
-
-results <- tibble(
-    row = numeric(),
-    col = numeric(),
-    pert = numeric(),
-    reserve = list()
-)
-
-for (colIdx in 2:nDev) {
-    for (rowIdx in 1:(nDev + 1 - colIdx)) {
-        for (pert in seq(0.5, 1.5, by = 0.25)) {
-
-            triangle <- singleOutlier(colIdx, rowIdx, pert,
-                nDev = nDev,
-                initMean = initMean,
-                initStd = initStd,
-                devFacs = devFacs,
-                sigma = sigma)
-
-            reserve <- reserveBoot(triangle, 1e3) %>%
-                tibble(reserve = .) %>%
-                list()
-
-            results %<>% add_row(row = rowIdx, col = colIdx, pert = pert, reserve = reserve)
-        }
-    }
-}
-```
 ```{r, cache = TRUE}
 
 results <- foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "pass") %:%
@@ -149,7 +118,11 @@ results <- foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "
 stopImplicitCluster()
 ```
 
--- Describe what the plots indicate:
+-- Describe what the plots indicate. 
+
+For the columns, there seems to be a lot of variation if the perturbation is applied early, which makes it difficult to distinguish problematic points in earlier columns. Later columns seem to exhibit a clearer influence.
+
+For the rows, the reverse it true: perturbations in earlier rows are more easily distinguished than in later ones. --
 
 ```{r}
 results <- mutate(results,
@@ -158,23 +131,133 @@ results <- mutate(results,
 
 ```{r}
 ggplot(data = results) +
-    geom_point(aes(pert, mean)) +
+    geom_point(aes(pert, mean, colour = row)) +
     facet_wrap(vars(col)) +
     labs(
         x = "Perturbation factor",
         y = "Bootstrap reserve mean"
     ) +
     ggtitle("Reserve estimates for different perturbed columns") +
-    theme(plot.title = element_text(hjust = 0.5, size = 30, face = "bold"))
+    theme(plot.title = element_text(hjust = 0.5, size = 25, face = "bold"))
 ```
 
 ```{r}
 ggplot(data = results) +
-    geom_point(aes(pert, mean)) +
-    facet_wrap(vars(row))
+    facet_wrap(vars(row)) +
+    geom_point(aes(pert, mean, colour = col)) +
+    labs(
+        x = "Perturbation factor",
+        y = "Bootstrap reserve mean"
+    ) +
+    ggtitle("Reserve estimates for different perturbed rows") +
+    theme(plot.title = element_text(hjust = 0.5, size = 25, face = "bold"))
 ```
 
-Now we want to go in the reverse direction: if we start from a perturbed triangle, does removal of the outlying observation create a significant difference in the reserve?
+--- We should really do this same kind of analysis for different ways of bootstrapping ---
+
+```{r, cache = TRUE}
+
+methods <- expand_grid(
+    residuals_type = c("parametric", "raw", "scaled"),
+    bootstrap_type = c("conditional", "unconditional")
+    )
+
+results <- foreach(method = iter(methods, by = "row"), .combine = "rbind") %:%
+    foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "pass") %:%
+        foreach(pert = seq(0.5, 1.5, by = 0.25), .combine = "rbind") %dopar% {
+
+            rowResult <- tibble()
+
+            for (rowIdx in 1:(nDev + 1 - colIdx)) {
+                triangle <- singleOutlier(colIdx, rowIdx, pert,
+                    nDev = nDev,
+                    initMean = initMean,
+                    initStd = initStd,
+                    devFacs = devFacs,
+                    sigma = sigma)
+
+                reserve <- reserveBoot(triangle, 1e3,
+                    distribution = "normal",
+                    residuals_type = method[[1]],
+                    bootstrap_type = method[[2]]
+                )
+
+                rowResult <- bind_rows(rowResult, tibble(
+                    col = colIdx,
+                    row = rowIdx,
+                    pert = pert,
+                    residuals_type = method[[1]],
+                    bootstrap_type = method[[2]],
+                    reserve = list(tibble(reserve = reserve))))
+            }
+
+            rowResult
+        }
+
+stopImplicitCluster()
+```
+
+```{r}
+plotsByColumn <- results %>%
+    mutate(mean = map_dbl(reserve, function(df) mean(df$reserve, na.rm = TRUE))) %>%
+    group_by(bootstrap_type, residuals_type) %>%
+    group_split() %>%
+    map_dfr(function(df) {
+        plot <- ggplot(data = df) +
+            geom_point(aes(pert, mean, colour = row)) +
+            facet_wrap(vars(col)) +
+            labs(
+                x = "Perturbation factor",
+                y = "Bootstrap reserve mean"
+            ) +
+            ggtitle(
+                "Reserve estimates grouped by perturbed column",
+                subtitle = paste0("Bootstrap type: ", df$bootstrap_type[1], "\nResiduals type: ", df$residuals_type)
+            ) +
+            theme(
+                plot.title = element_text(size = 25, face = "bold"),
+                plot.subtitle = element_text(size = 15)
+            )
+
+        return(tibble(
+            residuals_type = df$residuals_type[1],
+            bootstrap_type = df$bootstrap_type[1],
+            plot = list(plot)
+        ))
+    })
+
+plotsByRow <- results %>%
+    mutate(mean = map_dbl(reserve, function(df) mean(df$reserve, na.rm = TRUE))) %>%
+    group_by(bootstrap_type, residuals_type) %>%
+    group_split() %>%
+    map_dfr(function(df) {
+        plot <- ggplot(data = df) +
+            geom_point(aes(pert, mean, colour = col)) +
+            facet_wrap(vars(row)) +
+            labs(
+                x = "Perturbation factor",
+                y = "Bootstrap reserve mean"
+            ) +
+            ggtitle(
+                "Reserve estimates grouped by perturbed row",
+                subtitle = paste0("Bootstrap type: ", df$bootstrap_type[1], "\nResiduals type: ", df$residuals_type)
+            ) +
+            theme(
+                plot.title = element_text(size = 25, face = "bold"),
+                plot.subtitle = element_text(size = 15)
+            )
+
+        return(tibble(
+            residuals_type = df$residuals_type[1],
+            bootstrap_type = df$bootstrap_type[1],
+            plot = list(plot)
+        ))
+    })
+
+
+```
+
+--- Now we want to go in the reverse direction: if we start from a perturbed triangle, does removal of the outlying observation create a significant difference in the reserve? ---
 
 ```{r}
 rowIdx <- 2
@@ -196,12 +279,19 @@ results <- foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "
     for (rowIdx in 1:(nDev + 1 - colIdx)) {
 
         exclude_residuals <- list(c(rowIdx, colIdx))
+
         reserve <- reserveBoot(distortedTriangle, 1e3, exclude_residuals = exclude_residuals)
 
-        rowResult <- bind_rows(rowResult, tibble(col = colIdx, row = rowIdx, reserve = list(tibble(reserve = reserve))))
+        rowResult <- bind_rows(rowResult, tibble(col = colIdx, row = rowIdx, mean = mean(reserve)))
     }
     rowResult
 }
+```
+
+```{r}
+ggplot(data = results) +
+    geom_violin(aes(y = mean)) +
+    annotate(geom = "point", y = mean[col == colIdx])
 ```
 
 \subsection{Gamma distribution}
