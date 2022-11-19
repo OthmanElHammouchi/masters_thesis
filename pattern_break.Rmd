@@ -16,6 +16,7 @@ suppressPackageStartupMessages({
     library(knitr)
     library(gridExtra)
     library(patchwork)
+    library(grid)
 
     library(iterators)
     library(parallel)
@@ -58,13 +59,10 @@ triangle conforming to Mack's assumptions. For added realism, we borrow the deve
 set.seed(5)
 
 nDev <- ncol(UKMotor)
-benchmark <- MackChainLadder(UKMotor)
+benchmark <- suppressWarnings(MackChainLadder(UKMotor))
 sigma <- benchmark$sigma
 devFacs <- benchmark$f[-nDev]
-initMean <- mean(UKMotor[, 1])
-initStd <- sd(UKMotor[, 1])
-
-initCol <- rnorm(nDev, initMean, initStd)
+initCol <- unname(UKMotor[, 1])
 
 claimsTriangle <- matrix(ncol = nDev, nrow = nDev)
 claimsTriangle[, 1] <- initCol
@@ -92,24 +90,24 @@ print(res$f)
 
 -- Describe the first class of experiments: we perturb a single observation by drawing from a normal distribution whose mean is multiplied with a given factor. This corresponds to scaling the mean of the corresponding individual development factor from the link ratio adhered to by the rest of the column by that factor. --
 
+-- Remark: the singleOutlier function draws a new initial column and uses new draws every time it is run. An alternative would be to draw the initial column once and only draw additionally in order to introduce the perturbance; this excludes variability -- 
+
 ```{r, cache = TRUE}
 
-results <- foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "pass") %:%
+results <- foreach(outlierColIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "pass") %:%
     foreach(pert = seq(0.5, 1.5, by = 0.25), .combine = "rbind") %dopar% {
 
         rowResult <- tibble()
 
-        for (rowIdx in 1:(nDev + 1 - colIdx)) {
-            triangle <- singleOutlier(colIdx, rowIdx, pert,
-                nDev = nDev,
-                initMean = initMean,
-                initStd = initStd,
+        for (outlierRowIdx in 1:(nDev + 1 - outlierColIdx)) {
+            triangle <- singleOutlier(outlierColIdx, outlierRowIdx, pert,
+                initCol = initCol,
                 devFacs = devFacs,
                 sigma = sigma)
 
             reserve <- reserveBoot(triangle, 1e3, distribution = "normal")
 
-            rowResult <- bind_rows(rowResult, tibble(col = colIdx, row = rowIdx, pert = pert, reserve = list(tibble(reserve = reserve))))
+            rowResult <- bind_rows(rowResult, tibble(outlierColIdx = outlierColIdx, row = outlierRowIdx, pert = pert, reserve = list(tibble(reserve = reserve))))
         }
 
         rowResult
@@ -170,9 +168,7 @@ results <- foreach(method = iter(methods, by = "row"), .combine = "rbind") %:%
 
             for (rowIdx in 1:(nDev + 1 - colIdx)) {
                 triangle <- singleOutlier(colIdx, rowIdx, pert,
-                    nDev = nDev,
-                    initMean = initMean,
-                    initStd = initStd,
+                    initCol = initCol,
                     devFacs = devFacs,
                     sigma = sigma)
 
@@ -259,39 +255,112 @@ plotsByRow <- results %>%
 
 --- Now we want to go in the reverse direction: if we start from a perturbed triangle, does removal of the outlying observation create a significant difference in the reserve? ---
 
-```{r}
-rowIdx <- 2
-colIdx <- 3
-factor <- 0.7
+```{r, cache = TRUE}
 
-distortedTriangle <- singleOutlier(colIdx, rowIdx, factor,
-    nDev = nDev,
-    initMean = initMean,
-    initStd = initStd,
-    devFacs = devFacs,
-    sigma = sigma)
+results <- tibble(
+    outlierRowIdx = integer(),
+    outlierColIdx = integer(),
+    exclRowIdx = integer(),
+    exclColIdx = integer(),
+    reserve = list(),
+    mean = numeric())
 
-```
+iterator <- c()
 
-```{r}
-results <- foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "stop") %dopar% {
-    rowResult <- tibble()
-    for (rowIdx in 1:(nDev + 1 - colIdx)) {
-
-        exclude_residuals <- list(c(rowIdx, colIdx))
-
-        reserve <- reserveBoot(distortedTriangle, 1e3, exclude_residuals = exclude_residuals)
-
-        rowResult <- bind_rows(rowResult, tibble(col = colIdx, row = rowIdx, mean = mean(reserve)))
+for (outlierColIdx in 2:(nDev - 1)) {
+    for (outlierRowIdx in 1:(nDev + 1 - outlierColIdx)) {
+        for (pertFac in seq(0.5, 1.5, by = 0.25)) {
+        iterator <- rbind(iterator, c(outlierColIdx, outlierRowIdx, pertFac))
+        }
     }
-    rowResult
 }
+
+iterator <- iter(iterator, by = "row")
+
+foreach(triangleConfig = iterator) %:%
+            foreach(exclColIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "stop") %dopar% {
+
+                    outlierColIdx <- triangleConfig[1]
+                    outlierColIdx <- triangleConfig[2]
+                    pertFac <- triangleConfig[3]
+
+                    distortedTriangle <- singleOutlier(outlierColIdx, outlierRowIdx, pertFac,
+                        initCol = initCol,
+                        devFacs = devFacs,
+                        sigma = sigma)
+
+                    rowResult <- tibble()
+                    for (exclRowIdx in 1:(nDev + 1 - exclColIdx)) {
+
+                        exclude_residuals <- list(c(exclRowIdx, exclColIdx))
+
+                        reserve <- reserveBoot(distortedTriangle, 1e3, exclude_residuals = exclude_residuals)
+
+                        reserveMean <- mean(reserve, na.rm = TRUE)
+
+                        rowResult <- bind_rows(rowResult, tibble(
+                            outlierRowIdx = outlierRowIdx,
+                            outlierColIdx = outlierColIdx,
+                            exclRowIdx = exclRowIdx,
+                            exclColIdx = exclColIdx,
+                            pertFac = pertFac,
+                            reserve = list(reserve),
+                            mean = reserveMean))
+                    }
+
+                    rowResult
+                }
+
+            results <- bind_rows(results, triangleRes)
+
 ```
 
 ```{r}
-ggplot(data = results) +
-    geom_violin(aes(y = mean)) +
-    annotate(geom = "point", y = mean[col == colIdx])
+col1 <- rnorm(30)
+col2 <- rnorm(30)
+
+mat <- cbind(col1, col2)
+
+res <- foreach(row1 = iter(mat, by = "row"), .combine = "rbind") %:%
+    foreach(row2 = iter(mat, by = "row"), .combine = "rbind") %dopar% {
+        c(row1[1], row2[1])
+    }
+
+
+
+```
+
+```{r}
+if (!file.exists("results/backtest.RDS")) {
+    saveRDS(results, "results/backtest.RDS")
+}
+
+```
+
+```{r}
+
+plotList <- results %>%
+    group_by(outlierRowIdx, outlierColIdx, pertFac) %>%
+    mutate(exclMean = mean[(exclRowIdx == outlierRowIdx) & (exclColIdx == outlierColIdx)]) %>%
+    ungroup(pertFac) %>% 
+    group_map(~ ggplot(.x) +
+        geom_violin(aes(x = factor(pertFac), y = mean)) +
+            geom_point(aes(factor(pertFac), exclMean), colour = "red") +
+            geom_text(aes(label = sprintf("Outlier: (%d, %d)", .y[[1]], .y[[2]]), x = min(pertFac), y = max(mean)), hjust = "left") +
+            labs(x = NULL, y = NULL)
+    )
+
+p <- marrangeGrob(grobs = plotList,
+    ncol = 2,
+    nrow = 3,
+    top = textGrob("Distribution of bootstrap reserve means for different perturbations", gp = gpar(fontsize = 15)),
+    left = textGrob("Perturbation factor", rot = 90),
+    bottom = textGrob("Bootstrap means"),
+    vp = viewport(width = 0.8, height = 0.8))
+
+ggsave("results/backtest.pdf", p, dpi = "retina", width = 210, height = 297, units = "mm")
+
+
 ```
 
 \subsection{Gamma distribution}

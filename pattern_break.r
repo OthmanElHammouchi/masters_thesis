@@ -186,21 +186,24 @@ reserveBoot <- function(inputTriangle, nBoot, ..., resids_type = "raw", bootstra
     return(reserve)
 }
 
-singleOutlier <- function(outlierColIdx, outlierRowIdx, factor, ..., nDev, initMean, initStd, devFacs, sigma) {
+singleOutlier <- function(outlierColIdx, outlierRowIdx, factor, ..., initCol, devFacs, sigma) {
 
-    initCol <- rnorm(nDev, initMean, initStd)
+    nDev <- length(initCol)
+
+    if (outlierColIdx == 1) {
+        stop("Outlier column index must be greater than 1.")
+    }
 
     claimsTriangle <- matrix(ncol = nDev, nrow = nDev)
     claimsTriangle[, 1] <- initCol
 
     for (colIdx in 2:nDev) {
-        for (rowIdx in 1:(nDev + 1 - colIdx)) {
+        for (rowIdx in setdiff(1:(nDev + 1 - colIdx), outlierRowIdx)) {
             prevC <- claimsTriangle[rowIdx, colIdx - 1]
             claimsTriangle[rowIdx, colIdx] <-
                 rnorm(1, devFacs[colIdx - 1] * prevC, sigma[colIdx - 1] * sqrt(prevC))
         }
     }
-    claimsTriangle[outlierRowIdx, -1] <- NA
 
     if (outlierColIdx > 2) {
         for (colIdx in 2:(outlierColIdx - 1)) {
@@ -209,6 +212,7 @@ singleOutlier <- function(outlierColIdx, outlierRowIdx, factor, ..., nDev, initM
                 rnorm(1, devFacs[colIdx - 1] * prevC, sigma[colIdx - 1] * sqrt(prevC))
         }
     }
+
     prevC <- claimsTriangle[outlierRowIdx, outlierColIdx - 1]
     claimsTriangle[outlierRowIdx, outlierColIdx] <-
         rnorm(1,
