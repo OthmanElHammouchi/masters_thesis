@@ -111,7 +111,7 @@ reserveBoot <- function(inputTriangle, nBoot, ..., resids_type = "raw", bootstra
             if (resids_type == "scaled") {
                 indivDevFacBoot[[1]] <- devFacs[1] + (scaleFactors[[1]] * residBoot[[1]] * sigma[1]) / sqrt(prevCs[[1]])
             } else {
-            indivDevFacBoot[[1]] <- devFacs[1] + (residBoot[[1]] * sigma[1]) / sqrt(prevCs[[1]])
+                indivDevFacBoot[[1]] <- devFacs[1] + (residBoot[[1]] * sigma[1]) / sqrt(prevCs[[1]])
             }
 
             devFacBoot[1] <- sum(indivDevFacBoot[[1]] * prevCs[[1]]) / sum(prevCs[[1]])
@@ -229,73 +229,62 @@ singleOutlier <- function(outlierColIdx, outlierRowIdx, factor, ..., initCol, de
     return(claimsTriangle)
 }
 
-# bootReserveGamma <- function(inputTriangle, nBoot) {
+calendarOutlier <- function(outlierDiagIdx, factor, ..., initCol, devFacs, sigma) {
 
-#     nDev <- ncol(inputTriangle)
+    nDev <- length(initCol)
 
-#     mackResults <- suppressWarnings(MackChainLadder(inputTriangle))
+    claimsTriangle <- matrix(ncol = nDev, nrow = nDev)
+    claimsTriangle[, 1] <- initCol
 
-#     devFacs <- mackResults$f[-nDev]
-#     sigma <- mackResults$sigma
+    for (colIdx in 2:nDev) {
+        # points belonging to the diagIdx'th antidiagonal satisfy nDev + 1 - diagIdx == colIdx + rowIdx
+        diagRowIdx <- nDev + 1 - outlierDiagIdx - colIdx
+        for (rowIdx in setdiff(1:(nDev + 1 - colIdx), diagRowIdx)) {
+            prevC <- claimsTriangle[rowIdx, colIdx - 1]
+            claimsTriangle[rowIdx, colIdx] <-
+                rnorm(1, devFacs[colIdx - 1] * prevC, sigma[colIdx - 1] * sqrt(prevC))
+        }
+        if (diagRowIdx > 0) {
+            prevC <- claimsTriangle[diagRowIdx, colIdx - 1]
+            claimsTriangle[diagRowIdx, colIdx] <-
+                rnorm(1, factor * devFacs[colIdx - 1] * prevC, sigma[colIdx - 1] * sqrt(prevC))
+        }
+    }
+    return(claimsTriangle)
+}
 
-#     indivDevFacs <- list()
-#     prevCs <- list()
-#     resids <- list()
+accidentOutlier <- function(outlierRowIdx, factor, ..., initCol, devFacs, sigma, distribution = "normal") {
 
-#     for (idx in 1:(nDev - 1)) {
-#         indivDevFacs[[idx]] <- unname(inputTriangle[1:(nDev - idx), idx + 1] / inputTriangle[1:(nDev - idx), idx])
-#         prevCs[[idx]] <- unname(inputTriangle[1:(nDev - idx), idx])
+    nDev <- length(initCol)
 
-#         mean <- devFacs[idx - 1] ** 2 * prevCs[[idx]] / sigma[idx - 1] ** 2
-#         std <- devFacs[idx - 1] * prevCs[[idx]] / sigma[idx - 1] ** 2
+    claimsTriangle <- matrix(ncol = nDev, nrow = nDev)
+    claimsTriangle[, 1] <- initCol
 
-#         resids[[idx]] <- (indivDevFacs[[idx]] - mean) / std
-#     }
+    for (colIdx in (2:nDev)) {
+        for (rowIdx in setdiff(1:(nDev + 1 - colIdx), outlierRowIdx)) {
+            prevC <- claimsTriangle[rowIdx, colIdx - 1]
 
-#     #sample residuals and put them in proper list format
-#     reserveBoot <- c()
-#     for (iBoot in 1:nBoot) {
-#         residBoot <- list()
-#         residSample <- sample(unlist(resids), replace = TRUE)
-#         for (j in 1:(nDev - 1)) {
-#             residBoot[[j]] <- residSample[1:(nDev - j)]
-#             residSample <- residSample[-1:-(nDev - j)]
-#         }
+            if (distribution == "gamma") {
 
-#         #compute bootstrapped quantities
-#         FBoot <- list()
-#         fBoot <- c()
-#         sigmaBoot <- c()
-#         for (j in 1:(nDev - 1)) {
-#             mean <- devFacs[idx - 1] ** 2 * prevCs[[idx]] / sigma[idx - 1] ** 2
-#             std <- devFacs[idx - 1] * prevCs[[idx]] / sigma[idx - 1]**2
+                alpha <- devFacs[colIdx - 1]**2 * prevC / sigma[colIdx - 1]**2
+                beta <- devFacs[colIdx - 1] / (sigma[colIdx - 1]**2)
 
-#             FBoot[[j]] <- residBoot[[j]] * std + mean
-#             fBoot[j] <- sum(FBoot[[j]] * prevCs[[j]]) / sum(prevCs[[j]])
-#             sigmaBoot[j] <- mean(prevCs[[j]] * (FBoot[[j]] - fBoot[j])**2)
-#         }
+                claimsTriangle[rowIdx, colIdx] <-
+                    rgamma(1, shape = alpha, rate = beta)
 
-#         #complete the triangle
-#         bootTriangle <- inputTriangle
-#         for (diagIdx in 1:(nDev-1)) {
-#             for (rowIdx in (diagIdx + 1):nDev){
-#                 colIdx <- nDev + diagIdx + 1 - rowIdx
-#                 bootTriangle[rowIdx, colIdx] <-
-#                     rgamma(1,
-#                     devFacs[colIdx - 1]**2 * bootTriangle[rowIdx, colIdx - 1] / sigma[colIdx - 1]**2,
-#                     devFacs[colIdx - 1] / (sigma[colIdx - 1]**2))
-#                 }
-#             }
-#         #if the triangle contains undefined values, the simulated reserve became negative at some point,
-#         # and we throw away the triangle
-#         if (!(NA %in% bootTriangle) && !(NaN %in% bootTriangle)) {
-#             latest <- bootTriangle[col(bootTriangle) + row(bootTriangle) == nDev + 1]
-#             reserve <- sum(bootTriangle[, nDev] - latest)
-#             reserveBoot <- c(reserveBoot, reserve)
-#         }
-#     }
-#     return(reserveBoot)
-# }
+            } else {
+
+                claimsTriangle[rowIdx, colIdx] <-
+                    rnorm(1, devFacs[colIdx - 1] * prevC, sigma[colIdx - 1] * sqrt(prevC))
+            }
+        }
+
+        prevC <- claimsTriangle[outlierRowIdx, colIdx - 1]
+        claimsTriangle[outlierRowIdx, colIdx] <-
+            rnorm(1, factor * devFacs[colIdx - 1] * prevC, sigma[colIdx - 1] * sqrt(prevC))
+    }
+    return(claimsTriangle)
+}
 
 # singleOutlierGamma <- function(nDev, initMean, initStd, devFac, sigma, outlierColIdx, outlierRowIdx, pert = 1.1) {
 
