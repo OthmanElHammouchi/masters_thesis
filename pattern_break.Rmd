@@ -7,29 +7,23 @@ header_includes:
 ---
 ```{r, echo = FALSE}
 suppressPackageStartupMessages({
-    library(tidyverse)
     library(MASS)
     library(ggplot2)
-    library(magrittr)
     library(ChainLadder)
-    library(here)
     library(knitr)
-    library(gridExtra)
-    library(patchwork)
-    library(grid)
-
+    library(data.table)
     library(iterators)
     library(parallel)
     library(doParallel)
     library(foreach)
+    library(moments)
 
     registerDoParallel()
 
-    source(here("pattern_break.r"))
+    source("pattern_break.r")
 })
 
 suppressMessages({
-    here::i_am("pattern_break.Rmd")
     knitr::opts_chunk$set(echo = FALSE)
 })
 ```
@@ -55,316 +49,6 @@ The first violation we consider is of the mean assumption. We can repeat the sim
 
 triangle conforming to Mack's assumptions. For added realism, we borrow the development factors and $\sigma_j$-parameters from a real dataset, the UKMotor data from the `ChainLadder` package.
 
-```{r}
-set.seed(5)
-
-nDev <- ncol(UKMotor)
-benchmark <- suppressWarnings(MackChainLadder(UKMotor))
-sigma <- benchmark$sigma
-devFacs <- benchmark$f[-nDev]
-initCol <- unname(UKMotor[, 1])
-
-claimsTriangle <- matrix(ncol = nDev, nrow = nDev)
-claimsTriangle[, 1] <- initCol
-
-for (colIdx in 2:nDev) {
-    for (rowIdx in 1:(nDev + 1 - colIdx)) {
-        prevC <- claimsTriangle[rowIdx, colIdx - 1]
-        claimsTriangle[rowIdx, colIdx] <-
-            rnorm(1, devFacs[colIdx - 1] * prevC, sigma[colIdx - 1] * sqrt(prevC))
-    }
-}
-
-kable(claimsTriangle)
-```
-
-As expected, the Mack estimator performs very well in this case:
-
-```{r}
-res <- MackChainLadder(claimsTriangle)
-
-print(res$f)
-```
-
--- Describe that there are multiple ways of doing the bootstrap, depending on how parameter estimation error is quantified, assumptions on the residuals and choice of distribution for incorporating process error --
-
--- Describe the first class of experiments: we perturb a single observation by drawing from a normal distribution whose mean is multiplied with a given factor. This corresponds to scaling the mean of the corresponding individual development factor from the link ratio adhered to by the rest of the column by that factor. --
-
--- Remark: the singleOutlier function draws a new initial column and uses new draws every time it is run. An alternative would be to draw the initial column once and only draw additionally in order to introduce the perturbance; this excludes variability -- 
-
-```{r, cache = TRUE}
-
-results <- foreach(outlierColIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "pass") %:%
-    foreach(pert = seq(0.5, 1.5, by = 0.25), .combine = "rbind") %dopar% {
-
-        rowResult <- tibble()
-
-        for (outlierRowIdx in 1:(nDev + 1 - outlierColIdx)) {
-            triangle <- singleOutlier(outlierColIdx, outlierRowIdx, pert,
-                initCol = initCol,
-                devFacs = devFacs,
-                sigma = sigma)
-
-            reserve <- reserveBoot(triangle, 1e3, distribution = "normal")
-
-            rowResult <- bind_rows(rowResult, tibble(outlierColIdx = outlierColIdx, row = outlierRowIdx, pert = pert, reserve = list(tibble(reserve = reserve))))
-        }
-
-        rowResult
-    }
-
-stopImplicitCluster()
-```
-
--- Describe what the plots indicate. 
-
-For the columns, there seems to be a lot of variation if the perturbation is applied early, which makes it difficult to distinguish problematic points in earlier columns. Later columns seem to exhibit a clearer influence.
-
-For the rows, the reverse it true: perturbations in earlier rows are more easily distinguished than in later ones. --
-
-```{r}
-results <- mutate(results,
-    mean = map_dbl(reserve, function(df) mean(df$reserve, na.rm = TRUE)))
-```
-
-```{r}
-ggplot(data = results) +
-    geom_point(aes(pert, mean, colour = row)) +
-    facet_wrap(vars(col)) +
-    labs(
-        x = "Perturbation factor",
-        y = "Bootstrap reserve mean"
-    ) +
-    ggtitle("Reserve estimates for different perturbed columns") +
-    theme(plot.title = element_text(hjust = 0.5, size = 25, face = "bold"))
-```
-
-```{r}
-ggplot(data = results) +
-    facet_wrap(vars(row)) +
-    geom_point(aes(pert, mean, colour = col)) +
-    labs(
-        x = "Perturbation factor",
-        y = "Bootstrap reserve mean"
-    ) +
-    ggtitle("Reserve estimates for different perturbed rows") +
-    theme(plot.title = element_text(hjust = 0.5, size = 25, face = "bold"))
-```
-
---- We should really do this same kind of analysis for different ways of bootstrapping ---
-
-```{r, cache = TRUE}
-
-methods <- expand_grid(
-    residuals_type = c("parametric", "raw", "scaled"),
-    bootstrap_type = c("conditional", "unconditional")
-    )
-
-results <- foreach(method = iter(methods, by = "row"), .combine = "rbind") %:%
-    foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "pass") %:%
-        foreach(pert = seq(0.5, 1.5, by = 0.25), .combine = "rbind") %dopar% {
-
-            rowResult <- tibble()
-
-            for (rowIdx in 1:(nDev + 1 - colIdx)) {
-                triangle <- singleOutlier(colIdx, rowIdx, pert,
-                    initCol = initCol,
-                    devFacs = devFacs,
-                    sigma = sigma)
-
-                reserve <- reserveBoot(triangle, 1e3,
-                    distribution = "normal",
-                    residuals_type = method[[1]],
-                    bootstrap_type = method[[2]]
-                )
-
-                rowResult <- bind_rows(rowResult, tibble(
-                    col = colIdx,
-                    row = rowIdx,
-                    pert = pert,
-                    residuals_type = method[[1]],
-                    bootstrap_type = method[[2]],
-                    reserve = list(tibble(reserve = reserve))))
-            }
-
-            rowResult
-        }
-
-stopImplicitCluster()
-```
-
-```{r}
-plotsByColumn <- results %>%
-    mutate(mean = map_dbl(reserve, function(df) mean(df$reserve, na.rm = TRUE))) %>%
-    group_by(bootstrap_type, residuals_type) %>%
-    group_split() %>%
-    map_dfr(function(df) {
-        plot <- ggplot(data = df) +
-            geom_point(aes(pert, mean, colour = row)) +
-            facet_wrap(vars(col)) +
-            labs(
-                x = "Perturbation factor",
-                y = "Bootstrap reserve mean"
-            ) +
-            ggtitle(
-                "Reserve estimates grouped by perturbed column",
-                subtitle = paste0("Bootstrap type: ", df$bootstrap_type[1], "\nResiduals type: ", df$residuals_type)
-            ) +
-            theme(
-                plot.title = element_text(size = 25, face = "bold"),
-                plot.subtitle = element_text(size = 15)
-            )
-
-        return(tibble(
-            residuals_type = df$residuals_type[1],
-            bootstrap_type = df$bootstrap_type[1],
-            plot = list(plot)
-        ))
-    })
-
-plotsByRow <- results %>%
-    mutate(mean = map_dbl(reserve, function(df) mean(df$reserve, na.rm = TRUE))) %>%
-    group_by(bootstrap_type, residuals_type) %>%
-    group_split() %>%
-    map_dfr(function(df) {
-        plot <- ggplot(data = df) +
-            geom_point(aes(pert, mean, colour = col)) +
-            facet_wrap(vars(row)) +
-            labs(
-                x = "Perturbation factor",
-                y = "Bootstrap reserve mean"
-            ) +
-            ggtitle(
-                "Reserve estimates grouped by perturbed row",
-                subtitle = paste0("Bootstrap type: ", df$bootstrap_type[1], "\nResiduals type: ", df$residuals_type)
-            ) +
-            theme(
-                plot.title = element_text(size = 25, face = "bold"),
-                plot.subtitle = element_text(size = 15)
-            )
-
-        return(tibble(
-            residuals_type = df$residuals_type[1],
-            bootstrap_type = df$bootstrap_type[1],
-            plot = list(plot)
-        ))
-    })
-
-
-```
-
---- Now we want to go in the reverse direction: if we start from a perturbed triangle, does removal of the outlying observation create a significant difference in the reserve? ---
-
-```{r, cache = TRUE}
-
-results <- tibble(
-    outlierRowIdx = integer(),
-    outlierColIdx = integer(),
-    exclRowIdx = integer(),
-    exclColIdx = integer(),
-    reserve = list(),
-    mean = numeric())
-
-iterator <- c()
-
-for (outlierColIdx in 2:(nDev - 1)) {
-    for (outlierRowIdx in 1:(nDev + 1 - outlierColIdx)) {
-        for (pertFac in seq(0.5, 1.5, by = 0.25)) {
-        iterator <- rbind(iterator, c(outlierColIdx, outlierRowIdx, pertFac))
-        }
-    }
-}
-
-iterator <- iter(iterator, by = "row")
-
-foreach(triangleConfig = iterator) %:%
-            foreach(exclColIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "stop") %dopar% {
-
-                    outlierColIdx <- triangleConfig[1]
-                    outlierColIdx <- triangleConfig[2]
-                    pertFac <- triangleConfig[3]
-
-                    distortedTriangle <- singleOutlier(outlierColIdx, outlierRowIdx, pertFac,
-                        initCol = initCol,
-                        devFacs = devFacs,
-                        sigma = sigma)
-
-                    rowResult <- tibble()
-                    for (exclRowIdx in 1:(nDev + 1 - exclColIdx)) {
-
-                        exclude_residuals <- list(c(exclRowIdx, exclColIdx))
-
-                        reserve <- reserveBoot(distortedTriangle, 1e3, exclude_residuals = exclude_residuals)
-
-                        reserveMean <- mean(reserve, na.rm = TRUE)
-
-                        rowResult <- bind_rows(rowResult, tibble(
-                            outlierRowIdx = outlierRowIdx,
-                            outlierColIdx = outlierColIdx,
-                            exclRowIdx = exclRowIdx,
-                            exclColIdx = exclColIdx,
-                            pertFac = pertFac,
-                            reserve = list(reserve),
-                            mean = reserveMean))
-                    }
-
-                    rowResult
-                }
-
-            results <- bind_rows(results, triangleRes)
-
-```
-
-```{r}
-col1 <- rnorm(30)
-col2 <- rnorm(30)
-
-mat <- cbind(col1, col2)
-
-res <- foreach(row1 = iter(mat, by = "row"), .combine = "rbind") %:%
-    foreach(row2 = iter(mat, by = "row"), .combine = "rbind") %dopar% {
-        c(row1[1], row2[1])
-    }
-
-
-
-```
-
-```{r}
-if (!file.exists("results/backtest.RDS")) {
-    saveRDS(results, "results/backtest.RDS")
-}
-
-```
-
-```{r}
-
-plotList <- results %>%
-    group_by(outlierRowIdx, outlierColIdx, pertFac) %>%
-    mutate(exclMean = mean[(exclRowIdx == outlierRowIdx) & (exclColIdx == outlierColIdx)]) %>%
-    ungroup(pertFac) %>% 
-    group_map(~ ggplot(.x) +
-        geom_violin(aes(x = factor(pertFac), y = mean)) +
-            geom_point(aes(factor(pertFac), exclMean), colour = "red") +
-            geom_text(aes(label = sprintf("Outlier: (%d, %d)", .y[[1]], .y[[2]]), x = min(pertFac), y = max(mean)), hjust = "left") +
-            labs(x = NULL, y = NULL)
-    )
-
-p <- marrangeGrob(grobs = plotList,
-    ncol = 2,
-    nrow = 3,
-    top = textGrob("Distribution of bootstrap reserve means for different perturbations", gp = gpar(fontsize = 15)),
-    left = textGrob("Perturbation factor", rot = 90),
-    bottom = textGrob("Bootstrap means"),
-    vp = viewport(width = 0.8, height = 0.8))
-
-ggsave("results/backtest.pdf", p, dpi = "retina", width = 210, height = 297, units = "mm")
-
-
-```
-
-\subsection{Gamma distribution}
-
 The problem with using the above normal model is that it allows for negative samples during the bootstrap simulation. To avoid this, we can use a different distribution which still respects Mack's assumptions. If we take for instance $C_{ij} \sim \Gamma(\alpha, \beta)$, then we must choose $\alpha, \beta$ to satisfy
 \begin{displaymath}
 \begin{cases}
@@ -379,70 +63,409 @@ giving the values
 \end{gather*}
 for the distribution parameters.
 
-```{r, eval = FALSE}
+```{r}
+set.seed(5)
 
-# sequential version of computations in the next chunk; remove 'eval = FALSE' if your setup does not support multithreading
+# extract simulation parameters from benchmark data
+ndev <- ncol(UKMotor)
 
-results <- tibble(
-    row = numeric(),
-    col = numeric(),
-    pert = numeric(),
-    triangle = list(),
-    reserve = list()
-)
+benchmark <- sapply(1:(ndev - 1), function(i) {
 
-for (colIdx in 2:nDev) {
-    for (rowIdx in 1:(nDev + 1 - colIdx)) {
-        for (pert in seq(0.5, 1.5, length.out = 10)) {
-            triangle <- singleOutlierGamma(nDev, initMean, initStd, devFacs, sigma, colIdx, rowIdx, pert = pert)
-            reserve <- bootReserveGamma(triangle, 1e3) %>% list()
-            triangle %<>% list()
-            results %<>% add_row(row = rowIdx, col = colIdx, triangle = triangle, pert = pert, reserve = reserve)
-        }
+    model <- lm(y ~ x + 0,
+        data = data.frame(x = UKMotor[1:(ndev - i), i], y = UKMotor[1:(ndev - i), i + 1]),
+        weights = 1 / UKMotor[1:(ndev - i), i])
+
+    return(c(model$coefficients, summary(model)$sigma))
+})
+
+devfacs <- benchmark[1, ]
+sigmas <- benchmark[2, ]
+sigmas[length(sigmas)] <- sqrt(min(sigmas[(length(sigmas) - 2)]**2, sigmas[length(sigmas) - 1]**2, sigmas[length(sigmas) - 1]**4 / sigmas[(length(sigmas) - 2)]**2))
+
+# simulate triangle
+initcol <- unname(UKMotor[, 1])
+
+claims.triangle <- matrix(ncol = ndev, nrow = ndev)
+claims.triangle[, 1] <- initcol
+
+for (colidx in 2:ndev) {
+    for (rowIdx in 1:(ndev + 1 - colidx)) {
+        prevC <- claims.triangle[rowIdx, colidx - 1]
+        claims.triangle[rowIdx, colidx] <-
+            rnorm(1, devfacs[colidx - 1] * prevC, sigmas[colidx - 1] * sqrt(prevC))
     }
 }
+
+kable(claims.triangle)
 ```
-```{r, cache = TRUE}
 
-results <- foreach(colIdx = 2:(nDev - 1), .combine = "rbind", .errorhandling = "pass") %:%
-    foreach(pert = seq(0.5, 1.5, by = 0.25), .combine = "rbind") %dopar% {
+As expected, the Mack estimator performs very well in this case:
 
-        rowResult <- tibble()
+```{r}
+res <- MackChainLadder(claimsTriangle)
 
-        for (rowIdx in 1:(nDev + 1 - colIdx)) {
-            triangle <- singleOutlier(colIdx, rowIdx, pert,
-                nDev = nDev,
-                initMean = initMean,
-                initStd = initStd,
-                devFacs = devFacs,
-                sigma = sigma)
+print(res$f)
+```
 
-            reserve <- reserveBoot(triangle, 1e3, distribution = "normal")
+-- Describe that there are multiple ways of doing the bootstrap, depending on how parameter estimation error is quantified, assumptions on the residuals and choice of distribution for incorporating process error --
 
-            rowResult <- bind_rows(rowResult, tibble(col = colIdx, row = rowIdx, pert = pert, reserve = list(tibble(reserve = reserve))))
+-- Describe the first class of experiments: we perturb a single observation by drawing from a normal distribution whose mean is multiplied with a given factor. This corresponds to scaling the mean of the corresponding individual development factor from the link ratio adhered to by the rest of the column by that factor. --
+
+```{r}
+
+# create table of experiment configurations
+points <- c()
+
+for (colidx in 2:ndev) {
+    nrows <- ndev + 1 - colidx
+    points <- rbind(points, cbind(1:nrows, rep(colidx, nrows)))
+}
+
+pertfacs <- seq(0.5, 1.5, by = 0.25)
+
+residual.types <- c("parametric", "raw", "scaled")
+bootstrap.types <- c("conditional", "unconditional")
+
+indices <- expand.grid(seq_len(nrow(points)), seq_len(length(pertfacs)), seq_len(length(residual.types)), seq_len(length(bootstrap.types)))
+
+config <- cbind.data.frame(points[indices[, 1], ], pertfacs[indices[, 2]], residual.types[indices[, 3]], bootstrap.types[indices[, 4]])
+
+# experiment loop
+results <- foreach(config = iter(config, by = "row"), .combine = "rbind", .errorhandling = "stop") %dopar% {
+
+                outlier.rowidx <- config[[1]]
+                outlier.colidx <- config[[2]]
+                pertfac <- config[[3]]
+
+                distortedTriangle <- singleOutlier(outlier.rowidx, outlier.colidx, pertfac,
+                    initCol = initcol,
+                    devFacs = devfacs,
+                    sigma = sigmas)
+
+                residuals.type <- config[[4]]
+                bootstrap.type <- config[[5]]
+
+                reserve <- reserveBoot(distortedTriangle, 1e3,
+                    distribution = "normal",
+                    residuals.type = residuals.type,
+                    bootstrap.type = bootstrap.type
+                )
+
+                row <- data.table(
+                    residuals.type = residuals.type,
+                    bootstrap.type = bootstrap.type,
+                    outlier.rowidx = outlier.rowidx,
+                    outlier.colidx = outlier.colidx,
+                    pertfac = pertfac,
+                    reserve = list(reserve))
+
         }
-
-        rowResult
-    }
 
 stopImplicitCluster()
 ```
 
-```{r, eval = FALSE}
-results %<>%
-    mutate(mean = map(reserve, mean, na.rm = TRUE)) %>%
-    unnest_auto(mean)
+For the columns, there seems to be a lot of variation if the perturbation is applied early, which makes it difficult to distinguish problematic points in earlier columns. Later columns seem to exhibit a clearer influence.
+
+For the rows, the reverse it true: perturbations in earlier rows are more easily distinguished than in later ones.
+
+```{r}
+ggplot(results[, .(reserve = unlist(reserve)), by = setdiff(names(results), "reserve")]) +
+    geom_histogram(aes(x = reserve, fill = factor(pertfac))) +
+    facet_wrap(outlier.colidx ~ outlier.rowidx, scales = "free", labeller = "label_both")
+
+ggsave("results/graphs/single_outlier_prestudy_distributions.eps")
+
 ```
 
-```{r, eval = FALSE}
-ggplot(data = results) +
-    geom_point(aes(pert, mean)) +
-    facet_wrap(vars(col))
+```{r}
+methods <- unique(results[, .(residuals.type, bootstrap.type)])
+
+for (i in seq_len(nrow(methods))) {
+
+ggplot(
+    results[residuals.type == methods[i, residuals.type] & bootstrap.type == methods[i, bootstrap.type],
+ .(mean = sapply(reserve, mean, na.rm = TRUE)),
+  by = setdiff(names(results), "reserve")
+  ]) +
+    geom_point(aes(pertfac, mean, colour = outlier.rowidx)) +
+    facet_wrap(vars(outlier.colidx), scales = "free") +
+    labs(x = "Perturbation factor", y = "Bootstrap mean") +
+    ggtitle("Reserve estimates for different perturbed columns",
+        subtitle = sprintf("Residuals type: %s\n Bootstrap type: %s", methods[i, residuals.type], methods[i, bootstrap.type]))
+
+ggsave(sprintf("results/graphs/single_outlier_prestudy_%s_%s.eps", methods[i, residuals.type], methods[i, bootstrap.type]))
+
+}
+
 ```
 
-```{r, eval = FALSE}
-ggplot(data = results) +
-    geom_point(aes(pert, mean)) +
-    facet_wrap(vars(row))
+Now we want to go in the reverse direction: if we start from a perturbed triangle, does removal of the outlying observation create a significant difference in the reserve?
+
+```{r}
+if (exists("results/data_objects/single_outlier.RDS")) {
+
+    readRDS("results/data_objects/single_outlier.RDS")
+
+} else {
+
+    # create table of experiment configurations
+    points <- c()
+
+    for (colidx in 2:ndev) {
+        nrows <- ndev + 1 - colidx
+        points <- rbind(points, cbind(1:nrows, rep(colidx, nrows)))
+    }
+
+    pertfac <- seq(0.5, 1.5, by = 0.25)
+
+    residual.types <- c("parametric", "raw", "scaled")
+    bootstrap.types <- c("conditional", "unconditional")
+    distributions <- c("normal", "gamma")
+
+    indices <- expand.grid(seq_len(nrow(points)), seq_len(length(pertfac)), seq_len(nrow(points)), seq_len(length(residual.types)), seq_len(length(bootstrap.types)), seq_len(length(distributions)))
+
+    config <- cbind.data.frame(points[indices[, 1], ], pertfac[indices[, 2]], points[indices[, 3], ], residual.types[indices[, 4]], bootstrap.types[indices[, 5]], distributions[indices[, 6]])
+
+    # experiment loop
+    results <- foreach(config = iter(config, by = "row"), .combine = "rbind", .errorhandling = "stop") %dopar% {
+
+        outlier.rowidx <- config[[1]]
+        outlier.colidx <- config[[2]]
+        pertfac <- config[[3]]
+        excl.rowidx <- config[[4]]
+        excl.colidx <- config[[5]]
+        resids.type <- config[[6]]
+        bootstrap.type <- config[[7]]
+        distribution <- config[[8]]
+
+        distortedTriangle <- singleOutlier(outlier.rowidx, outlier.colidx, pertfac,
+            initcol = initcol,
+            devfacs = devfacs,
+            sigmas = sigmas,
+        distribution = distribution)
+
+        exclude.residuals <- list(c(excl.rowidx, excl.colidx))
+
+        reserve <- reserveBoot(distortedTriangle, 1e3, exclude.residuals = exclude.residuals, distribution = distribution, resids.type = resids.type, bootstrap.type = bootstrap.type)
+
+        row <- data.table(
+            outlier.rowidx = outlier.rowidx,
+            outlier.colidx = outlier.colidx,
+            pertfac = pertfac,
+            excl.rowidx = excl.rowidx,
+            excl.colidx = excl.colidx,
+            distribution = distribution,
+            resids.type = resids.type,
+            bootstrap.type = bootstrap.type,
+            reserve = list(reserve))
+    }
+
+    stopImplicitCluster()
+
+    results[, c("mean", "sd", "kurtosis") := .(sapply(reserve, mean), sapply(reserve, sd), sapply(reserve, kurtosis))]
+
+    saveRDS(results, "results/data_objects/single_outlier.RDS")
+}
+
 ```
 
+```{r}
+
+options <- expand.grid(pertfac, residual.types, bootstrap.types, distributions)
+
+for (i in nrow(options)) {
+
+    factor <- options[i, 1]
+    resids.type <- options[i, 2]
+    bootstrap.type <- options[i, 3]
+    distribution <- options[i, 4]
+
+
+    ggplot() +
+        geom_density(
+            data = results[resids.type == resids.type, bootstrap.type == bootstrap.type, distribution == distribution, pertfac == factor & outlier.colidx != excl.colidx & outlier.rowidx != excl.rowidx, .(reserve = unlist(reserve)), by = setdiff(names(results), "reserve")],
+            aes(x = reserve, group = excl.colidx), alpha = 0.7,
+        ) +
+        geom_density(
+            data = results[resids.type == resids.type, bootstrap.type == bootstrap.type, distribution == distribution, pertfac == factor & outlier.colidx == excl.colidx & outlier.rowidx == excl.rowidx, .(reserve = unlist(reserve)), by = setdiff(names(results), "reserve")],
+            aes(x = reserve), colour = "red") +
+        facet_wrap(vars(outlier.rowidx, outlier.colidx), scales = "free") +
+        ggtitle("Reserve distributions for different outlier points",
+            subtitle = sprintf("Perturbation factor: %f", factor))
+
+    ggsave(sprintf("results/graphs/single_outlier/densities_distribution_%s_pertfac_%f_residstype_%s_bootstraptype_%s.eps", distribution, factor, resids.type, bootstrap.type))
+
+}
+```
+
+```{r}
+ggplot(results) +
+    geom_violin(aes(factor(pertfac), mean)) +
+    geom_point(data = results[outlier.colidx == excl.colidx & outlier.rowidx == excl.rowidx], aes(factor(pertfac), mean), colour = "red") +
+    facet_wrap(vars(outlier.colidx, outlier.rowidx), scales = "free", labeller = "label_both") +
+    ggtitle("Reserve mean for different outlier points")
+
+ggsave("results/graphs/single_outlier/normal_mean.eps")
+
+ggplot(results) +
+    geom_violin(aes(factor(pertfac), sd)) +
+    geom_point(data = results[outlier.colidx == excl.colidx & outlier.rowidx == excl.rowidx], aes(factor(pertfac), sd), colour = "red") +
+    facet_wrap(vars(outlier.colidx, outlier.rowidx), scales = "free", labeller = "label_both") +
+    ggtitle("Reserve sd for different outlier points")
+
+ggsave("results/graphs/single_outlier/normal_sd.eps")
+
+ggplot(results) +
+    geom_violin(aes(factor(pertfac), kurtosis)) +
+    geom_point(data = results[outlier.colidx == excl.colidx & outlier.rowidx == excl.rowidx], aes(factor(pertfac), kurtosis), colour = "red") +
+    facet_wrap(vars(outlier.colidx, outlier.rowidx), scales = "free", labeller = "label_both") +
+    ggtitle("Reserve kurtosis for different outlier points")
+
+ggsave("results/graphs/single_outlier/normal_kurtosis.eps")
+
+```
+
+```{r}
+
+```
+
+\section{Perturbing a calendar year}
+
+Now instead of perturbing a single observation, we perturb an entire calendar year.
+
+```{r}
+if (exists("results/data_objects/calendar_year.RDS")) {
+
+    readRDS("results/data_objects/calendar_year.RDS")
+
+} else {
+
+    # create table of experiment configurations
+    diagidx <- 0:6
+    pertfac <- seq(0.5, 1.5, by = 0.25)
+
+    indices <- expand.grid(seq_len(length(diagidx)), seq_len(length(pertfac)), seq_len(length(diagidx)))
+
+    config <- cbind(diagidx[indices[, 1]], pertfac[indices[, 2]], diagidx[indices[, 3]])
+
+    # experiment loop
+    results <- foreach(config = iter(config, by = "row"), .combine = "rbind", .errorhandling = "stop") %dopar% {
+
+        outlier.diagidx <- config[1]
+        pertfac <- config[2]
+
+        distorted.triangle <- calendarOutlier(outlier.diagidx, pertfac,
+            initcol = initcol,
+            devfacs = devfacs,
+            sigmas = sigmas)
+
+        excl.diagidx <- config[3]
+
+        exclude.residuals <- list()
+
+        for (colidx in 2:ndev) {
+            diag.rowidx <- ndev + 1 - excl.diagidx - colidx
+            if (diag.rowidx > 0) {
+                exclude.residuals <- c(exclude.residuals, list(c(diag.rowidx, colidx)))
+            }
+        }
+
+        reserve <- reserveBoot(distorted.triangle, 1e3, exclude.residuals = exclude.residuals)
+
+        row <- data.table(
+            outlier.diagidx = outlier.diagidx,
+            pertfac = pertfac,
+            excl.diagidx = excl.diagidx,
+            reserve = list(reserve))
+
+    }
+
+    stopImplicitCluster()
+
+    results[, c("mean", "sd", "kurtosis") := .(sapply(reserve, mean), sapply(reserve, sd), sapply(reserve, kurtosis))]
+
+    saveRDS(results, "results/data_objects/calendar_year.RDS")
+}
+
+```
+
+```{r}
+ggplot(results) +
+    geom_violin(aes(factor(pertfac), mean)) +
+    geom_point(data = results[outlier.diagidx == excl.diagidx], aes(factor(pertfac), mean)) +
+    facet_wrap(vars(outlier.diagidx), scales = "free", labeller = "label_both") +
+    ggtitle("Reserve mean for different outlier points")
+
+ggsave("results/graphs/calendar_outlier_mean.eps")
+
+ggplot(results) +
+    geom_violin(aes(factor(pertfac), sd)) +
+    geom_point(data = results[outlier.diagidx == excl.diagidx], aes(factor(pertfac), sd)) +
+    facet_wrap(vars(outlier.diagidx), scales = "free", labeller = "label_both") +
+    ggtitle("Reserve sd for different outlier points")
+
+ggsave("results/graphs/calendar_outlier_sd.eps")
+
+ggplot(results) +
+    geom_violin(aes(factor(pertfac), kurtosis)) +
+    geom_point(data = results[outlier.diagidx == excl.diagidx], aes(factor(pertfac), kurtosis)) +
+    facet_wrap(vars(outlier.diagidx), scales = "free", labeller = "label_both") +
+    ggtitle("Reserve kurtosis for different outlier points")
+
+ggsave("results/graphs/calendar_outlier_kurtosis.eps")
+
+```
+
+
+\section{Perturbing an accident year}
+
+```{r}
+if (exists("results/data_objects/calendar_year.RDS")) {
+
+    readRDS("results/data_objects/calendar_year.RDS")
+
+} else {
+
+    # create table of experiment configurations
+    points <- c()
+
+    for (colIdx in 2:ndev) {
+        nRows <- ndev + 1 - colIdx
+        points <- rbind(points, cbind(1:nRows, rep(colIdx, nRows)))
+    }
+
+    pertFac <- seq(0.5, 1.5, by = 0.25)
+
+    indices <- expand.grid(seq_len(nrow(points)), seq_len(length(pertFac)), seq_len(nrow(points)))
+
+    config <- cbind(points[indices[, 1], ], pertFac[indices[, 2]], points[indices[, 3], ])
+
+    # experiment loop
+    singleOutlierResult <- foreach(config = iterator(config, by = "row"), .combine = "rbind", .errorhandling = "stop") %dopar% {
+
+        outlierRowIdx <- config[1]
+        outlierColIdx <- config[2]
+        pertFac <- config[3]
+
+        distortedTriangle <- singleOutlier(outlierColIdx, outlierRowIdx, pertFac,
+            initCol = initCol,
+            devFacs = devFacs,
+            sigma = sigma)
+
+        exclRowIdx <- config[4]
+        exclColIdx <- config[5]
+
+        exclude_residuals <- list(c(exclRowIdx, exclColIdx))
+
+        reserve <- reserveBoot(distortedTriangle, 1e3, exclude_residuals = exclude_residuals)
+
+        row <- data.table(outlierRowIdx = outlierRowIdx, outlierColIdx = outlierColIdx, pertFac = pertFac, exclRowIdx = exclRowIdx, exclColIdx = exclColIdx)
+
+    }
+
+    results[]
+
+    saveRDS(results, "results/data_objects/calendar_year.RDS")
+}
+
+```
