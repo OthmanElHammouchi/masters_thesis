@@ -138,16 +138,16 @@ results <- foreach(config = iter(config, by = "row"), .combine = "rbind", .error
                 pertfac <- config[[3]]
 
                 distortedTriangle <- singleOutlier(outlier.rowidx, outlier.colidx, pertfac,
-                    initCol = initcol,
-                    devFacs = devfacs,
-                    sigma = sigmas)
+                    initcol = initcol,
+                    devfacs = devfacs,
+                    sigmas = sigmas)
 
                 residuals.type <- config[[4]]
                 bootstrap.type <- config[[5]]
 
-                reserve <- reserveBoot(distortedTriangle, 1e3,
-                    distribution = "normal",
-                    residuals.type = residuals.type,
+                reserve <- reserveBootFortran(distortedTriangle, 1e3,
+                    distribution = "gamma",
+                    resids.type = residuals.type,
                     bootstrap.type = bootstrap.type
                 )
 
@@ -226,7 +226,7 @@ if (exists("results/data_objects/single_outlier.RDS")) {
 
     config <- cbind.data.frame(points[indices[, 1], ], pertfac[indices[, 2]], points[indices[, 3], ], residual.types[indices[, 4]], bootstrap.types[indices[, 5]], distributions[indices[, 6]])
 
-    # experiment loop
+#     # experiment loop
     results <- foreach(config = iter(config, by = "row"), .combine = "rbind", .errorhandling = "stop") %dopar% {
 
         outlier.rowidx <- config[[1]]
@@ -246,7 +246,12 @@ if (exists("results/data_objects/single_outlier.RDS")) {
 
         exclude.residuals <- list(c(excl.rowidx, excl.colidx))
 
-        reserve <- reserveBoot(distortedTriangle, 1e3, exclude.residuals = exclude.residuals, distribution = distribution, resids.type = resids.type, bootstrap.type = bootstrap.type)
+        reserve <- reserveBootFortran(distortedTriangle, 1e3,
+            excl.resids = exclude.residuals,
+            distribution = distribution,
+            resids.type = resids.type,
+            bootstrap.type = bootstrap.type
+        )
 
         row <- data.table(
             outlier.rowidx = outlier.rowidx,
@@ -270,7 +275,10 @@ if (exists("results/data_objects/single_outlier.RDS")) {
 ```
 
 ```{r}
+unique(results[(mean < 0 | is.nan(mean)) & distribution == "gamma"]$resids.type)
+```
 
+```{r}
 options <- expand.grid(pertfac, residual.types, bootstrap.types, distributions)
 
 for (i in nrow(options)) {

@@ -88,7 +88,6 @@ MODULE random
 
    !     Author: Alan Miller
    !     e-mail: amiller @ bigpond.net.au
-
    IMPLICIT NONE
    REAL, PRIVATE      :: zero = 0.0, half = 0.5, one = 1.0, two = 2.0,   &
       vsmall = TINY(1.0), vlarge = HUGE(1.0)
