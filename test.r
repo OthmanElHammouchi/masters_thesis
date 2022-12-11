@@ -15,140 +15,57 @@ suppressPackageStartupMessages({
     source("pattern_break.r")
 })
 
-suppressMessages({
-    knitr::opts_chunk$set(echo = FALSE)
+suppressWarnings({
+    triangle <- unname(UKMotor)
+    initcol <- triangle[, 1]
+    devfacs <- MackChainLadder(triangle)$f
+    sigmas <- MackChainLadder(triangle)$sigma
 })
 
-set.seed(5)
+points <- cbind(row(triangle)[!is.na(triangle)], col(triangle)[!is.na(triangle)])
 
-# extract simulation parameters from benchmark data
-ndev <- ncol(UKMotor)
+factor <- seq(0.5, 1.5, by = 0.25)
+resids.type <- c("parametric", "raw", "scaled")
+boot.type <- c("conditional", "unconditional")
+dist <- c("normal", "gamma")
 
-benchmark <- sapply(1:(ndev - 1), function(i) {
+config <- genConfig(points, factor, points, resids.type, boot.type, dist)
 
-    model <- lm(y ~ x + 0,
-        data = data.frame(x = UKMotor[1:(ndev - i), i], y = UKMotor[1:(ndev - i), i + 1]),
-        weights = 1 / UKMotor[1:(ndev - i), i])
+names(config) <- c("outlier.rowidx", "outlier.colidx", "factor", "excl.rowidx", "excl.colidx", "resids.type", "boot.type", "dist")
 
-    return(c(model$coefficients, summary(model)$sigma))
-})
+config <- config[!(config$dist == "gamma" &  config$resids.type == "parametric"), ]
 
-devfacs <- benchmark[1, ]
-sigmas <- benchmark[2, ]
-sigmas[length(sigmas)] <- sqrt(min(sigmas[(length(sigmas) - 2)]**2, sigmas[length(sigmas) - 1]**2, sigmas[length(sigmas) - 1]**4 / sigmas[(length(sigmas) - 2)]**2))
+config <- config[config$outlier.colidx != 1 & config $excl.colidx != 1, ]
 
-# simulate triangle
-initcol <- unname(UKMotor[, 1])
+nconfig <- nrow(config)
+nboot <- 1e3
 
-claims.triangle <- matrix(ncol = ndev, nrow = ndev)
-claims.triangle[, 1] <- initcol
+results <- config
+results[, "reserve"] <- list(rep(0, nconfig))
 
-for (colidx in 2:ndev) {
-    for (rowIdx in 1:(ndev + 1 - colidx)) {
-        prevC <- claims.triangle[rowIdx, colidx - 1]
-        claims.triangle[rowIdx, colidx] <-
-            rnorm(1, devfacs[colidx - 1] * prevC, sigmas[colidx - 1] * sqrt(prevC))
-    }
-}
+progress.bar <- txtProgressBar(min = 0, max = nconfig, initial = 0, style = 3)
 
-# create table of experiment configurations
-points <- c()
+for (rowidx in seq_len(nconfig)) {
 
-for (colidx in 2:ndev) {
-    nrows <- ndev + 1 - colidx
-    points <- rbind(points, cbind(1:nrows, rep(colidx, nrows)))
-}
+    setTxtProgressBar(progress.bar, rowidx)
 
-pertfac <- seq(0.5, 1.5, by = 0.25)
+    row <- config[rowidx, ]
 
-residual.types <- c("parametric", "raw", "scaled")
-bootstrap.types <- c("conditional", "unconditional")
-distributions <- c("normal", "gamma")
-
-indices <- expand.grid(
-    seq_len(nrow(points)),
-    seq_len(length(pertfac)),
-    seq_len(nrow(points)),
-    seq_len(length(residual.types)),
-    seq_len(length(bootstrap.types)),
-    seq_len(length(distributions))
-)
-
-config <- cbind.data.frame(
-    points[indices[, 1], ],
-    pertfac[indices[, 2]],
-    points[indices[, 3], ],
-    residual.types[indices[, 4]],
-    bootstrap.types[indices[, 5]],
-    distributions[indices[, 6]]
-)
-
-names(config) <- c(
-    "outlier.rowidx",
-    "outlier.colidx",
-    "perfac",
-    "excl.rowidx",
-    "excl.colidx",
-    "resids.type",
-    "bootstrap.type",
-    "distribution"
-)
-
-config <- config[!(config$distribution == "gamma" & config$resids.type == "parametric"), ]
-
-# experiment loop
-results <- foreach(config = iter(config, by = "row"), .combine = "rbind", .errorhandling = "stop") %do% {
-
-    outlier.rowidx <- config[[1]]
-    outlier.colidx <- config[[2]]
-    pertfac <- config[[3]]
-    excl.rowidx <- config[[4]]
-    excl.colidx <- config[[5]]
-    resids.type <- config[[6]]
-    bootstrap.type <- config[[7]]
-    distribution <- config[[8]]
-
-    distortedTriangle <- singleOutlier(outlier.rowidx, outlier.colidx, pertfac,
+    triangle <- singleOutlier(row$outlier.rowidx, row$outlier.colidx, row$factor,
         initcol = initcol,
         devfacs = devfacs,
         sigmas = sigmas,
-    distribution = distribution)
+        dist = row$dist)
 
-    exclude.residuals <- list(c(excl.rowidx, excl.colidx))
-
-    reserve <- reserveBootFortran(distortedTriangle, 1e3,
-        excl.resids = exclude.residuals,
-        distribution = distribution,
-        resids.type = resids.type,
-        bootstrap.type = bootstrap.type
-    )
-
-    row <- data.table(
-        outlier.rowidx = outlier.rowidx,
-        outlier.colidx = outlier.colidx,
-        pertfac = pertfac,
-        excl.rowidx = excl.rowidx,
-        excl.colidx = excl.colidx,
-        distribution = distribution,
-        resids.type = resids.type,
-        bootstrap.type = bootstrap.type,
-        reserve = list(reserve))
+    results$reserve[rowidx] <- list(reserveBootFortran(triangle, nboot,
+        resids.type = row$resids.type,
+        boot.type = row$boot.type,
+        dist = row$dist,
+        excl.resids = matrix(c(row$excl.rowidx, row$excl.colidx), nrow = 2)))
 }
 
-##########################################
+close(progress.bar)
 
-# triangle <- unname(UKMotor)
-# initcol <- triangle[, 1]
-# devfacs <- MackChainLadder(triangle)$f
-# sigmas <- MackChainLadder(triangle)$sigmas
+saveRDS(results, "results/data_objects/single_outlier.RDS")
 
-# singleOutlier(1, 2, 1.5,
-#     initcol = initcol,
-#     devfacs = devfacs,
-#     sigmas = sigmas, 
-#     distribution = "gamma")
-
-# reserve <- reserveBoot(triangle, 1e3,
-#     distribution = "gamma",
-#     bootstrap.type = "unconditional",
-#     resids.type = "raw")
+means <- sapply(results$reserve, mean, na.rm = TRUE)

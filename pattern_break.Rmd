@@ -222,11 +222,9 @@ if (exists("results/data_objects/single_outlier.RDS")) {
     bootstrap.types <- c("conditional", "unconditional")
     distributions <- c("normal", "gamma")
 
-    indices <- expand.grid(seq_len(nrow(points)), seq_len(length(pertfac)), seq_len(nrow(points)), seq_len(length(residual.types)), seq_len(length(bootstrap.types)), seq_len(length(distributions)))
+    config <- genConfig(points, pertfac, points, residual.types, bootstrap.types, distributions)
 
-    config <- cbind.data.frame(points[indices[, 1], ], pertfac[indices[, 2]], points[indices[, 3], ], residual.types[indices[, 4]], bootstrap.types[indices[, 5]], distributions[indices[, 6]])
-
-#     # experiment loop
+    # experiment loop
     results <- foreach(config = iter(config, by = "row"), .combine = "rbind", .errorhandling = "stop") %dopar% {
 
         outlier.rowidx <- config[[1]]

@@ -25,7 +25,8 @@ subroutine reserve_boot(n_boot, n_dev, triangle, reserve, &
    distribution, resids_type, bootstrap_type, excl_resids, excl_resids_n_cols)
 
    use random, only: norm => random_normal, gamma => random_gamma
-   use iso_fortran_env, only: dp => real64
+   use, intrinsic :: iso_fortran_env, only: dp => real64
+   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
 
    implicit none
 
@@ -47,15 +48,13 @@ subroutine reserve_boot(n_boot, n_dev, triangle, reserve, &
    real(dp) :: dev_facs(n_dev - 1), sigmas(n_dev - 1), latest(n_dev), &
       indiv_dev_facs(n_dev - 1, n_dev - 1), resids(n_dev - 1, n_dev - 1), &
       scale_facs(n_dev - 1, n_dev - 1), resampled_triangle(n_dev, n_dev), &
-      boot_resids(n_dev - 1, n_dev - 1), boot_indiv_dev_facs(n_dev - 1, n_dev - 1), &
-      boot_dev_facs(n_dev - 1), boot_sigmas(n_dev - 1), boot_triangle(n_dev, n_dev)
+      resids_boot(n_dev - 1, n_dev - 1), indiv_dev_facs_boot(n_dev - 1, n_dev - 1), &
+      dev_facs_boot(n_dev - 1), sigmas_boot(n_dev - 1), triangle_boot(n_dev, n_dev)
 
    real(dp), allocatable :: flat_resids(:)
    real(dp) :: gamma_shape, gamma_rate
 
    real(dp) :: flat_resampled_triangle(n_dev**2)
-
-   integer :: fileunit
 
    n_resids = ((n_dev - 1)**2 + (n_dev - 1))/2 - 1
 
@@ -105,7 +104,7 @@ subroutine reserve_boot(n_boot, n_dev, triangle, reserve, &
       end if
       do j = 1, n_dev - 1
          do i = 1, n_dev - j
-            boot_resids(i, j) = flat_resids(1 + int(n_resids * rand()))
+            resids_boot(i, j) = flat_resids(1 + int(n_resids * rand()))
          end do
       end do
 
@@ -115,17 +114,17 @@ subroutine reserve_boot(n_boot, n_dev, triangle, reserve, &
 
             n_rows = n_dev - j
 
-            boot_indiv_dev_facs(1:n_rows, j) = dev_facs(j) + boot_resids(1:n_rows, j) * sigmas(j) / sqrt(triangle(1:n_rows, j))
+            indiv_dev_facs_boot(1:n_rows, j) = dev_facs(j) + resids_boot(1:n_rows, j) * sigmas(j) / sqrt(triangle(1:n_rows, j))
 
-            boot_dev_facs(j) = sum(triangle(1:n_rows, j) * boot_indiv_dev_facs(1:n_rows, j)) / sum(triangle(1:n_rows, j))
+            dev_facs_boot(j) = sum(triangle(1:n_rows, j) * indiv_dev_facs_boot(1:n_rows, j)) / sum(triangle(1:n_rows, j))
 
             if (j < n_dev - 1) then
-               boot_sigmas(j) = sqrt(sum(triangle(1:n_rows, j) * &
-                  (boot_indiv_dev_facs(1:n_rows, j) - boot_dev_facs(j)) ** 2) / (n_rows - 1))
+               sigmas_boot(j) = sqrt(sum(triangle(1:n_rows, j) * &
+                  (indiv_dev_facs_boot(1:n_rows, j) - dev_facs_boot(j)) ** 2) / (n_rows - 1))
             else
-               boot_sigmas(j) = sqrt(min(boot_sigmas(j - 1) ** 2, &
-                  boot_sigmas(j - 2) ** 2, &
-                  boot_sigmas(j - 1) ** 4 / boot_sigmas(j - 2) ** 2))
+               sigmas_boot(j) = sqrt(min(sigmas_boot(j - 1) ** 2, &
+                  sigmas_boot(j - 2) ** 2, &
+                  sigmas_boot(j - 1) ** 4 / sigmas_boot(j - 2) ** 2))
             end if
          end do
       else if (bootstrap_type == 2) then
@@ -133,21 +132,21 @@ subroutine reserve_boot(n_boot, n_dev, triangle, reserve, &
          do j = 2, n_dev
             n_rows = n_dev + 1 - j
             resampled_triangle(1:n_rows, j) = dev_facs(j - 1) * resampled_triangle(1:n_rows, j - 1) + &
-               sigmas(j - 1) * sqrt(resampled_triangle(1:n_rows, j - 1)) * boot_resids(1:n_rows, j - 1)
+               sigmas(j - 1) * sqrt(resampled_triangle(1:n_rows, j - 1)) * resids_boot(1:n_rows, j - 1)
 
-            boot_indiv_dev_facs(1:n_rows, j - 1) = dev_facs(j - 1) + boot_resids(1:n_rows, j - 1) * &
+            indiv_dev_facs_boot(1:n_rows, j - 1) = dev_facs(j - 1) + resids_boot(1:n_rows, j - 1) * &
                sigmas(j - 1) / sqrt(resampled_triangle(1:n_rows, j - 1))
 
-            boot_dev_facs(j - 1) = sum(resampled_triangle(1:n_rows, j - 1) * &
-               boot_indiv_dev_facs(1:n_rows, j - 1)) / sum(resampled_triangle(1:n_rows, j - 1))
+            dev_facs_boot(j - 1) = sum(resampled_triangle(1:n_rows, j - 1) * &
+               indiv_dev_facs_boot(1:n_rows, j - 1)) / sum(resampled_triangle(1:n_rows, j - 1))
 
             if (j < n_dev) then
-               boot_sigmas(j - 1) = sqrt(sum(resampled_triangle(1:n_rows, j - 1) * &
-                  (boot_indiv_dev_facs(1:n_rows, j - 1) - boot_dev_facs(j - 1)) ** 2) / (n_rows - 1))
+               sigmas_boot(j - 1) = sqrt(sum(resampled_triangle(1:n_rows, j - 1) * &
+                  (indiv_dev_facs_boot(1:n_rows, j - 1) - dev_facs_boot(j - 1)) ** 2) / (n_rows - 1))
             else
-               boot_sigmas(j - 1) = sqrt(min(boot_sigmas(j - 2) ** 2, &
-                  boot_sigmas(j - 3) ** 2, &
-                  boot_sigmas(j - 2) ** 4 / boot_sigmas(j - 3) ** 2))
+               sigmas_boot(j - 1) = sqrt(min(sigmas_boot(j - 2) ** 2, &
+                  sigmas_boot(j - 3) ** 2, &
+                  sigmas_boot(j - 2) ** 4 / sigmas_boot(j - 3) ** 2))
             end if
          end do
          
@@ -159,93 +158,44 @@ subroutine reserve_boot(n_boot, n_dev, triangle, reserve, &
 
       end if
 
-      boot_triangle = triangle
+      triangle_boot = triangle
 
       if (distribution == 1) then
          do i_diag = 1, n_dev - 1
             do i = i_diag + 1, n_dev
                j = n_dev + i_diag + 1 - i
-               boot_triangle(i, j) = boot_dev_facs(j - 1) * boot_triangle(i, j - 1) + &
-               norm()*real((boot_sigmas(j - 1) * sqrt(boot_triangle(i, j - 1) )))
+               triangle_boot(i, j) = dev_facs_boot(j - 1) * triangle_boot(i, j - 1) + &
+               norm()*real((sigmas_boot(j - 1) * sqrt(triangle_boot(i, j - 1) )))
             end do
          end do
 
          do j = 1, n_dev
-            latest(j) = boot_triangle(n_dev + 1 - j, j)
+            latest(j) = triangle_boot(n_dev + 1 - j, j)
          end do
 
-         reserve(i_boot) = sum(boot_triangle(:, n_dev)) - sum(latest)
+         reserve(i_boot) = sum(triangle_boot(:, n_dev)) - sum(latest)
 
-      else
+      else if (distribution == 2) then
          do i_diag = 1, n_dev - 1
             do i = i_diag + 1, n_dev
                j = n_dev + i_diag + 1 - i
-               gamma_shape = (boot_dev_facs(j - 1)**2 * boot_triangle(i, j - 1)) / (boot_sigmas(j - 1) **2)
-               gamma_rate = boot_dev_facs(j - 1) / (boot_sigmas(j - 1) ** 2)
-               if (gamma_shape <= 0)  then
-                  open(newunit=fileunit, file = "/home/othman/repos/masters_thesis/log/log")
-                  write(fileunit, "(a, /, /)") "NONPOSITIVE GAMMA SHAPE"
-                  write(fileunit, "(/, /, 'point: ', 2i2)") i, j                  
-                  write(fileunit, "(/, /, 'bootstrap type: ', i2)") bootstrap_type
-                  write(fileunit, "(/, /, 'residuals type: ', i2)") resids_type
-                  write(fileunit, "(/, /, 'distribution: ', i2)") distribution
-                  write(fileunit, "(/, /, 'dev_facs: ', 6f15.7)") dev_facs
-                  write(fileunit, "(/, /, 'sigmas: ', 6f15.7)") sigmas
-                  write(fileunit, "(/, /, 'boot_dev_facs: ', 6f15.7)") boot_dev_facs
-                  write(fileunit, "(/, /, 'boot_sigmas: '6f15.7)") boot_sigmas
-                  if (bootstrap_type == 2) then
-                     write(fileunit, "(/, /, a)") "resampled_triangle: "
-                     do k = 1, n_dev
-                        write(fileunit, "(7f15.7)") resampled_triangle(k, :)
-                     end do
-                  end if
-                  write(fileunit, "(/, /, a)") "boot_triangle: "
-                  do k = 1, n_dev
-                     write(fileunit, "(7f15.7)") boot_triangle(k, :)
-                  end do
-                  write(fileunit, "(/, /, a)") "boot_resids: "
-                  do k = 1, n_dev - 1
-                     write(fileunit, "(6f20.7)") boot_resids(k, :)
-                  end do
-                  write(fileunit, "(/, /, a)") "resids: "
-                  do k = 1, n_dev - 1
-                     write(fileunit, "(6f20.7)") resids(k, :)
-                  end do
-                  write(fileunit, "(/, /, 'excl_resids: ', g10.3, /, g10.3)") excl_resids(1, 1), excl_resids(2, 1)
-                  stop
-               else 
-                  boot_triangle(i, j) = real(gamma(real(gamma_shape), .true.)/real(gamma_rate), dp) 
-                  if ((boot_triangle(i, j) - 0) < 1e-5) then
-                     open(newunit=fileunit, file = "/home/othman/repos/masters_thesis/log/log")
-                     write(fileunit, "(/, /, 'point: ', 2i2)") i, j                  
-                     write(fileunit, "(/, /, 'bootstrap type: ', i2)") bootstrap_type
-                     write(fileunit, "(/, /, 'residuals type: ', i2)") resids_type
-                     write(fileunit, "(/, /, 'distribution: ', i2)") distribution
-                     write(fileunit, "(/, /, 'dev_facs: ', 6f15.7)") dev_facs
-                     write(fileunit, "(/, /, 'sigmas: ', 6f15.7)") sigmas
-                     write(fileunit, "(/, /, 'boot_dev_facs: ', 6f15.7)") boot_dev_facs
-                     write(fileunit, "(/, /, 'boot_sigmas: '6f15.7)") boot_sigmas
-                     if (bootstrap_type == 2) then
-                        write(fileunit, "(/, /, a)") "resampled_triangle: "
-                        do k = 1, n_dev
-                           write(fileunit, "(7f15.7)") resampled_triangle(k, :)
-                        end do
-                     end if
-                     write(fileunit, "(/, /, a)") "boot_triangle: "
-                     do k = 1, n_dev
-                        write(fileunit, "(7f15.7)") boot_triangle(k, :)
-                     end do
-                     stop
-                  end if
+               gamma_shape = (dev_facs_boot(j - 1)**2 * triangle_boot(i, j - 1)) / sigmas_boot(j - 1) **2
+               if (gamma_shape <= tiny(1.0)) then
+                  cycle main_loop
+               end if
+               gamma_rate = dev_facs_boot(j - 1) / sigmas_boot(j - 1) ** 2
+               triangle_boot(i, j) = real(gamma(real(gamma_shape), .true.)/real(gamma_rate), dp) 
+               if (triangle_boot(i, j) <= 0) then
+                  cycle main_loop
                end if
             end do
          end do
 
          do j = 1, n_dev
-            latest(j) = boot_triangle(n_dev + 1 - j, j)
+            latest(j) = triangle_boot(n_dev + 1 - j, j)
          end do
 
-         reserve(i_boot) = sum(boot_triangle(:, n_dev)) - sum(latest)
+         reserve(i_boot) = sum(triangle_boot(:, n_dev)) - sum(latest)
       end if
 
    end do main_loop
