@@ -1,19 +1,24 @@
-FC=gfortran
-FCFLAGS= -g -fcheck=all
+FC = gfortran
+FCFLAGS = -g -fcheck=all -cpp -fbounds-check
 
-build/reserve_boot.so: src/reserve_boot.f90 build/random.o
-	$(FC) $(FCFLAGS) -fPIC -shared $^ -o $@ -I./lib 
+SRC_DIR = src
+BUILD_DIR = build
 
-build/random.o: src/random.f90
-	$(FC) $(FCFLAGS) -c $^ -o $@ -J./lib 
+SRCS = $(wildcard $(SRC_DIR)/*.f90)
+OBJS = $(patsubst $(SRC_DIR)/%.f90, $(BUILD_DIR)/%.o, $(SRCS))
 
-build/ranlib.o: src/ranlib77.f
-	$(FC) $(FCFLAGS) -fPIC -std=legacy -c $^ -o $@ -J./lib
+all: $(OBJS)
 
-.PHONY: test
-test: test/test.f90 build/reserve_boot.so
-	$(FC) $(FCFLAGS) -Wl,-rpath=./build $^ -o test/test
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.f90
+	$(FC) $(FCFLAGS) -fPIC -c $^ -o $@ -J./lib
 
-.PHONY: clean
+$(BUILD_DIR)/reserve_boot.so: $(SRCS) $(OBJS)
+	$(FC) $(FCFLAGS) -fPIC -shared $^ -o $@ -I./lib -J./lib
+
+.PHONY: test clean
+
+test: test/test.f90 $(OBJS)
+	$(FC) $(FCFLAGS) -Wl,-rpath=./build $^ -o test/test -I./lib
+
 clean:
 	rm -rf build/* lib/*

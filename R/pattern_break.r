@@ -1,3 +1,5 @@
+library(data.table)
+
 reserveBoot <- function(triangle, nboot, ...,
     resids.type = "raw",
     boot.type = "conditional",
@@ -432,5 +434,5 @@ genConfig <- function(...) {
 
     config <- do.call(cbind.data.frame, config.args)
 
-    return(config)
+    return(as.data.table(config))
 }

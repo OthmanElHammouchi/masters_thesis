@@ -331,10 +331,6 @@ ggsave("results/graphs/single_outlier/normal_kurtosis.eps")
 
 ```
 
-```{r}
-
-```
-
 \section{Perturbing a calendar year}
 
 Now instead of perturbing a single observation, we perturb an entire calendar year.
