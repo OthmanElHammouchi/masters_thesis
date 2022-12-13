@@ -41,50 +41,78 @@ for (colidx in 2:ndev) {
 
 }
 
+# points <- cbind(row(triangle)[!is.na(triangle)], col(triangle)[!is.na(triangle)])
+
+# factor <- seq(0.5, 1.5, by = 0.25)
+# resids.type <- c("parametric", "raw", "scaled")
+# boot.type <- c("conditional", "unconditional")
+# dist <- c("normal", "gamma")
+
+# config <- genConfig(points, factor, points, resids.type, boot.type, dist)
+# config <- config[!(config$dist == "gamma" &  config$resids.type == "parametric"), ]
+# config <- config[config$outlier.colidx != 1 & config $excl.colidx != 1, ]
+
+# names(config) <- c("outlier.rowidx", "outlier.colidx", "factor", "excl.rowidx", "excl.colidx", "resids.type", "boot.type", "dist")
+
+# nconfig <- nrow(config)
+# nboot <- 1e3
+
+# results <- config
+# results[, "reserve"] <- list(rep(0, nconfig))
+
+# progress.bar <- txtProgressBar(min = 0, max = nconfig, initial = 0, style = 3)
+
+# for (rowidx in seq_len(nconfig)) {
+
+#     setTxtProgressBar(progress.bar, rowidx)
+
+#     row <- config[rowidx, ]
+
+#     triangle <- with(row, singleOutlier(outlier.rowidx, outlier.colidx, factor,
+#         initcol = initcol,
+#         devfacs = devfacs,
+#         sigmas = sigmas,
+#         dist = dist))
+
+#     results$reserve[rowidx] <- with(row, list(reserveBootFortran(triangle, nboot,
+#         resids.type = resids.type,
+#         boot.type = boot.type,
+#         dist = dist,
+#         excl.resids = matrix(c(excl.rowidx, excl.colidx), nrow = 2))))
+# }
+
+# results <- as.data.table(results)[, .(reserve = unlist(reserve)), by = setdiff(names(results), "reserve")]
+
+# close(progress.bar)
+
+# saveRDS(results, "results/data_objects/single_outlier.RDS")
+
+#################
+
 points <- cbind(row(triangle)[!is.na(triangle)], col(triangle)[!is.na(triangle)])
 
 factor <- seq(0.5, 1.5, by = 0.25)
-resids.type <- c("parametric", "raw", "scaled")
-boot.type <- c("conditional", "unconditional")
-dist <- c("normal", "gamma")
+resids.type <- c(1, 2, 3)
+boot.type <- c(1, 2)
+dist <- c(1, 2)
 
 config <- genConfig(points, factor, points, resids.type, boot.type, dist)
 
 names(config) <- c("outlier.rowidx", "outlier.colidx", "factor", "excl.rowidx", "excl.colidx", "resids.type", "boot.type", "dist")
 
-config <- config[!(config$dist == "gamma" &  config$resids.type == "parametric"), ]
 
+config <- config[!(config$dist == 2 & config$resids.type == 3), ]
 config <- config[config$outlier.colidx != 1 & config $excl.colidx != 1, ]
 
 nconfig <- nrow(config)
 nboot <- 1e3
 
-results <- config
-results[, "reserve"] <- list(rep(0, nconfig))
+dyn.load("fortran/build/reserve_sim.so")
 
-progress.bar <- txtProgressBar(min = 0, max = nconfig, initial = 0, style = 3)
+results <- matrix(rep(0, nconfig * nboot * (ncol(config) + 1)), nrow = nboot * nconfig, ncol = ncol(config) + 1)
 
-for (rowidx in seq_len(nconfig)) {
+triangle[is.na(triangle)] <- 0
 
-    setTxtProgressBar(progress.bar, rowidx)
+res <- .Fortran("reserve_sim", triangle = triangle, nboot = as.integer(nboot), ndev = ndev, config = as.matrix(config), nconfig = nconfig, results = results)
 
-    row <- config[rowidx, ]
-
-    triangle <- with(row, singleOutlier(outlier.rowidx, outlier.colidx, factor,
-        initcol = initcol,
-        devfacs = devfacs,
-        sigmas = sigmas,
-        dist = dist))
-
-    results$reserve[rowidx] <- with(row, list(reserveBootFortran(triangle, nboot,
-        resids.type = resids.type,
-        boot.type = boot.type,
-        dist = dist,
-        excl.resids = matrix(c(excl.rowidx, excl.colidx), nrow = 2))))
-}
-
-results <- as.data.table(results)[, .(reserve = unlist(reserve)), by = setdiff(names(results), "reserve")]
-
-close(progress.bar)
-
-saveRDS(results, "results/data_objects/single_outlier.RDS")
+res$results

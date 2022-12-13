@@ -1,7 +1,7 @@
 program test
 
    use, intrinsic :: ieee_arithmetic, only: IEEE_Value, IEEE_QUIET_NAN
-   use :: iso_fortran_env, only: dp => real64
+   use :: iso_fortran_env, only: dp => real64, di => int64
    use dispmodule
 
    implicit none
@@ -28,7 +28,11 @@ program test
    integer, parameter :: n_boot = 1e3
    real(dp) :: triangle(n_dev, n_dev), reserve(n_boot)
    real(dp), allocatable :: config(:, :), results(:, :)
-   integer :: fileunit
+   integer :: file_unit
+   integer :: i, j, k
+   integer, parameter:: n_points = (n_dev**2 - n_dev)/2
+   integer :: points(n_points, 2)
+   integer :: n_config
 
    triangle = transpose(reshape( &
       [3511._dp, 6726._dp, 8992._dp, 10704._dp, 11763._dp, 12350._dp, 12690._dp, &
@@ -40,12 +44,33 @@ program test
       6283._dp, 0._dp, 0._dp, 0._dp, 0._dp, 0._dp, 0._dp], &
       [n_dev, n_dev]))
 
-   config = reshape([1., 4., 0.75, 1., 2., 1., 1., 1.], [1, 8])
+   k = 1
+   do j = 2, n_dev
+      do i = 1, n_dev + 1 - j
+         points(k, :) = [i, j]
+         k = k + 1
+      end do
+   end do
 
-   allocate(results(n_boot, 9))
+   allocate(config(size(points, 1)**2, 8))
 
-   call reserve_sim(triangle, n_boot, n_dev, config, 1, results)
+   k = 1
+   do j = 1, n_points
+      do i = 1, n_points
+         config(k, :) = [real(points(j, 1), dp), real(points(j, 2), dp), 0.75_dp, &
+         real(points(i, 1), dp), real(points(i, 2), dp), 1._dp, 1._dp, 1._dp]
+         k = k + 1
+      end do
+   end do
 
-   call disp(results)
+   n_config = size(config, 1)
+
+   allocate(results(n_config*n_boot, 9))
+
+   call reserve_sim(triangle, n_boot, n_dev, config, n_config, results)
+
+   open(newunit=file_unit, file="test/test.dat")
+
+   call disp(results, unit=file_unit)
 
 end program test

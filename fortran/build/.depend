@@ -1,0 +1,5 @@
+build/dispmodule.o : src/dispmodule.f90 
+build/helpers.o : src/helpers.f90 build/dispmodule.o build/random.o 
+build/random.o : src/random.f90 
+build/reserve_sim.o : src/reserve_sim.f90 build/progressbar.o build/dispmodule.o 
+build/progressbar.o : src/progressbar.f95 
