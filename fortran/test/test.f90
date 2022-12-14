@@ -1,7 +1,7 @@
 program test
 
    use, intrinsic :: ieee_arithmetic, only: IEEE_Value, IEEE_QUIET_NAN
-   use :: iso_fortran_env, only: dp => real64, di => int64
+   use :: iso_fortran_env, only: dp => real64
    use dispmodule
 
    implicit none
@@ -69,8 +69,9 @@ program test
 
    call reserve_sim(triangle, n_boot, n_dev, config, n_config, results)
 
-   open(newunit=file_unit, file="test/test.dat")
+   open(newunit=file_unit, file="test/test.dat", buffered='yes', blocksize=104857600)
 
    call disp(results, unit=file_unit)
 
+   close(file_unit)
 end program test

@@ -7,8 +7,8 @@ subroutine reserve_sim(triangle, n_boot, n_dev, config, n_config, results)
    implicit none
 
    interface
-      subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
-         dist_in, resids_type_in, boot_type_in, excl_resids, n_excl_resids, log_unit)
+   subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
+      resids_type_in, boot_type_in, dist_in, excl_resids, n_excl_resids, log_unit)   
 
          use, intrinsic :: iso_fortran_env, only: dp => real64
 
@@ -50,7 +50,8 @@ subroutine reserve_sim(triangle, n_boot, n_dev, config, n_config, results)
       integer :: log_unit
 
       log_path = "/home/othman/repos/masters_thesis/fortran/log/reserve_boot.log"
-      open(newunit=log_unit, file=log_path)
+      
+      open(newunit=log_unit, file=log_path, buffered='yes', blocksize=209715200)
 
       init_col = triangle(:, 1)
 
@@ -73,6 +74,7 @@ subroutine reserve_sim(triangle, n_boot, n_dev, config, n_config, results)
       do i = 1, n_config
 
          call progress_bar(i, n_config)
+         flush(6)
 
          sim_triangle = single_outlier(int(config(i, 1)), int(config(i, 2)), config(i, 3), &
          init_col, dev_facs, sigmas, int(config(i, 8)))
@@ -84,6 +86,8 @@ subroutine reserve_sim(triangle, n_boot, n_dev, config, n_config, results)
          results(((i - 1)*n_boot + 1):(i*n_boot), 9) = reserve
 
       end do
+
+      write(6, '(/)')
 
       close(log_unit)
 

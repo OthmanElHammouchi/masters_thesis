@@ -11,7 +11,7 @@
 !   dispmodule_userman.html  HTML file
 !   dispmodule_userman.txt   Text file
 !    
-! Copyright (c) 2008, Kristján Jónasson, Dept. of Computer Science, University of
+! Copyright (c) 2008, Kristjï¿½n Jï¿½nasson, Dept. of Computer Science, University of
 ! Iceland (jonasson@hi.is). This software is free. For details see the file README.
 
 

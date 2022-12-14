@@ -102,7 +102,7 @@ names(config) <- c("outlier.rowidx", "outlier.colidx", "factor", "excl.rowidx", 
 
 
 config <- config[!(config$dist == 2 & config$resids.type == 3), ]
-config <- config[config$outlier.colidx != 1 & config $excl.colidx != 1, ]
+config <- config[config$outlier.colidx != 1 & config$excl.colidx != 1, ]
 
 nconfig <- nrow(config)
 nboot <- 1e3
@@ -115,4 +115,8 @@ triangle[is.na(triangle)] <- 0
 
 res <- .Fortran("reserve_sim", triangle = triangle, nboot = as.integer(nboot), ndev = ndev, config = as.matrix(config), nconfig = nconfig, results = results)
 
-res$results
+results <- res$results
+
+names(results) <- c("outlier.rowidx", "outlier.colidx", "factor", "excl.rowidx", "excl.colidx", "resids.type", "boot.type", "dist", "reserve")
+
+saveRDS(results, "results/data_objects/single_outlier.RDS")
