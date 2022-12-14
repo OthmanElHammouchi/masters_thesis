@@ -119,4 +119,4 @@ results <- res$results
 
 names(results) <- c("outlier.rowidx", "outlier.colidx", "factor", "excl.rowidx", "excl.colidx", "resids.type", "boot.type", "dist", "reserve")
 
-saveRDS(results, "results/data_objects/single_outlier.RDS")
+# saveRDS(results, "results/data_objects/single_outlier.RDS")

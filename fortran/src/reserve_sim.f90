@@ -51,7 +51,11 @@ subroutine reserve_sim(triangle, n_boot, n_dev, config, n_config, results)
 
       log_path = "/home/othman/repos/masters_thesis/fortran/log/reserve_boot.log"
       
+#ifdef __INTEL_COMPILER__
       open(newunit=log_unit, file=log_path, buffered='yes', blocksize=209715200)
+#elif defined __GFORTRAN__
+      open(newunit=log_unit, file=log_path)
+#endif
 
       init_col = triangle(:, 1)
 

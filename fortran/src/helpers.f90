@@ -3,19 +3,18 @@ include 'mkl_vsl.f90'
 subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
    resids_type_in, boot_type_in, dist_in, excl_resids, n_excl_resids, log_unit)
    
-   !  use random, only: norm => random_normal, gamma => random_gamma
+#ifdef __INTEL_COMPILER
+   use ifport
+   use mkl_vsl
+#elif defined __GFORTRAN__
+   use random, only: norm => random_normal, gamma => random_gamma
+#endif
+
    use, intrinsic :: iso_fortran_env, only: dp => real64
    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
    use dispmodule
-   use ifport
-   use mkl_vsl
-
+   
    implicit none
-
-   type (vsl_stream_state) :: stream
-   integer(kind=4) :: errcode
-   integer :: brng, method, sd, n
-   real(dp) :: r(1)
 
    integer :: i, j, i_diag, i_boot, n_rows, n_resids, k
 
@@ -44,11 +43,16 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
 
    integer, intent(in) :: log_unit
 
-
+#ifdef __INTEL_COMPILER
+   type (vsl_stream_state) :: stream
+   integer(kind=4) :: errcode
+   integer :: brng, method, sd, n
+   real(dp) :: r(1)
+   
    brng = VSL_BRNG_MT19937
    sd = 777
-
    errcode = vslnewstream(stream, brng,  sd)
+#endif
 
    ! can't pass strings to R, we have to encode options as integers:
    ! distribution: 1 = normal, 2 = gamma
@@ -136,11 +140,17 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
    main_loop: do i_boot = 1, n_boot
       ! resample residual
       if (resids_type == "parametric") then
+#ifdef __INTEL_COMPILER
          method = VSL_RNG_METHOD_GAUSSIAN_ICDF
          do i = 1, n_resids
             errcode = vdrnggaussian(method, stream, 1, r, 0._dp, 1._dp)
             flat_resids(i) = r(1)
          end do
+#elif defined __GFORTRAN__
+         do i = 1, n_resids
+            flat_resids(i) = norm()
+         end do
+#endif
       end if
       do j = 1, n_dev - 1
          do i = 1, n_dev - j
@@ -196,6 +206,7 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
          end do
 
          if (any(sigmas_boot < 0)) then
+#ifdef DEBUG
             write(log_unit, '("Configuration: ", 3a, /)') trim(resids_type), trim(boot_type), trim(dist)
             write(log_unit, '(a, /)') "sigmas_boot: "
             call disp(sigmas_boot, unit=log_unit)
@@ -205,6 +216,7 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
             call disp(dev_facs_boot, unit=log_unit)
             write(log_unit, '(/, a, /)') "resids_boot: "
             call disp(resids_boot, unit=log_unit)
+#endif
             stop "Fatal error: negative sigma"
          end if
 
@@ -216,7 +228,9 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
 
       if (dist == "normal") then
 
+#ifdef __INTEL_COMPILER
          method = VSL_RNG_METHOD_GAUSSIAN_ICDF
+#endif
 
          do i_diag = 1, n_dev - 1
             do i = i_diag + 1, n_dev
@@ -229,7 +243,7 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
                   r(1) * real((sigmas_boot(j - 1) * sqrt(triangle_boot(i, j - 1) )))
 
                if (triangle_boot(i, j) <= 0) then
-
+#ifdef DEBUG
                   write(log_unit, '(a, 2i2, //)') "Negative draw at ", i, j
                   write(log_unit, '("Configuration: ", 3a, /)') trim(resids_type), trim(boot_type), trim(dist)
                   write(log_unit, '(a, /)') "sigmas_boot: "
@@ -242,7 +256,7 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
                   call disp(dev_facs_boot, unit=log_unit)
                   write(log_unit, '(/, a, /)') "resids_boot:"
                   call disp(resids_boot, unit=log_unit)
-
+#endif
                   cycle main_loop
                end if
 
@@ -257,7 +271,9 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
 
       else if (dist == "gamma") then
 
+#ifdef __INTEL_COMPILER
          method = VSL_RNG_METHOD_GAMMA_GNORM
+#endif
 
          do i_diag = 1, n_dev - 1
             do i = i_diag + 1, n_dev
@@ -267,7 +283,7 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
                gamma_shape = (dev_facs_boot(j - 1)**2 * triangle_boot(i, j - 1)) / sigmas_boot(j - 1) **2
 
                if (gamma_shape <= tiny(1.0) .or. isnan(gamma_shape)) then
-
+#ifdef DEBUG
                   write(log_unit, '(a, 2i2, //)') "Negative gamma shape parameter at ", i, j
                   write(log_unit, '("Configuration: ", 3a, /)') trim(resids_type), trim(boot_type), trim(dist)
                   write(log_unit, '(a, /)') "sigmas_boot: "
@@ -280,17 +296,20 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
                   call disp(dev_facs_boot, unit=log_unit)
                   write(log_unit, '(/, a, /)') "resids_boot:"
                   call disp(resids_boot, unit=log_unit)
-
+#endif
                   cycle main_loop
                end if
 
                gamma_rate = dev_facs_boot(j - 1) / sigmas_boot(j - 1) ** 2
 
+#ifdef __INTEL_COMPILER
                errcode = vdrnggamma(method, stream, 1, r, gamma_shape, 0._dp, 1/gamma_rate)
-
                triangle_boot(i, j) = r(1)
+#elif defined __GFORTRAN__
+               triangle_boot(i, j) = real(amma(real(gamma_shape), .true.)/real(gamma_rate), dp)
+#endif
 
-               ! triangle_boot(i, j) = real(gamma(real(gamma_shape), .true.)/real(gamma_rate), dp)
+               ! triangle_boot(i, j) = real(gamma(reagl(gamma_shape), .true.)/real(gamma_rate), dp)
 
             end do
          end do
@@ -304,15 +323,22 @@ subroutine reserve_boot(triangle, n_boot, n_dev, reserve, &
 
    end do main_loop
 
+#ifdef __INTEL_COMPILER
    errcode = vsldeletestream(stream)
+#endif
 
 end subroutine reserve_boot
 
 function single_outlier(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist) result(sim_triangle)
-
-   ! use random, only: norm => random_normal, gamma => random_gamma
-   use, intrinsic :: iso_fortran_env, only: dp => real64
+   
+#ifdef __INTEL_COMPILER 
    use mkl_vsl
+#elif defined __GFORTRAN__
+   use random, only: norm => random_normal, gamma => random_gamma
+#endif
+
+   use, intrinsic :: iso_fortran_env, only: dp => real64
+   
    implicit none
 
    integer, intent(in):: outlier_rowidx, outlier_colidx
@@ -325,15 +351,17 @@ function single_outlier(outlier_rowidx, outlier_colidx, factor, init_col, dev_fa
    integer :: n_dev
    integer :: i, j
 
+#ifdef __INTEL_COMPILER
    type (vsl_stream_state) :: stream
    integer(kind=4) :: errcode
    integer :: brng, method, sd, n
    real(dp) :: r(1)
+   
 
    brng = VSL_BRNG_MT19937
    sd = 777
-
    errcode = vslnewstream(stream, brng,  sd)
+#endif
 
    n_dev = size(init_col)
 
@@ -343,48 +371,83 @@ function single_outlier(outlier_rowidx, outlier_colidx, factor, init_col, dev_fa
 
    if (dist == 1) then
 
+#ifdef __INTEL_COMPILER
       method = VSL_RNG_METHOD_GAUSSIAN_ICDF
+#endif
 
       do j = 2, n_dev
          do i = 1, n_dev + 1 - j
             if (i == outlier_rowidx) cycle
 
+#ifdef __INTEL_COMPILER
             errcode = vdrnggaussian(method, stream, 1, r, 0._dp, 1._dp)
 
             sim_triangle(i, j) = dev_facs(j - 1) * sim_triangle(i, j - 1) + &
                r(1) * sigmas(j - 1) * sqrt(sim_triangle(i, j - 1))
+
+#elif defined __GFORTRAN__
+            sim_triangle(i, j) = dev_facs(j - 1) * sim_triangle(i, j - 1) + &
+            norm() * sigmas(j - 1) * sqrt(sim_triangle(i, j - 1))
+
+#endif
          end do
       end do
 
       if (outlier_colidx > 2) then
 
+#ifdef __INTEL_COMPILER
          errcode = vdrnggaussian(method, stream, 1, r, 0._dp, 1._dp)
 
          do j = 2, outlier_colidx - 1
             sim_triangle(outlier_rowidx, j) = dev_facs(j - 1) * sim_triangle(outlier_rowidx, j - 1) + &
                r(1) * sigmas(j - 1) * sqrt(sim_triangle(outlier_rowidx, j - 1))
          end do
+#elif defined __GFORTRAN__
+         do j = 2, outlier_colidx - 1
+            sim_triangle(outlier_rowidx, j) = dev_facs(j - 1) * sim_triangle(outlier_rowidx, j - 1) + &
+               norm() * sigmas(j - 1) * sqrt(sim_triangle(outlier_rowidx, j - 1))
+         end do
+#endif
+
       end if
 
+#ifdef __INTEL_COMPILER
       errcode = vdrnggaussian(method, stream, 1, r, 0._dp, 1._dp)
 
       sim_triangle(outlier_rowidx, outlier_colidx) = &
          factor * dev_facs(outlier_colidx - 1) * sim_triangle(outlier_rowidx, outlier_colidx - 1) + &
          r(1) * sigmas(outlier_colidx - 1) * sqrt(sim_triangle(outlier_rowidx, outlier_colidx - 1))
 
+#elif defined __GFORTRAN__
+      sim_triangle(outlier_rowidx, outlier_colidx) = &
+         factor * dev_facs(outlier_colidx - 1) * sim_triangle(outlier_rowidx, outlier_colidx - 1) + &
+         r(1) * sigmas(outlier_colidx - 1) * sqrt(sim_triangle(outlier_rowidx, outlier_colidx - 1))
+
+#endif
+
       if (outlier_colidx < n_dev) then
          do j = outlier_colidx + 1, n_dev + 1 - outlier_rowidx
 
+#ifdef __INTEL_COMPILER
             errcode = vdrnggaussian(method, stream, 1, r, 0._dp, 1._dp)
 
             sim_triangle(outlier_rowidx, j) = dev_facs(j - 1) * sim_triangle(outlier_rowidx, j - 1) + &
                r(1) * sigmas(j - 1) * sqrt(sim_triangle(outlier_rowidx, j - 1))
+#elif defined __GFORTRAN__
+
+            sim_triangle(outlier_rowidx, j) = dev_facs(j - 1) * sim_triangle(outlier_rowidx, j - 1) + &
+               r(1) * sigmas(j - 1) * sqrt(sim_triangle(outlier_rowidx, j - 1))
+            
+#endif
+
          end do
       end if
 
    else if (dist == 2) then
-
+      
+#ifdef __INTEL_COMPILER
       method = VSL_RNG_METHOD_GAMMA_GNORM
+#endif
 
       do j = 2, n_dev
          do i = 1, n_dev + 1 - j
@@ -392,10 +455,16 @@ function single_outlier(outlier_rowidx, outlier_colidx, factor, init_col, dev_fa
 
             gamma_shape = dev_facs(j - 1)**2 * sim_triangle(i, j - 1) / sigmas(j - 1)**2
             gamma_rate = dev_facs(j - 1) / sigmas(j - 1)**2
-
+            
+#ifdef __INTEL_COMPILER
             errcode = vdrnggamma(method, stream, 1, r, gamma_shape, 0._dp, 1/gamma_rate)
 
             sim_triangle(i, j) = r(1)
+
+#elif __GFORTRAN__
+            sim_triangle(i, j) = real(gamma(reagl(gamma_shape), .true.)/real(gamma_rate), dp)
+
+#endif
 
          end do
       end do
@@ -405,27 +474,47 @@ function single_outlier(outlier_rowidx, outlier_colidx, factor, init_col, dev_fa
             gamma_shape = dev_facs(j - 1)**2 * sim_triangle(i, j - 1) / sigmas(j - 1)**2
             gamma_rate = dev_facs(j - 1) / sigmas(j - 1)**2
 
+#ifdef __INTEL_COMPILER
             errcode = vdrnggamma(method, stream, 1, r, gamma_shape, 0._dp, 1/gamma_rate)
 
             sim_triangle(i, j) = r(1)
+
+#elif __GFORTRAN__
+            sim_triangle(i, j) = real(gamma(reagl(gamma_shape), .true.)/real(gamma_rate), dp)
+
+#endif
+
          end do
       end if
 
       gamma_shape = dev_facs(j - 1)**2 * sim_triangle(i, j - 1) / sigmas(j - 1)**2
       gamma_rate = dev_facs(j - 1) / sigmas(j - 1)**2
 
+#ifdef __INTEL_COMPILER
       errcode = vdrnggamma(method, stream, 1, r, gamma_shape, 0._dp, 1/gamma_rate)
 
       sim_triangle(i, j) = r(1)
+
+#elif __GFORTRAN__
+      sim_triangle(i, j) = real(gamma(reagl(gamma_shape), .true.)/real(gamma_rate), dp)
+      
+#endif
 
       if (outlier_colidx < n_dev) then
          do j = outlier_colidx + 1, n_dev + 1 - outlier_rowidx
             gamma_shape = dev_facs(j - 1)**2 * sim_triangle(i, j - 1) / sigmas(j - 1)**2
             gamma_rate = dev_facs(j - 1) / sigmas(j - 1)**2
 
+#ifdef __INTEL_COMPILER
             errcode = vdrnggamma(method, stream, 1, r, gamma_shape, 0._dp, 1/gamma_rate)
 
             sim_triangle(i, j) = r(1)
+
+#elif __GFORTRAN__
+            sim_triangle(i, j) = real(gamma(reagl(gamma_shape), .true.)/real(gamma_rate), dp)
+
+#endif
+
          end do
       end if
 
