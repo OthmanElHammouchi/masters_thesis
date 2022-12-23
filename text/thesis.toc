@@ -1,0 +1,10 @@
+\contentsline {chapter}{Abstract}{iii}{}%
+\contentsline {chapter}{\numberline {1}Introduction}{1}{}%
+\contentsline {chapter}{\numberline {2}Pattern break detection}{3}{}%
+\contentsline {section}{\numberline {2.1}Introduction}{3}{}%
+\contentsline {section}{\numberline {2.2}The bootstrap method}{3}{}%
+\contentsline {section}{\numberline {2.3}Mack's model}{4}{}%
+\contentsline {subsection}{\numberline {2.3.1}Bootstrapping the parameter error}{6}{}%
+\contentsline {subsection}{\numberline {2.3.2}Bootstrapping Mack's model}{7}{}%
+\contentsline {subsection}{\numberline {2.3.3}Numerical results}{8}{}%
+\contentsline {chapter}{Conclusion}{9}{}%

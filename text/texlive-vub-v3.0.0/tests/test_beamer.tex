@@ -1,0 +1,132 @@
+\documentclass{beamer}
+
+\usepackage{minted}
+\usepackage{hyperref}
+
+%\usetheme{vub}
+\usetheme[coloredtitles,coloredblocks]{vub}
+%\usetheme[showsection]{vub}
+
+\title{The VUB style package}
+\subtitle{The \LaTeX\ style package for the Vrije Universiteit Brussel}
+\author{Ruben De Smet}
+
+\AtBeginPart{\frame{\partpage}}
+\AtBeginSection{\frame{\sectionpage}}
+\AtBeginSubsection{\frame{\subsectionpage}}
+
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}{Outline}
+
+  {\color{vubbleu}\large Part 1: regular documents}
+  \tableofcontents[part=1]
+
+  {\color{vubbleu}\large Part 2: slides using \texttt{beamer}}
+  \tableofcontents[part=2]
+\end{frame}
+
+\part{regular documents}
+
+\begin{frame}[fragile]{Title page}
+Regular documents can use
+
+\begin{minted}{LaTeX}
+\usepackage{vub}
+\end{minted}
+
+This transforms \mint{LaTeX}|\maketitle| into a VUB-themed title page,
+complete with logo and triangle.
+\end{frame}
+
+\part{slides using \texttt{beamer}}
+\section{basic usage}
+
+\begin{frame}[fragile]{Setup}
+\framesubtitle{Loading the style}
+Create your regular \texttt{beamer} presentation, and use
+
+\begin{minted}{LaTeX}
+\usetheme{vub}
+\end{minted}
+
+This will load the relevant fonts, colors and images.
+\end{frame}
+
+\begin{frame}[fragile]{Setup}
+\framesubtitle{Title page as usual}
+\mint{LaTeX}|\maketitle| will generate a titlepage,
+or you can use \mint{LaTeX}|\titlepage| inside a \texttt{frame}, e.g.
+
+\begin{minted}{LaTeX}
+\frame{\titlepage}
+\end{minted}
+
+Both are standard \texttt{beamer} commands.
+\end{frame}
+
+\section{features}
+
+\begin{frame}[fragile]{Frame title comes here}
+\framesubtitle{and this is its subtitle}
+As usual, you can specify the subtitle using
+
+\begin{minted}{LaTeX}
+\framesubtitle{...}
+\end{minted}
+
+It will appear in a blue (``bleu'' of the ``oranje blanje bleu'' colors) bar
+\footnote{\url{http://huisstijl.vub.ac.be/styleguide/stijlelementen/stijlelementen-de-tekststrip/}}
+at the top of the slide.
+
+\smallskip
+
+The title itself will appear in an ``oranje'' bar.
+\end{frame}
+
+\begin{frame}{Blocks}
+\begin{block}{Default block}
+  As usual, blocks can be used. The option ``coloredblocks`` makes them appear in VUB colors
+  \end{block}
+ \begin{theorem}
+  The default color for blocks is blue but theorems appear in orange. 
+ \end{theorem}
+ \begin{proof}
+  Proof by visualisation. 
+ \end{proof}
+
+
+
+\end{frame}
+
+
+
+\begin{frame}{Very long text in a frame}
+  \framesubtitle{with a subtitle}
+  \emph{Lorem ipsum dolor} sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+  \bigskip
+
+  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+  \bigskip
+
+  Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+  \bigskip
+
+  Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+  \bigskip
+
+  Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\end{frame}
+
+\begin{frame}{Very long titles in a frame are not to be used, but at least they don't have a bug anymore.}
+  \framesubtitle{I'd rather use a subtitle.}
+  Please don't put sentences in slides.
+\end{frame}
+
+
+\end{document}

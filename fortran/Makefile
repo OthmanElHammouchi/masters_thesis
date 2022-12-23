@@ -7,9 +7,9 @@ SHELL := /bin/bash
 MKLROOT = $(shell echo $$MKLROOT)
 
 ifeq ($(FC), gfortran)
-FFLAGS = -fbackslash -g -fcheck=all -cpp -I./lib -J./lib
+FFLAGS = -fbackslash -fcheck=all -cpp -I./lib -J./lib
 else
-FFLAGS = -assume bscc -assume nobuffered_stdout  -g -par-runtime-control2 -fpp -module ./lib -L$(MKLROOT)/include/ -I${MKLROOT}/include/intel64/ilp64 -I"${MKLROOT}/include"
+FFLAGS = -assume bscc -assume nobuffered_stdout -par-runtime-control2 -fpp -module ./lib -L$(MKLROOT)/include/ -I${MKLROOT}/include/intel64/ilp64 -I"${MKLROOT}/include"
 
 LDFLAGS = -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a $(MKLROOT)/lib/intel64/libmkl_sequential.a $(MKLROOT)/lib/intel64/libmkl_core.a -Wl,--end-group $(MKLROOT)/lib/intel64/libmkl_blas95_ilp64.a $(MKLROOT)/lib/intel64/libmkl_lapack95_ilp64.a -lpthread -lm 
 endif
@@ -25,9 +25,12 @@ TARGET = $(BUILD_DIR)/reserve_sim.so
 .phony: all
 all: $(TARGET)
 
--include $(BUILD_DIR)/.depend
+include .depend
 
-$(OBJS): .depend
+$(OBJS): depend
+
+.phony: depend
+depend: .depend
 
 .depend: $(SRCS)
 	makedepf90 -b $(BUILD_DIR) $(SRCS) > .depend
@@ -35,13 +38,19 @@ $(OBJS): .depend
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.f90
 	$(FC) $(FFLAGS) -fPIC -c $< -o $@
 
-$(TARGET): $(OBJS)
+$(TARGET): $(filter-out $(BUILD_DIR)/reserve_boot.o, $(OBJS))
 	$(FC) $(FFLAGS) -fPIC -shared $^ -o $@ $(LDFLAGS)
 
-.PHONY: test clean
+reserve_boot: $(SRC_DIR)/reserve_boot.f90 $(BUILD_DIR)/dispmodule.o
+	$(FC) $(FFLAGS) -fPIC -shared $^ -o $(BUILD_DIR)/reserve_boot.so $(LDFLAGS)
+
+.PHONY: test clean debug
 
 test: test/test.f90 $(OBJS)
 	$(FC) $(FFLAGS) -Wl,-rpath=./build $^ -o test/test -I./lib $(LDFLAGS)
 
 clean:
 	rm -rf build/* lib/* .depend
+
+debug: FFLAGS += -DDEBUG -g
+debug: .depend $(TARGET)

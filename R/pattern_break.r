@@ -148,6 +148,7 @@ reserveBoot <- function(triangle, nboot, ...,
 
                 nrows <- ndev + 1 - colidx
 
+                #clearly we resample the triangle only once
                 resampled.triangle[1:nrows, colidx] <- devfacs[colidx - 1] * resampled.triangle[1:nrows, colidx - 1] +
                  sigmas[colidx - 1] * sqrt(resampled.triangle[1:nrows, colidx - 1]) * resids.boot[1:nrows, colidx - 1]
 
@@ -226,32 +227,70 @@ reserveBootFortran <- function(triangle, nboot,
     dist = "normal",
     excl.resids = NULL) {
 
-    dyn.load("fortran/build/reserve_boot.so")
-
-    triangle[is.na(triangle)] <- 0
+    nboot <- as.integer(nboot)
     ndev <- ncol(triangle)
-    reserve <- rep(0, nboot)
 
     dist.options <- list(normal = 1L, gamma = 2L)
     resids.type.options <- list(raw = 1L, scaled = 2L, parametric = 3L)
     boot.type.options <- list(conditional = 1L, unconditional = 2L)
 
     if (is.null(excl.resids)) {
-        excl.resids <- matrix(c(0L, 0L), nrow = 2)
+        excl.resids <- matrix(c(0L, 0L), ncol = 1)
     }
+
+    dyn.load("fortran/build/reserve_boot.so")
+
+    triangle[is.na(triangle)] <- 0
+    reserve <- rep(0, nboot)
 
     res <- .Fortran(
         "reserve_boot",
-        nboot = as.integer(nboot),
-        ndev = ndev,
         triangle = triangle,
+        nboot = nboot,
+        ndev = ndev,
         reserve = reserve,
-        dist = dist.options[[dist]],
         resids.type = resids.type.options[[resids.type]],
         boot.type = boot.type.options[[boot.type]],
+        dist = dist.options[[dist]],
         excl.resids = excl.resids,
         excl.resids.ncols = ncol(excl.resids)
     )
+
+    results <- as.data.table(res$reserve)
+
+    return(results)
+}
+
+reserveSimFortran <- function(triangle, nboot, config) {
+
+    config <- as.matrix(config)
+
+    nboot <- as.integer(nboot)
+    ndev <- nrow(triangle)
+    nconfig <- nrow(config)
+
+    nrow.results <- nconfig * nboot
+    ncol.results <- ncol(config) + 1
+
+    dyn.load("fortran/build/reserve_sim.so")
+
+    results <- matrix(rep(0, nrow.results * ncol.results),
+        nrow = nrow.results,
+        ncol = ncol.results)
+
+    triangle[is.na(triangle)] <- 0
+
+    res <- .Fortran("reserve_sim",
+        triangle = triangle,
+        nboot = nboot,
+        ndev = ndev,
+        config = config,
+        nconfig = nconfig,
+        results = results)
+
+    results <- as.data.table(res$results)
+
+    names(results) <- c("outlier.rowidx", "outlier.colidx", "factor", "excl.rowidx", "excl.colidx", "resids.type", "boot.type", "dist", "reserve")
 
     return(res$reserve)
 }

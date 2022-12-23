@@ -1,0 +1,57 @@
+image: tianon/latex
+
+stages:
+  - build
+  - test
+  - deploy
+
+before_script:
+  - apt-get -y update
+  - apt-get -y install python-pygments fonts-roboto git
+
+template-zips:
+  stage: build
+  script:
+    - make templates
+  artifacts:
+    paths:
+      - templates/*.zip
+
+installable-zip:
+  stage: build
+  script:
+    - make texlive-vub.zip
+  artifacts:
+    paths:
+      - texlive-vub.zip
+
+compile_article_xetex:
+  stage: test
+  script:
+    - latexmk -pdf -xelatex tests/test.tex
+
+compile_article_pdflatex:
+  stage: test
+  script:
+    - latexmk -pdf tests/test.tex
+
+compile_beamer_xetex:
+  stage: test
+  script:
+    - latexmk -shell-escape -pdf -xelatex tests/test_beamer.tex
+
+compile_beamer_pdflatex:
+  stage: test
+  script:
+    - latexmk -shell-escape -pdf tests/test_beamer.tex
+
+push-to-overleaf:
+  stage: deploy
+  dependencies:
+    - template-zips
+  only:
+    - master
+  script:
+    - git config --global user.name "$OVERLEAF_USERNAME"
+    - git config --global user.email "$OVERLEAF_USERNAME"
+    - make publish
