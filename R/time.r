@@ -122,7 +122,9 @@ time.r <- start - end
 
 ####################### Fortran ##########################
 
+points <- cbind(row(triangle)[!is.na(triangle)], col(triangle)[!is.na(triangle)])
 
+factor <- seq(0.5, 1.5, by = 0.25)
 resids.type <- c(1, 2, 3)
 boot.type <- c(1, 2)
 dist <- c(1, 2)

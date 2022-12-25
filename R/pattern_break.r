@@ -148,7 +148,6 @@ reserveBoot <- function(triangle, nboot, ...,
 
                 nrows <- ndev + 1 - colidx
 
-                #clearly we resample the triangle only once
                 resampled.triangle[1:nrows, colidx] <- devfacs[colidx - 1] * resampled.triangle[1:nrows, colidx - 1] +
                  sigmas[colidx - 1] * sqrt(resampled.triangle[1:nrows, colidx - 1]) * resids.boot[1:nrows, colidx - 1]
 
@@ -281,7 +280,7 @@ reserveSimFortran <- function(triangle, nboot, config) {
     triangle[is.na(triangle)] <- 0
 
     res <- .Fortran("reserve_sim",
-        triangle = triangle,
+        triangle = unname(triangle),
         nboot = nboot,
         ndev = ndev,
         config = config,
@@ -292,7 +291,7 @@ reserveSimFortran <- function(triangle, nboot, config) {
 
     names(results) <- c("outlier.rowidx", "outlier.colidx", "factor", "excl.rowidx", "excl.colidx", "resids.type", "boot.type", "dist", "reserve")
 
-    return(res$reserve)
+    return(results)
 }
 
 singleOutlier <- function(outlier.rowidx, outlier.colidx, factor, ...,

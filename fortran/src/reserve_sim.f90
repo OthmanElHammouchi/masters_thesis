@@ -51,9 +51,9 @@ subroutine reserve_sim(triangle, n_boot, n_dev, config, n_config, results)
    character(:), allocatable :: log_path
    integer :: log_unit
 
-   log_path = "/home/othman/repos/masters_thesis/fortran/log/reserve_boot_helper.log"
+   log_path = "/home/othman/repos/masters_thesis/fortran/log/reserve_boot.log"
 
-#ifdef __INTEL_COMPILER__
+#ifdef __INTEL_COMPILER
    open(newunit=log_unit, file=log_path, buffered='yes', blocksize=209715200)
 #elif defined __GFORTRAN__
    open(newunit=log_unit, file=log_path)
@@ -132,9 +132,10 @@ subroutine reserve_boot_helper(triangle, n_boot, n_dev, reserve, &
 
    real(dp) :: dev_facs(n_dev - 1), sigmas(n_dev - 1), latest(n_dev), &
       indiv_dev_facs(n_dev - 1, n_dev - 1), resids(n_dev - 1, n_dev - 1), &
-      scale_facs(n_dev - 1, n_dev - 1), resampled_triangle(n_dev, n_dev), &
-      resids_boot(n_dev - 1, n_dev - 1), indiv_dev_facs_boot(n_dev - 1, n_dev - 1), &
-      dev_facs_boot(n_dev - 1), sigmas_boot(n_dev - 1), triangle_boot(n_dev, n_dev)
+      scale_facs(n_dev - 1, n_dev - 1), resampled_triangle(n_dev, n_dev, n_dev - 1)
+   real(dp) :: &
+      resids_boot(n_dev - 1, n_dev - 1, n_dev - 1), indiv_dev_facs_boot(n_dev - 1, n_dev - 1, n_dev - 1), &
+      dev_facs_boot(n_dev - 1, n_dev - 1), sigmas_boot(n_dev - 1, n_dev - 1), triangle_boot(n_dev, n_dev)
 
    real(dp), allocatable :: flat_resids(:)
    real(dp) :: gamma_shape, gamma_rate
@@ -142,6 +143,8 @@ subroutine reserve_boot_helper(triangle, n_boot, n_dev, reserve, &
    real(dp) :: flat_resampled_triangle(n_dev**2)
 
    integer, intent(in) :: log_unit
+
+   logical :: first_pass
 
 #ifdef __INTEL_COMPILER
    type (vsl_stream_state) :: stream
@@ -189,7 +192,10 @@ subroutine reserve_boot_helper(triangle, n_boot, n_dev, reserve, &
       stop "Parametric resids not supported for gamma distribution"
    end if
 
-   n_resids = ((n_dev - 1)**2 + (n_dev - 1))/2 - 1
+   n_resids = ((n_dev - 1)**2 + (n_dev - 1))/2 - 1 !discard residual from upper right corner
+
+   indiv_dev_facs = 0
+   resids = 0
 
    do j = 1, n_dev - 1
 
@@ -238,89 +244,125 @@ subroutine reserve_boot_helper(triangle, n_boot, n_dev, reserve, &
 
    ! main loop
    main_loop: do i_boot = 1, n_boot
-      ! resample residual
+      ! resample residuals
       if (resids_type == "parametric") then
 #ifdef __INTEL_COMPILER
          method = VSL_RNG_METHOD_GAUSSIAN_ICDF
-         do i = 1, n_resids
-            errcode = vdrnggaussian(method, stream, 1, r, 0._dp, 1._dp)
-            flat_resids(i) = r(1)
+         do i = 1, n_dev - 1
+            do j = 1, n_dev - 1
+               do k = 1, n_dev - 1
+                  errcode = vdrnggaussian(method, stream, 1, r, 0._dp, 1._dp)
+                  resids_boot(i, j, k) = r(1)
+               end do
+            end do
          end do
 #elif defined __GFORTRAN__
-         do i = 1, n_resids
-            flat_resids(i) = norm()
+         do i = 1, n_dev - 1
+            do i = 1, n_dev - 1
+               do k = 1, n_dev - 1
+                  resids_boot(i, j, k) = norm()
+               end do
+            end do
          end do
 #endif
-      end if
-      do j = 1, n_dev - 1
-         do i = 1, n_dev - j
-            resids_boot(i, j) = flat_resids(1 + int(n_resids * rand()))
+      else
+         do i = 1, n_dev - 1
+            do j = 1, n_dev - 1
+               do k = 1, n_dev - 1
+                  resids_boot(i, j, k) = flat_resids(1 + int(n_resids * rand()))
+               end do
+            end do
          end do
-      end do
+      end if
+
+      indiv_dev_facs_boot = 0
+      dev_facs_boot = 0
+      sigmas_boot = 0
 
       ! compute bootstrapped quantities
       if (boot_type == "conditional") then
+         do k = 1, n_dev - 1
+            do j = 1, n_dev - 1
 
-         do j = 1, n_dev - 1
+               n_rows = n_dev - j
 
-            n_rows = n_dev - j
+               indiv_dev_facs_boot(1:n_rows, j, k) = dev_facs(j) + resids_boot(1:n_rows, j, k) * sigmas(j) / sqrt(triangle(1:n_rows, j))
 
-            indiv_dev_facs_boot(1:n_rows, j) = dev_facs(j) + resids_boot(1:n_rows, j) * sigmas(j) / sqrt(triangle(1:n_rows, j))
+               dev_facs_boot(j, k) = sum(triangle(1:n_rows, j) * indiv_dev_facs_boot(1:n_rows, j, k)) / sum(triangle(1:n_rows, j))
 
-            dev_facs_boot(j) = sum(triangle(1:n_rows, j) * indiv_dev_facs_boot(1:n_rows, j)) / sum(triangle(1:n_rows, j))
+               if (j < n_dev - 1) then
+                  sigmas_boot(j, k) = sqrt(sum(triangle(1:n_rows, j) * &
+                     (indiv_dev_facs_boot(1:n_rows, j, k) - dev_facs_boot(j, k)) ** 2) / (n_rows - 1))
+               else
+                  sigmas_boot(j, k) = sqrt(min(sigmas_boot(j - 1, k) ** 2, &
+                     sigmas_boot(j - 2, k) ** 2, &
+                     sigmas_boot(j - 1, k) ** 4 / sigmas_boot(j - 2, k) ** 2))
+               end if
+            end do
 
-            if (j < n_dev - 1) then
-               sigmas_boot(j) = sqrt(sum(triangle(1:n_rows, j) * &
-                  (indiv_dev_facs_boot(1:n_rows, j) - dev_facs_boot(j)) ** 2) / (n_rows - 1))
-            else
-               sigmas_boot(j) = sqrt(min(sigmas_boot(j - 1) ** 2, &
-                  sigmas_boot(j - 2) ** 2, &
-                  sigmas_boot(j - 1) ** 4 / sigmas_boot(j - 2) ** 2))
+            if (any(sigmas_boot < 0) .or. any(isnan(sigmas_boot))) then
+#ifdef DEBUG
+               write(log_unit, '("Bad sigma at ", i2, /)') k
+               write(log_unit, '("Configuration: ", 3(a, x), /)') trim(resids_type), trim(boot_type), trim(dist)
+               write(log_unit, '(a, /)') "sigmas_boot: "
+               call disp(sigmas_boot(:, k), unit=log_unit)
+               write(log_unit, '(/, a, /)') "indiv_devfacs_boot: "
+               call disp(indiv_dev_facs_boot(:, :, k), unit=log_unit)
+               write(log_unit, '(/, a, /)') "devfacs_boot: "
+               call disp(dev_facs_boot(:, k), unit=log_unit)
+               write(log_unit, '(/, a, /)') "resids_boot: "
+               call disp(resids_boot(:, :, k), unit=log_unit)
+#endif
+               stop "Fatal error: bad sigma"
             end if
-
          end do
 
       else if (boot_type == "unconditional") then
+         do k = 1, n_dev - 1
+            resampled_triangle(:, 1, k) = triangle(:, 1)
+            do j = 1, n_dev - 1
 
-         resampled_triangle(:, 1) = triangle(:, 1)
+               n_rows = n_dev - j
 
-         do j = 2, n_dev
-            n_rows = n_dev + 1 - j
-            resampled_triangle(1:n_rows, j) = dev_facs(j - 1) * resampled_triangle(1:n_rows, j - 1) + &
-               sigmas(j - 1) * sqrt(resampled_triangle(1:n_rows, j - 1)) * resids_boot(1:n_rows, j - 1)
+               resampled_triangle(1:n_rows, j + 1, k) = dev_facs(j) * resampled_triangle(1:n_rows, j, k) + &
+                  sigmas(j) * sqrt(resampled_triangle(1:n_rows, j, k)) * resids_boot(1:n_rows, j, k)
 
-            indiv_dev_facs_boot(1:n_rows, j - 1) = dev_facs(j - 1) + resids_boot(1:n_rows, j - 1) * &
-               sigmas(j - 1) / sqrt(resampled_triangle(1:n_rows, j - 1))
+               if (any(resampled_triangle(1:n_rows, j + 1, k) < 0)) cycle main_loop
 
-            dev_facs_boot(j - 1) = sum(resampled_triangle(1:n_rows, j - 1) * &
-               indiv_dev_facs_boot(1:n_rows, j - 1)) / sum(resampled_triangle(1:n_rows, j - 1))
+               indiv_dev_facs_boot(1:n_rows, j, k) = dev_facs(j) + resids_boot(1:n_rows, j, k) * &
+                  sigmas(j) / sqrt(resampled_triangle(1:n_rows, j, k))
 
-            if (j < n_dev) then
-               sigmas_boot(j - 1) = sqrt(sum(resampled_triangle(1:n_rows, j - 1) * &
-                  (indiv_dev_facs_boot(1:n_rows, j - 1) - dev_facs_boot(j - 1)) ** 2) / (n_rows - 1))
-            else
-               sigmas_boot(j - 1) = sqrt(min(sigmas_boot(j - 2) ** 2, &
-                  sigmas_boot(j - 3) ** 2, &
-                  sigmas_boot(j - 2) ** 4 / sigmas_boot(j - 3) ** 2))
+               dev_facs_boot(j, k) = sum(resampled_triangle(1:n_rows, j, k) * &
+                  indiv_dev_facs_boot(1:n_rows, j, k)) / sum(resampled_triangle(1:n_rows, j, k))
+
+               if (j < n_dev - 1) then
+                  sigmas_boot(j, k) = sqrt(sum(resampled_triangle(1:n_rows, j, k) * &
+                     (indiv_dev_facs_boot(1:n_rows, j, k) - dev_facs_boot(j, k)) ** 2) / (n_rows - 1))
+               else
+                  sigmas_boot(j, k) = sqrt(min(sigmas_boot(j - 1, k) ** 2, &
+                     sigmas_boot(j - 2, k) ** 2, &
+                     sigmas_boot(j - 1, k) ** 4 / sigmas_boot(j - 2, k) ** 2))
+               end if
+            end do
+
+            if (any(sigmas_boot < 0) .or. any(isnan(sigmas_boot))) then
+#ifdef DEBUG
+               write(log_unit, '("Bad sigma at ", i2, /)') k
+               write(log_unit, '("Configuration: ", 3(a, x), /)') trim(resids_type), trim(boot_type), trim(dist)
+               write(log_unit, '(a, /)') "sigmas_boot: "
+               call disp(sigmas_boot(:, k), unit=log_unit)
+               write(log_unit, '(/, a, /)') "indiv_devfacs_boot: "
+               call disp(indiv_dev_facs_boot(:, :, k), unit=log_unit)
+               write(log_unit, '(/, a, /)') "devfacs_boot: "
+               call disp(dev_facs_boot(:, k), unit=log_unit)
+               write(log_unit, '(/, a, /)') "resids_boot: "
+               call disp(resids_boot(:, :, k), unit=log_unit)
+#endif
+               stop "Fatal error: bad sigma"
             end if
+
          end do
 
-         if (any(sigmas_boot < 0)) then
-#ifdef DEBUG
-            write(log_unit, '("Configuration: ", 3a, /)') trim(resids_type), trim(boot_type), trim(dist)
-            write(log_unit, '(a, /)') "sigmas_boot: "
-            call disp(sigmas_boot, unit=log_unit)
-            write(log_unit, '(/, a, /)') "indiv_devfacs_boot: "
-            call disp(indiv_dev_facs_boot, unit=log_unit)
-            write(log_unit, '(/, a, /)') "devfacs_boot: "
-            call disp(dev_facs_boot, unit=log_unit)
-            write(log_unit, '(/, a, /)') "resids_boot: "
-            call disp(resids_boot, unit=log_unit)
-#endif
-            stop "Fatal error: negative sigma"
-         end if
-
-         flat_resampled_triangle = pack(resampled_triangle, .true.)
 
       end if
 
@@ -339,23 +381,23 @@ subroutine reserve_boot_helper(triangle, n_boot, n_dev, reserve, &
 
                errcode = vdrnggaussian(method, stream, 1, r, 0._dp, 1._dp)
 
-               triangle_boot(i, j) = dev_facs_boot(j - 1) * triangle_boot(i, j - 1) + &
-                  r(1) * real((sigmas_boot(j - 1) * sqrt(triangle_boot(i, j - 1) )))
+               triangle_boot(i, j) = dev_facs_boot(j - 1, i - 1) * triangle_boot(i, j - 1) + &
+                  r(1) * real((sigmas_boot(j - 1, i - 1) * sqrt(triangle_boot(i, j - 1))))
 
                if (triangle_boot(i, j) <= 0) then
 #ifdef DEBUG
-                  write(log_unit, '(a, 2i2, //)') "Negative draw at ", i, j
-                  write(log_unit, '("Configuration: ", 3a, /)') trim(resids_type), trim(boot_type), trim(dist)
+                  write(log_unit, '(a, 2i2, /)') "Negative draw at ", i, j
+                  write(log_unit, '("Configuration: ", 3(a, x), /)') trim(resids_type), trim(boot_type), trim(dist)
                   write(log_unit, '(a, /)') "sigmas_boot: "
-                  call disp(sigmas_boot, unit=log_unit)
+                  call disp(sigmas_boot(:, i), unit=log_unit)
                   write(log_unit, '(/, a, /)') "triangle_boot:"
                   call disp(triangle_boot, unit=log_unit)
                   write(log_unit, '(/, a, /)') "indiv_devfacs_boot:"
-                  call disp(indiv_dev_facs_boot, unit=log_unit)
+                  call disp(indiv_dev_facs_boot(:, :, i), unit=log_unit)
                   write(log_unit, '(/, a, /)') "devfacs_boot:"
-                  call disp(dev_facs_boot, unit=log_unit)
+                  call disp(dev_facs_boot(:, i), unit=log_unit)
                   write(log_unit, '(/, a, /)') "resids_boot:"
-                  call disp(resids_boot, unit=log_unit)
+                  call disp(resids_boot(:, :, i), unit=log_unit)
 #endif
                   cycle main_loop
                end if
@@ -380,27 +422,27 @@ subroutine reserve_boot_helper(triangle, n_boot, n_dev, reserve, &
 
                j = n_dev + i_diag + 1 - i
 
-               gamma_shape = (dev_facs_boot(j - 1)**2 * triangle_boot(i, j - 1)) / sigmas_boot(j - 1) **2
+               gamma_shape = (dev_facs_boot(j - 1, i - 1)**2 * triangle_boot(i, j - 1)) / sigmas_boot(j - 1, i - 1) **2
 
                if (gamma_shape <= tiny(1.0) .or. isnan(gamma_shape)) then
 #ifdef DEBUG
                   write(log_unit, '(a, 2i2, //)') "Negative gamma shape parameter at ", i, j
-                  write(log_unit, '("Configuration: ", 3a, /)') trim(resids_type), trim(boot_type), trim(dist)
+                  write(log_unit, '("Configuration: ", 3(a, x), /)') trim(resids_type), trim(boot_type), trim(dist)
                   write(log_unit, '(a, /)') "sigmas_boot: "
-                  call disp(sigmas_boot, unit=log_unit)
+                  call disp(sigmas_boot(:, i), unit=log_unit)
                   write(log_unit, '(/, a, /)') "triangle_boot:"
                   call disp(triangle_boot, unit=log_unit)
                   write(log_unit, '(/, a, /)') "indiv_devfacs_boot:"
-                  call disp(indiv_dev_facs_boot, unit=log_unit)
+                  call disp(indiv_dev_facs_boot(:, :, i), unit=log_unit)
                   write(log_unit, '(/, a, /)') "devfacs_boot:"
-                  call disp(dev_facs_boot, unit=log_unit)
+                  call disp(dev_facs_boot(:, i), unit=log_unit)
                   write(log_unit, '(/, a, /)') "resids_boot:"
-                  call disp(resids_boot, unit=log_unit)
+                  call disp(resids_boot(:, :, i), unit=log_unit)
 #endif
                   cycle main_loop
                end if
 
-               gamma_rate = dev_facs_boot(j - 1) / sigmas_boot(j - 1) ** 2
+               gamma_rate = dev_facs_boot(j - 1, i - 1) / sigmas_boot(j - 1, i - 1) ** 2
 
 #ifdef __INTEL_COMPILER
                errcode = vdrnggamma(method, stream, 1, r, gamma_shape, 0._dp, 1/gamma_rate)
@@ -463,6 +505,7 @@ function single_outlier_helper(outlier_rowidx, outlier_colidx, factor, init_col,
    n_dev = size(init_col)
 
    allocate(sim_triangle(n_dev, n_dev))
+   sim_triangle = 0
 
    sim_triangle(:, 1) = init_col
 
@@ -568,47 +611,47 @@ function single_outlier_helper(outlier_rowidx, outlier_colidx, factor, init_col,
 
       if (outlier_colidx > 2) then
          do j = 2, outlier_colidx - 1
-            gamma_shape = dev_facs(j - 1)**2 * sim_triangle(i, j - 1) / sigmas(j - 1)**2
+            gamma_shape = dev_facs(j - 1)**2 * sim_triangle(outlier_rowidx, j - 1) / sigmas(j - 1)**2
             gamma_rate = dev_facs(j - 1) / sigmas(j - 1)**2
 
 #ifdef __INTEL_COMPILER
             errcode = vdrnggamma(method, stream, 1, r, gamma_shape, 0._dp, 1/gamma_rate)
 
-            sim_triangle(i, j) = r(1)
+            sim_triangle(outlier_rowidx, j) = r(1)
 
 #elif __GFORTRAN__
-            sim_triangle(i, j) = real(gamma(reagl(gamma_shape), .true.)/real(gamma_rate), dp)
+            sim_triangle(outlier_rowidx, j) = real(gamma(real(gamma_shape), .true.)/real(gamma_rate), dp)
 
 #endif
 
          end do
       end if
 
-      gamma_shape = dev_facs(j - 1)**2 * sim_triangle(i, j - 1) / sigmas(j - 1)**2
-      gamma_rate = dev_facs(j - 1) / sigmas(j - 1)**2
+      gamma_shape = dev_facs(outlier_colidx - 1)**2 * sim_triangle(outlier_rowidx, outlier_colidx - 1) / sigmas(outlier_colidx - 1)**2
+      gamma_rate = dev_facs(outlier_colidx - 1) / sigmas(outlier_colidx - 1)**2
 
 #ifdef __INTEL_COMPILER
       errcode = vdrnggamma(method, stream, 1, r, gamma_shape, 0._dp, 1/gamma_rate)
 
-      sim_triangle(i, j) = r(1)
+      sim_triangle(outlier_rowidx, outlier_colidx) = r(1)
 
 #elif __GFORTRAN__
-      sim_triangle(i, j) = real(gamma(reagl(gamma_shape), .true.)/real(gamma_rate), dp)
+      sim_triangle(outlier_rowidx, outlier_colidx) = real(gamma(real(gamma_shape), .true.)/real(gamma_rate), dp)
 
 #endif
 
       if (outlier_colidx < n_dev) then
          do j = outlier_colidx + 1, n_dev + 1 - outlier_rowidx
-            gamma_shape = dev_facs(j - 1)**2 * sim_triangle(i, j - 1) / sigmas(j - 1)**2
+            gamma_shape = dev_facs(j - 1)**2 * sim_triangle(outlier_rowidx, j - 1) / sigmas(j - 1)**2
             gamma_rate = dev_facs(j - 1) / sigmas(j - 1)**2
 
 #ifdef __INTEL_COMPILER
             errcode = vdrnggamma(method, stream, 1, r, gamma_shape, 0._dp, 1/gamma_rate)
 
-            sim_triangle(i, j) = r(1)
+            sim_triangle(outlier_rowidx, j) = r(1)
 
 #elif __GFORTRAN__
-            sim_triangle(i, j) = real(gamma(reagl(gamma_shape), .true.)/real(gamma_rate), dp)
+            sim_triangle(outlier_rowidx, j) = real(gamma(real(gamma_shape), .true.)/real(gamma_rate), dp)
 
 #endif
 

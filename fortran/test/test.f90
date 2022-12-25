@@ -58,7 +58,7 @@ program test
    do j = 1, n_points
       do i = 1, n_points
          config(k, :) = [real(points(j, 1), dp), real(points(j, 2), dp), 0.75_dp, &
-         real(points(i, 1), dp), real(points(i, 2), dp), 1._dp, 1._dp, 1._dp]
+         real(points(i, 1), dp), real(points(i, 2), dp), 1._dp, 1._dp, 2._dp]
          k = k + 1
       end do
    end do
@@ -69,9 +69,9 @@ program test
 
    call reserve_sim(triangle, n_boot, n_dev, config, n_config, results)
 
-   open(newunit=file_unit, file="test/test.dat", buffered='yes', blocksize=104857600)
+   open(newunit=file_unit, file="test/test.dat", buffered='yes', blocksize=2147467264)
 
-   call disp(results, unit=file_unit)
-
+   call disp(results(1:100, :), unit=file_unit)
    close(file_unit)
+   
 end program test
