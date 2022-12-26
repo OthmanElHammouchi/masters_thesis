@@ -27,13 +27,13 @@ all: $(TARGET)
 
 include .depend
 
-$(OBJS): depend
-
 .phony: depend
 depend: .depend
 
 .depend: $(SRCS)
 	makedepf90 -b $(BUILD_DIR) $(SRCS) > .depend
+
+$(OBJS): depend
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.f90
 	$(FC) $(FFLAGS) -fPIC -c $< -o $@
@@ -54,5 +54,5 @@ test: test/test.f90 $(filter-out $(BUILD_DIR)/reserve_boot.o, $(OBJS))
 clean:
 	rm -rf build/* lib/* .depend
 
-debug: FFLAGS += -DDEBUG -g -O0
+debug: FFLAGS += -DDEBUG -g -O0 -warn -check
 debug: .depend $(TARGET)
