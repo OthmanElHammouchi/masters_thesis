@@ -22,13 +22,16 @@
 
 \usepackage{vub}
 
-\mathtoolsset{showonlyrefs}
-
 \usepackage{cleveref}
 \addbibresource{bibliography.bib}
+\renewcommand\multicitedelim{\addsemicolon\space}
+%
+\DeclareMultiCiteCommand{\footfullcites}[\mkbibfootnote]
+  {\footfullcite}{\addsemicolon\space}
 
 \theoremstyle{plain}
 \newtheorem{model}{Model}
+\newtheorem{theorem}{Theorem}
 
 \makeatletter
 \def\th@plain{%
@@ -95,7 +98,7 @@ The defining characteristic of the insurance industry is the inverted nature of 
 
 The chain ladder method ranks among the most frequently applied loss reserving techniques in insurance. Originally conceived as a purely computational algorithm, various models have since been proposed to cast it in a stochastic framework. Regardless of which one the reserving actuary chooses to employ, the central assumption he is obliged to make is that the development pattern observed in earlier cohorts is applicable to later ones. While this requirement seems eminently reasonable - all models ultimately rely on the past serving as a sufficiently reliable guide to the future - it turns out to be difficult to verify quantitatively in practice. 
 
-A special difficulty which arises in the actuarial context is the relatively small quantity of data which is typically available. This dearth of observations sharply constrains the efficacy of classical statistical tests. Historical data is most often presented in the form of a \emph{loss} or \emph{run-off triangle} $\mathcal{D}_I$, which consists either of cumulative or incremental amounts of some actuarial variable (payments, number of claims, etc.), respectively denoted by $C_{ij}$ and $X_{ij}$. Here $1 \leq i \leq I$ denotes the \emph{cohort} or \emph {accident year} and $1 \leq j \leq J$ the \emph{development year}, so that
+A special difficulty which arises in the actuarial context is the relatively small quantity of data which is typically available. This dearth of observations sharply constrains the efficacy of classical statistical tests. Historical data is most often presented in the form of a \emph{loss} or \emph{run-off triangle} $\mathcal{D}_I$, which consists either of cumulative or incremental amounts of some actuarial variable (payments, number of claims, etc.), respectively denoted by $C_{ij}$ and $X_{ij}$. Here $1 \leq i \leq I$ denotes the \emph{cohort}, \emph{origin year} or \emph {accident year} and $1 \leq j \leq J$ the \emph{development year}, so that
 \begin{equation}
     \mathcal{D}_I = \left\lbrace C_{ij} \, \vert \, 1 \leq j \leq J, i + j \leq I + 1 \right \rbrace 
     %
@@ -107,7 +110,7 @@ To simplify the formulas, we assume throughout this exposition that $I = J$. Emb
 \begin{equation}
     R = \sum_{i = 1}^I (C_{i, I} - C_{i, I + 1- i})
 \end{equation}
-by forecasting the values in the lower triangle $\mathcal{D}^c_I$. 
+by forecasting the values in the lower triangle $\mathcal{D}^{\mathsf{c}}_I$. 
 
 Our aim in this chapter is to use bootstrap simulation methods to investigate whether it is possible to detect structural breaks in the claims development pattern. We do this by examining the sensitivity of widely-used actuarial models to the deviations from their assumptions.  
 
@@ -120,17 +123,18 @@ Suppose we are given a sample $X_1, \dots, X_n$ of independent and identical ran
     \hat{F}(x) \coloneqq \sum_{k=1}^n I_{\{ X_k \leq x \}} \,.
 \end{equation}
 We then use $\hat{F}$ to simulate new samples $X^{(b)}_1, \dots, X^{(b)}_n$, which simply corresponds to drawing with replacement from $X_1, \dots X^*_n$. For each of these $B$ bootstrap samples, we can then compute $g^{(b)} = g(X^{(b)}_1, \dots, X^{(b)}_n)$, which we think of as an approximate sample from the true distribution of $\widehat{h(F)}$. The uncertainty of our estimate could then for instance be quantified by
-\begin{displaymath}
-    \frac{1}{B-1}\sum_{b=1}^B(g^{(b)} - \widehat{h(F)})^2
-\end{displaymath}
-The parametric bootstrap follows the same logic, but makes the additional assumption that $F$ has a known form which is fully determined by some parameters $\boldsymbol{\theta}$. We can then compute an estimate $\boldsymbol{\hat{\theta}}(X_1, \dots, X_n)$ from the available data and approximate $F_{\boldsymbol{\theta}} \approx F_{\boldsymbol{\hat{\theta}}}$. A random number generator can then be used to produce the simulated samples $X^{(b)}_1, \dots, X^{(b)}_n$ and $g^{(b)}$ needed to perform inference.
+\begin{equation}
+    \frac{1}{B-1}\sum_{b=1}^B(g^{(b)} - \widehat{h(F)})^2 
+    \,.
+\end{equation}
 
-Uses the fitted model to generate new samples.
+The parametric bootstrap follows the same logic, but makes the additional assumption that $F$ is of a known form fully determined by a set of parameters $\bm{\theta}$. It then estimates $\bm{\theta}$ with the available data and uses the fitted model $F_{\bm{\theta}}$ to simulate new samples $X^{(b)}_1, \dots, X^{(b)}_n$ and $g^{(b)}$ with the help of a random number generator.
+
+Although we introduced the bootstrap in this section as a device for estimating the error of our models, its scope does not limit itself to this. The output of the bootstrap gives us a complete \emph{simulated distribution} which can be used for all kinds of inference, e.g. estimating higher moments, computing confidence intervals. 
 
 \section{Mack's model}
 
 We begin by considering the distribution-free model due to Mack \footfullcite{mack}, which applies to the cumulative claims triangle $\mathcal{D}_I = (C_{ij})$, and makes the following assumptions:
-
 \begin{model}[Mack Chain Ladder] \label{mack} \leavevmode
     \begin{enumerate}[(i)]
         \item \label{mack1} There exist development factors $f_1, \dots, f_{I - 1}$ such that
@@ -146,24 +150,27 @@ We begin by considering the distribution-free model due to Mack \footfullcite{ma
         \item \label{mack3} Cumulative claims processes $(C_{ij})_j, (C_{i'j})_j$ are independent for $i \neq i'$.
     \end{enumerate}
 \end{model}
-
 Assumption (\ref{mack1}) states that the conditional expectation of the cumulative claim amount in any period depends only on that of the previous period, and that this dependence is moreover linear. Assumption (\ref{mack2}) makes a similar assertion about the conditional variance, and assumption (\ref{mack3}) states that the rows of our data triangle represent randomly drawn sample paths.
 
-Estimates for the ultimate claim amounts $C_{iI}$ are obtained by substituting the chain ladder estimates $\hat{f}_j$ for the unknown development factors $f_j$ in the expression for the conditional expectation, yielding
+Estimates for the ultimate claim amounts $C_{iI}$ are obtained by substituting the chain ladder estimates
+\begin{equation} \label{eq:chain-ladder-estimator}
+    \hat{f}_j(\mathcal{D}_I) = \hat{f}_j(C_{1j}, \dots, C_{I - j, j}, \dots, C_{1, j + 1}, \dots, C_{I - j, j + 1}) \coloneqq \frac{\sum_{i=1}^{I - j} C_{i, j + 1}}{\sum_{i=1}^{I - j} C_{i, j}}
+\end{equation}
+for the unknown development factors $f_j$ in the expression for the conditional expectation, yielding
 \begin{equation}
     \hat{C}_{i, I} \coloneqq \hat{\mathbb{E}}[C_{i, I} \ \Vert \ C_{i, I-i}] = C_{i, I + 1 - i} \prod_{j=I-i}^{I-1} \hat{f}_j  \,,
 \end{equation}
 from which we obtain the reserve estimate
-\begin{equation}
-    \hat{R} = \sum_{i = 1}^I (\hat{C}_{i, I} - C_{i, I + 1- i}) \,.
+\begin{equation} 
+    \hat{R} = g(\mathcal{D}_I) \coloneqq \sum_{i = 1}^I (\hat{C}_{i, I} - C_{i, I + 1- i}) \,, \label{eq:reserve_predictor}
 \end{equation}
-Observe that this is, in fact, a two-step process: the ultimate is estimated by the conditional mean, which we estimate in turn by plugging in $\hat{f}_j$.
+which should, strictly speaking, more properly be called a \emph{predictor}, as the total outstanding loss, being a function of $(C_{iI})_{1 \leq i \leq I}$, is a random variable. Altough we shall generally follow the common practice of using both terms interchangeably, as this is rarely cause for confusion, it will sometimes prove fruitful to make this distinction, which is why we emphasize it here.
 
-There exist a number of approaches to defining a bootstrap procedure for Mack's model. Following the literature \footfullcite{wuthrich:mse}, we will describe them in the context of gauging the uncertainty of our chain ladder estimates, which provides a suitable backdrop to describe the different choices involved. As with any model, the error made by Mack's  chain ladder can be quantified using the (conditional) \emph{mean square error of prediction}
-\begin{equation}
+Predicting the reserve, then, can be viewed as a two-step process, the conditional mean being estimated by plugging in $\hat{f}_j$, and the former in turn serving to predict the ultimate loss. The error thus made can be quantified using the (conditional) \emph{mean square error of prediction}
+\begin{equation} \label{eq:msep}
     \underset{R \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\hat{R}) \coloneqq \condexp*{(\hat{R} - R)^2}{\mathcal{D}_I} \,,
 \end{equation}
-which, in line with previous remarks, we can divide into \emph{estimation error} and \emph{process error} as follows:
+which we can divide into an \emph{estimation error} and a \emph{process error} corresponding to both steps of the procedure:
 \begin{align}
     \begin{split}
         \condexp*{(\hat{R} - R)^2}{\mathcal{D}_I} &= \condexp*{(R - \condexp*{R}{\mathcal{D}_I})^2}{\mathcal{D}_I} + \condexp*{(\condexp*{R}{\mathcal{D}_I} - \hat{R})^2}{\mathcal{D}_I} \\ &\phantom{{}=1} -2\condexp*{(R - \condexp*{R}{\mathcal{D}_I})(\condexp*{R}{\mathcal{D}_I} - \hat{R})}{\mathcal{D}_I}
@@ -174,7 +181,45 @@ which, in line with previous remarks, we can divide into \emph{estimation error}
     \end{split} \\
     &= \underbrace{\mathrm{Var}(R \, \Vert \, \mathcal{D}_I)}_\text{process error} + \underbrace{(\condexp*{R}{\mathcal{D}_I} - \hat{R})^2}_\text{estimation error} \,.
 \end{align}
-It is not difficult to see the analogy between this expression and the familiar bias-variance decomposition from classical statistics. Using the standard rules of conditional probability, we can then express the MSEP in terms of the individual accident years:
+It is not difficult to see the analogy between this expression and the familiar bias-variance decomposition from classical statistics.
+
+\subsection{Choosing residuals}
+
+If we attempt to apply the methodology of \Cref{sec:boot} to \eqref{eq:reserve_predictor}, we are faced with the difficulty that the $C_{ij}$'s are neither independent nor share the same distribution. This problem is encountered when bootstrapping any statistical model, and is most commonly solved by resorting to the residuals obtained after fitting it. Here, the limitations of \Cref{model:mack} with its distribution-free paradigm become apparent, and we will need to supplement it with some stronger assumptions. For now, we will use the following autoregressive Gaussian time series model:
+\begin{equation} \label{eq:time-series-model}
+    C_{i, j+1} = f_j C_{i,j} + \sigma_j \sqrt{C_{i,j}} \varepsilon_{i, j} \sim \mathcal{N}(f_j C_{i, j}, \sigma_j^2 C_{i, j}) \,.
+\end{equation}
+It can easily be verified that this is compatible with \Cref{model:mack}. Its error terms are given by
+\begin{equation}
+    \hat{\varepsilon}_{ij} \coloneqq \frac{(F_{i, j} - f_j)\sqrt{C_{i, j}}}{\sigma_j} \,,
+\end{equation}
+and we can obtain residuals by substituting appropriate estimators for the unknown parameters in this expression. For $f_j$, these will be the chain-ladder estimators \ref{eq:chain-ladder-estimator}, but we haven't discussed how to estimate the $\sigma_j$'s yet. The next theorem, which we state without proof \footcite[The relevant proofs can be found in][17 \psqq]{wuthrich:stochastic-reserving}, remedies this, as well as giving some useful properties of these estimators.
+\begin{theorem}
+    The chain ladder estimators $\hat{f}_j$ are (conditionally) unbiased and uncorrelated. Moreover, if we define the individual development factors as
+    \begin{equation}
+        F_{i, j + 1} \coloneqq \frac{C_{i, j + 1}}{C_{ij}} \,
+    \end{equation}
+    then
+    \begin{equation}
+        \hat{\sigma}_j \coloneqq \frac{1}{I-j}\sum_{i=1}^{I-j} C_{ij}\left( F_{ij} - \hat{f}_j \right)^2
+    \end{equation}
+    are (conditionally) unbiased estimators for the parameters $\sigma_1, \dots, 
+    \sigma_I$.
+\end{theorem}
+For the residuals, a multitude of different choices are available. The most obvious is to simply use the \emph{raw residuals}
+\begin{equation}
+\hat{\varepsilon}_{ij} \coloneqq \frac{(F_{i, j} - \hat{f}_j)\sqrt{C_{i, j}}}{\hat{\sigma}_j} \,,
+\end{equation}
+which have the advantage of being intuitive and simple to implement.
+
+
+Note that the recursive dependence of loss amounts with the same origin year makes this a non-trivial task. Had we been dealing with a simple linear regression of pairs ${(X_1, Y_1), \dots, (X_n, Y_n)}$, for example, then we could use the fitted model and resampled residuals directly to generate simulated responses
+\begin{equation}
+    Y^*_i \coloneqq \hat{\beta}_0 + \hat{\beta}_1 X_i + \hat{\varepsilon}^*_i \,.
+\end{equation}
+By contrast, it is not immediately clear how a resampled loss triangle can be obtained from $\hat{f}_j$, $\hat{\sigma}_j$ and $\hat{\varepsilon}^*_{ij}$. A number of different approaches have been proposed in the literature  \footcites[See, for example,][Section~D6]{mack:chain-ladder-variability}{wuthrich:chain-ladder-msep}, where they are framed in terms of producing a bootstrap estimate of \eqref{eq:msep}, which is why we choose to adopt this point of view as well. Our exposition closely follows \cite[45\psqq]{wuthrich:stochastic-reserving}, focusing on two methods in particular, which, for reasons that will become apparant shortly, we will refer to as the \emph{conditional} and \emph{unconditional} approach.
+
+Our first task is to obtain a more manageable expression for the total MSEP by breaking it down into components which depend on the individual accident years:
 \begin{align}
     \begin{split}
     \condexp*{(\hat{R} - R)^2}{\mathcal{D}_I} &=
@@ -184,17 +229,17 @@ It is not difficult to see the analogy between this expression and the familiar 
     %
     &= \sum_{i=2}^I \mathrm{Var}(C_{iI} \, \Vert \, \mathcal{D}_I) + \left( \sum_{i=2}^I \condexp*{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI} \right)^2 \\
     %
-    \begin{split}
-    &= \sum_{i=2}^I \underbrace{\left(\mathrm{Var}(C_{iI} \, \Vert \, \mathcal{D}_I) + (\condexp*{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI}) \right)}_{\eqqcolon \underset{C_{iI} \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\hat{C}_{iI})} \\
+    \begin{split} \label{eq:msep-decomposition}
+    &= \sum_{i=2}^I \underbrace{\left(\mathrm{Var}(C_{iI} \, \Vert \, \mathcal{D}_I) + (\condexp*{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})^2 \right)}_{\eqqcolon \underset{C_{iI} \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\hat{C}_{iI})} \\
     &\phantom{{}=1} + \sum_{\substack{2 \leq i, j \leq I \\ i \neq j}} (\condexp*{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})(\condexp*{C_{jI}}{\mathcal{D}_I} - \hat{C}_{jI}) \,.
     \end{split}
 \end{align}
-The problem of esitmating the total MSEP has thus been reduced to estimation of the MSEP for a single accident along with the additional cross terms. As the latter is not important the 
+The problem has thus been reduced to estimation of the MSEP for a single accident along with some additional cross terms. The latter are only relevant for obtaining a closed formula and we will therefore ignore them in the sequal. It then remains for us to deal with the parameter and process error of individual accident years.
 
 \subsection{Bootstrapping the parameter error}
 
 Using the definitions from the previous section, we can write the process error for a single accident year $i \in \{ 1, 
-dots, I \}$ as
+\dots, I \}$ as
 \begin{align}
     (\condexp*{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})^2 &= C^2_{i, I+1-i} \left( \prod_{j=I+1-i}^{I-1}f_j - \prod_{j=I+1-i}^{I-1}\hat{f}_j \right)^2 \\
     \label{procerr}%
@@ -202,106 +247,141 @@ dots, I \}$ as
 \end{align}
 Notice that this expression contains the unknown development factors $f_j$ and so cannot be computed directly. If we tried to estimate it by subtituting the $\hat{f}_j$'s for them, however, the result would be a constant $0$, which is clearly not accurate. We must therefore find a way to express the variability of $\hat{f}_j$ around $f_j$. Until now, we have worked under the assumption that $\mathcal{D}_I$ is held fixed, which is problematic because, conditional on $\mathcal{D}_I$, $\hat{f}_j$ is a scalar. Relaxing this assumption therefore means reducing the dataset we condition on.
 
-Several ways of achieving this have been proposed in the literature, see for example \cite[45]{wuthrich:stoch} and \cite[Section D6, p. 32]{mack:var}. We will focus on two of them in particular, the so-called \emph{conditional} and \emph{unconditional} approaches. They can be most easily understood if we think of conditioning as providing a 'recipe' for a particular kind of resampling, e.g. $\condexp*{X}{Y}$ corresponds to sampling observations from $X$ for a fixed value of $Y$ and taking their average. Unsurprisingly, this point of view will allow us to transition easily from analytic formulae to a bootstrapping procedure.
+It's instructive to reflect upon the relation between 
+
+They can be most easily understood if we think of conditioning as providing a 'recipe' for a particular kind of resampling, e.g. $\condexp*{X}{Y}$ corresponds to sampling observations from $X$ for a fixed value of $Y$ and taking their average. Unsurprisingly, this point of view will allow us to transition easily from analytic formulae to a bootstrapping procedure.
 
 If we define the subset of observation up to (and including) development year $k$ as
 \begin{equation}
     \mathcal{B}_k \coloneqq \left\lbrace C_{ij} \in \mathcal{D}_I \, \rvert \, j \leq k \right\rbrace \,,
 \end{equation}
-then the unconditional approach fixes $\mathcal{B}_{I+1-i}I$ in accident year $i$, resampling the observations in
+then the unconditional approach fixes $\mathcal{B}_{I+1-i}$ in accident year $i$, resampling the observations in
 \begin{equation}
     \mathcal{D}^O_{I, i} \coloneqq \left \lbrace C_{ij} \in \mathcal{D}_I \mid j > I + 1 - i \right\rbrace \,.
 \end{equation}
 completely, which leads to the estimate
-\begin{align} \label{uncond}
+\begin{align} \label{eq:unconditional-parameter-error}
     \condexp{(\condexp{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})^2}{\mathcal{B}_{I+1-i}} &= C^2_{i, I+1-i} \condexp*{\left( \prod_{j=I+1-i}^{I-1}f_j - \prod_{j=I+1-i}^{I-1}\hat{f}_j \right)^2}{\mathcal{B}_{I+1-i}} \\
     &= C^2_{i, I+1-i} \left( \condexp*{\prod_{j=I+1-i}^{I-1}\hat{f}^2_j}{\mathcal{B}_{I+1-i}} - \prod_{j=I+1-i}^{I-1}f^2_j \right)\,,
 \end{align}
-where we used the fact that the $\hat{f}_j$'s are uncorrelated. If we upgrade Assumptions \ref{mack} to the stronger autoregressive Gaussian time series model
-\begin{equation} \label{tsmodel}
-    C_{i, j+1} = f_j C_{i,j} + \sigma_j \sqrt{C_{i,j}} \varepsilon_{i, j} \sim \mathcal{N}(f_j C_{i, j}, \sigma_j^2 C_{i, j}) \,,
-\end{equation}
-then we can view \ref{uncond} as resampling $\mathcal{D}^O_{I, i}$ completely, computing $\prod_{j=I+1-i}^{I-1}\hat{f}^2_j$ and taking the average. 
+where we used the fact that the $\hat{f}_j$'s are uncorrelated.
 
-By contrast, the conditional approach only allows us to vary a given factor $\hat{f}_j$ over the observations after $j$, so that every point in $\mathcal{D}^O_{I, i}$ (except the upper right corner) will be conditioned on for at least one $\hat{f}_j$ when resampling. Phrased in terms of \eqref{tsmodel}, we keep the original $C_{ij}$ fixed at every step of the time series and only resample the next value $C_{i, j+1}$. Denoting the probability measure induced by this process on $\mathcal{D}^O_{I, i}$ by $\mathbb{P}^*_{\mathcal{D}_I}$, our estimate for the parameter error in the conditional approach then becomes
+then we can view \eqref{eq:unconditional-parameter-error} as resampling $\mathcal{D}^O_{I, i}$ completely, computing $\prod_{j=I+1-i}^{I-1}\hat{f}^2_j$ and taking the average. 
+
+\begin{algorithm}
+    \caption{Unconditional resampling} \label{alg:unconditional-resampling}
+    \begin{algorithmic}
+        \Require Loss triangle $\mathcal{D}_I = (C_{ij})_{1 \leq i, j \leq I}$, number of iterations $N$, residuals $(\varepsilon_{ij})_{1 \leq i, j \leq I - 1}$
+        \vspace{2pt}
+        \Ensure{Simulated reserve sample $\hat{R}^*_1, \dots, \hat{R}^*_N$}
+        \vspace{2pt}
+        \For{$l \gets 1, N$}
+            \For{$k \gets 2, I$}
+                \For{$i \gets 1, \, I + 1 - k$}
+                    \vspace{2pt}
+                    \State $C^*_{i, I + 1 - k} \gets C_{i, I + 1 - k}$
+                    \vspace{2pt}
+                \EndFor
+                \For{$j \gets I + 1 - k, \, I - 1$}
+                    \For{$i \gets 1, \, I + 1 - j$}
+                        \vspace{4pt}
+                        \State $\displaystyle F^*_{ij} \gets \hat{f}_j + \frac{\hat{\sigma}_j}{\sqrt{C^*_{ij}}} \varepsilon^*_{ij}$
+                        \vspace{4pt}
+                        \State $C^*_{i, j + 1} \gets F^*_{ij} \, C^*_{ij}$
+                        \vspace{4pt}
+                    \EndFor
+                    \vspace{4pt}
+                        \State $\displaystyle \hat{f}^*_j \gets \frac{\sum_{i = 1}^{I - j}F^*_{ij} \, C^*_{ij}}{\sum_{i = 1}^{I - j} C^*_{ij}}$
+                    \vspace{4pt}
+                \EndFor
+                \vspace{3pt}
+                \State $\hat{C}_{i, I} \gets \prod_{j = I - i}^{I - 1} \hat{f}_j C_{i, I + 1 - i} \,,$
+                \vspace{2pt}
+                \State $\hat{R}^*_{i, l} \gets \hat{C}_{i, I} - C_{i, I + 1 - i}$
+                \vspace{3pt}
+            \EndFor
+            \vspace{2pt}
+            \State $\hat{R}^*_l \gets \sum_{i = 2}^I \hat{R}^*_{i, l}$
+            \vspace{2pt}
+        \EndFor
+    \end{algorithmic}
+\end{algorithm}
+
+By contrast, the conditional approach only allows us to vary a given factor $\hat{f}_j$ over the observations after $j$, so that every point in $\mathcal{D}^O_{I, i}$ (except the upper right corner) will be conditioned on for at least one $\hat{f}_j$ when resampling. Phrased in terms of \eqref{eq:time-series-model}, we keep the original $C_{ij}$ fixed at every step of the time series and only resample the next value $C_{i, j+1}$. Writing $\mathbb{P}^*_{\mathcal{D}_I}$ for the probability measure induced on $\mathcal{D}^O_{I, i}$ by this process, our estimate for the parameter error in the conditional approach then becomes
 \begin{align}
     \expect*{(\condexp{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})^2}{\mathbb{P}^*_{\mathcal{D}_I}}&= C^2_{iI} \, \expect*{\left( \prod_{j=I+1-i}^{I-1}f_j - \prod_{j=I+1-i}^{I-1}\hat{f}_j \right)^2}{\mathbb{P}^*_{\mathcal{D}_I}} \\ 
     &= C^2_{i, I+1-i} \left( \expect*{\prod_{j=I+1-i}^{I-1}\hat{f}^2_j}{\mathbb{P}^*_{\mathcal{D}_I}} - \prod_{j=I+1-i}^{I-1}f^2_j \right) \\
     &= C^2_{i, I+1-i} \left( \prod_{j=I+1-i}^{I-1} \condexp*{\hat{f}^2_j}{\mathcal{B}_j} - \prod_{j=I+1-i}^{I-1}f^2_j \right) \,.
 \end{align}
 
-We will implement both approaches in \Cref{sec:num}.
-
-\subsection{Bootstrapping Mack's model}
-
-Although we introduced the bootstrap in \Cref{sec:boot} as a device for gauging the uncertainty of estimates, its scope is in reality far wider than this. The output of the bootstrap is in fact a complete \emph{simulated distribution} which can be used for all kinds of inference, e.g. estimating higher moments, computing confidence intervals. Recall as well that we distinguished between the parametric and non-parametric bootstrap, which differ in the method used for resampling. In this section, we will see how both can be applied to Mack's model.
-
-Our first concern is to identify a set of variables which are i.i.d. In the context of bootstrapping statistical models, these are invariably taken to be the residuals. Defining the individual development factors $F_{i, j+1} \coloneqq \frac{C_{i, j + 1}}{C_{ij}}$
-
-\eqref{tsmodel}
-
-\begin{equation}
-\hat{\varepsilon}_{ij} \coloneqq \frac{(F_{i, j} - \hat{f}_j)\sqrt{C_{i, j}}}{\sigma_j} \,.
-\end{equation}
-Note that the true errors are standard normally distributed
-\begin{equation}
-    \varepsilon_{ij} \coloneqq \frac{(F_{i, j} - f_j)\sqrt{C_{i, j}}}{\sigma_j} \sim \mathcal{N}(0, 1) \,,
-\end{equation}
-which suggests the following parametric bootstrap procedure:
-\begin{algorithm}
-    \caption{Normal parametric bootstrap, Mack's model}
-    \label{alg:mackparamnorm}
+\begin{algorithm} \label{alg:conditional-resampling}
+    \caption{Conditional resampling}
     \begin{algorithmic}
-        
-        \State 
-    \end{algorithmic}
-\end{algorithm}
-
-\Require{Loss triangle $\mathcal{D}_I = (C_{ij})_{1 \leq i, j \leq I}$, number of iterations $N$}
+        \Require Loss triangle $\mathcal{D}_I = (C_{ij})_{1 \leq i, j \leq I}$, number of iterations $N$, residuals $(\varepsilon_{ij})_{1 \leq i, j \leq I - 1}$
         \vspace{2pt}
-        \Ensure{Simulated reserve sample $\hat{R}_1, \dots, \hat{R}_N$}
+        \Ensure{Simulated reserve sample $\hat{R}^*_1, \dots, \hat{R}^*_N$}
         \vspace{2pt}
-
-\begin{algorithm}
-    \begin{algorithmic}
-        \Procedure{Resample}{}
-        \For{$i \gets 1, I - 1$}
-            \vspace{3pt}
-            \State $\displaystyle F_{ij} \gets \frac{C_{i, j+1}}{C_{ij}}$
-            \vspace{4pt}
-            \State $\displaystyle \hat{f}_j \gets \frac{\sum_{i=1}^{I+1-j}C_{i, j + 1}}{\sum_{i=1}^{I+1-j}C_{ij}}$
-            \vspace{4pt}
-            \State $\displaystyle \hat{\sigma}_j \gets \frac{1}{I-j}\sum_{i=1}^{I-j} C_{ij}\left( F_{ij} - \hat{f}_j \right)^2$
-            \vspace{3pt}
+        \For{$l \gets 1, N$}
+            \For{$k \gets 2, I$}
+                \For{$j \gets I + 1 - k, \, I - 1$}
+                    \For{$i \gets 1, \, I + 1 - j$}
+                        \vspace{4pt}
+                        \State $\displaystyle F^*_{ij} \gets \hat{f}_j + \frac{\hat{\sigma}_j}{\sqrt{C_{ij}}} \varepsilon^*_{ij}$
+                        \vspace{4pt}
+                    \EndFor
+                    \vspace{4pt}
+                        \State $\displaystyle \hat{f}^*_j \gets \frac{\sum_{i = 1}^{I - j}F^*_{ij} \, C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}$
+                    \vspace{4pt}
+                \EndFor
+                \vspace{3pt}
+                \State $\hat{C}_{i, I} \gets \prod_{j = I - i}^{I - 1} \hat{f}_j C_{i, I + 1 - i} \,,$
+                \vspace{2pt}
+                \State $\hat{R}^*_{i, l} \gets \hat{C}_{i, I} - C_{i, I + 1 - i}$
+                \vspace{3pt}
+            \EndFor
+            \vspace{2pt}
+            \State $\hat{R}^*_l \gets \sum_{i = 2}^I \hat{R}^*_{i, l}$
+            \vspace{2pt}
         \EndFor
-        \State $\bm{\varepsilon^*} \gets$ \Call{rnorm}{$\mu = 0$, $\sigma = 1$, $n = (I + I^2)/2$}
     \end{algorithmic}
 \end{algorithm}
+We will implement both approaches in \Cref{sec:results}.
 
-% \vspace{4pt}
-%     \State $\displaystyle \hat{\varepsilon}_{ij} \gets \frac{(F_{i, j} - \hat{f}_j)\sqrt{C_{i, j}}}{\sigma_j}$
+\subsection{Bootstrapping the process error}
 
-The difficulty with the normal model is that it makes it possible to draw negative samples during the bootstrap simulation. 
+Moving on to the remaining component in \eqref{eq:msep-decomposition}, which quantifies the intrinsic variation of the ultimate loss amount, conditional on the observations in $\mathcal{D}_I$. Observe that this term only arises because we are dealing with a prediction problem, so that our target is a random variable rather than some fixed parameter. This suggests the following method for incorporation the process error into our bootstrap procedure. At each iteration of the innermost loop in \cref{alg:unconditional-resampling} and \cref{alg:conditional-resampling}, we additionally compute the resampled parameters, respectively
+\begin{equation}
+    \hat{\sigma}^*_j = \frac{1}{I-j}\sum_{i=1}^{I-j} C^*_{ij}\left( F^*_{ij} - \hat{f}^*_j \right)^2
+\end{equation}
+and
+\begin{equation}
+    \hat{\sigma}^*_j = \frac{1}{I-j}\sum_{i=1}^{I-j} C_{ij}\left( F^*_{ij} - \hat{f}^*_j \right)^2 \,.
+\end{equation}
+We then use these to simulate lower pseudo-triangles $(\mathcal{D}^{\mathsf{c}}_I)^* = (C^*_{ij})$, which in turn yield simulated reserve samples
+\begin{equation}
+    R^* \coloneqq \sum_{i = 2}^I (C^*_{iI} - C_{i, I + 1 - i}) \,.
+\end{equation}
+Notice that this allows us to bypass \eqref{eq:reserve_predictor} completely, altough we still expect that
+\begin{equation}
+    \frac{1}{N} \sum_{k = 1}^N R^*_k \approx \hat{R} \,.
+\end{equation}
+In view of \eqref{eq:time-series-model}, the most evident way to generate $(\mathcal{D}^{\mathsf{c}}_I)^*$ is to start from the antidiagonal in $\mathcal{D}_I$ and successively sample
+\begin{equation} \label{eq:normal-sampling}
+    C^*_{i, j + 1} \sim \mathcal{N}(\hat{f}^*_j \, C_{ij}, \hat{\sigma}^*_j \, C_{ij}) \,.
+\end{equation}
+This approach has a major drawback, however: it makes it possible to draw negative samples for the cumulative loss amounts. One way to remedy this would obviously be to simply discard a simulated triangle as soon as it contains a negative value. 
 
-To remedy this, we follow the suggestion given in \cite[238]{england:dist} and additionally consider 
+An alternative is to follow the suggestion given in \cite[238]{england:dist} and subtitute in place of \eqref{eq:normal-sampling} a gamma distribution with the same mean and variance. If we write $C_{ij} \sim \Gamma(\alpha, \beta)$, this means that $\alpha, \beta$ must satisfy
+\begin{equation}
+\frac{\alpha}{\beta} = f_{j-1} C_{i, j-1} \quad \text{and} \quad \frac{\alpha}{\beta^2} = \sigma^2_{j-1} C_{i, j-1} \,,
+\end{equation}
+from which it follows that
+\begin{equation}
+\alpha = \frac{f_{j-1}^2 C_{i, j-1}}{\sigma_{j-1}^2} \quad \text{and} \quad \beta = \frac{f_{j-1}}{\sigma_{j-1}^2} \,.
+\end{equation}
+This ensures that Mack's assumptions are still valid while avoiding nonsensical outcomes.
 
-use a different distribution which still respects Mack's assumptions. 
-
-If we take for instance $C_{ij} \sim \Gamma(\alpha, \beta)$, then we must choose $\alpha, \beta$ to satisfy
-\begin{displaymath}
-\begin{cases}
-\frac{\alpha}{\beta} = f_{j-1} C_{i, j-1} \\
-\frac{\alpha}{\beta^2} = \sigma^2_{j-1} C_{i, j-1} \,,
-\end{cases}
-\end{displaymath}
-giving the values
-\begin{gather*}
-\alpha = \frac{f_{j-1}^2 C_{i, j-1}}{\sigma_{j-1}^2} \\
-\beta = \frac{f_{j-1}}{\sigma_{j-1}^2} \,,
-\end{gather*}
-for the distribution parameters.
-
-\subsection{Numerical results} \label{sec:num}
+\subsection{Implementation and numerical results} \label{sec:results}
 
 % Using the rules of conditional probability, we can rewrite the first equation as
 % \begin{gather}
@@ -309,7 +389,10 @@ for the distribution parameters.
 % \end{gather}
 % from which it becomes clear that this is in fact a first-order stationarity assumption over the cohorts on the time series $(F_{i, j - 1})_{0 \leq i \leq I}$. 
 % \\
+
+% $$
 % \mathrm{Var}[\frac{C_{ij}}{C_{i, j - 1}^2} \ \Vert  \ C_{i, j - 1}] = \mathrm{Var}[\frac{F_{i, j - 1}}{C_{i, j - 1}} \ \Vert \ C_{i, j - 1}] = \sigma_{j - 1}^2 \,,
+% $$
 
 \backmatter%
 \chapter{Conclusion}

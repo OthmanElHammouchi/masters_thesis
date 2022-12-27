@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2022.12.15)  23 DEC 2022 09:40
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2022.12.15)  27 DEC 2022 20:46
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -771,38 +771,38 @@ Package cleveref Info: `amsthm' support loaded on input line 3026.
 Package cleveref Info: `algorithmicx' support loaded on input line 3120.
 )
 \c@model=\count449
-\@quotelevel=\count450
-\@quotereset=\count451
-
-No file thesis.aux.
+\c@theorem=\count450
+\@quotelevel=\count451
+\@quotereset=\count452
+ (./thesis.aux)
 \openout1 = `thesis.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 68.
-LaTeX Font Info:    ... okay on input line 68.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 68.
-LaTeX Font Info:    ... okay on input line 68.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 68.
-LaTeX Font Info:    ... okay on input line 68.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 68.
-LaTeX Font Info:    ... okay on input line 68.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 68.
-LaTeX Font Info:    ... okay on input line 68.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 68.
-LaTeX Font Info:    ... okay on input line 68.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 68.
-LaTeX Font Info:    ... okay on input line 68.
-(/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+ (/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count452
+\scratchcounter=\count453
 \scratchdimen=\dimen299
 \scratchbox=\box69
-\nofMPsegments=\count453
-\nofMParguments=\count454
+\nofMPsegments=\count454
+\nofMParguments=\count455
 \everyMPshowfont=\toks47
-\MPscratchCnt=\count455
+\MPscratchCnt=\count456
 \MPscratchDim=\dimen300
-\MPnumerator=\count456
-\makeMPintoPDFobject=\count457
+\MPnumerator=\count457
+\makeMPintoPDFobject=\count458
 \everyMPtoPDFconversion=\toks48
 ) (/usr/share/texlive/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
@@ -824,14 +824,14 @@ Package biblatex Info: Data encoding 'utf8' specified.
 \openout4 = `thesis-blx.bib'.
 
 Package biblatex Info: Trying to load bibliographic data...
-Package biblatex Info: ... file 'thesis.bbl' not found.
-
-No file thesis.bbl.
-Package biblatex Info: Reference section=0 on input line 68.
-Package biblatex Info: Reference segment=0 on input line 68.
+Package biblatex Info: ... file 'thesis.bbl' found.
+ (./thesis.bbl)
+Package biblatex Info: Reference section=0 on input line 71.
+Package biblatex Info: Reference segment=0 on input line 71.
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: float package is loaded.
 Package caption Info: End \AtBeginDocument code.
+
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
 *geometry* verbose mode - [ preamble ] result:
@@ -901,29 +901,29 @@ Package caption Info: End \AtBeginDocument code.
 <vub_logo_cmyk.pdf, id=4, 2094.8363pt x 738.42874pt>
 File: vub_logo_cmyk.pdf Graphic file (type pdf)
 <use vub_logo_cmyk.pdf>
-Package pdftex.def Info: vub_logo_cmyk.pdf  used on input line 70.
+Package pdftex.def Info: vub_logo_cmyk.pdf  used on input line 73.
 (pdftex.def)             Requested size: 161.0427pt x 56.76566pt.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 70.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 73.
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 70.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 73.
  (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Trying to load font information for U+esint on input line 70.
+LaTeX Font Info:    Trying to load font information for U+esint on input line 73.
  (/usr/share/texlive/texmf-dist/tex/latex/esint/uesint.fd
 File: uesint.fd 
 )
-LaTeX Font Info:    Trying to load font information for U+rsfs on input line 70.
+LaTeX Font Info:    Trying to load font information for U+rsfs on input line 73.
  (/usr/share/texlive/texmf-dist/tex/latex/jknapltx/ursfs.fd
 File: ursfs.fd 1998/03/24 rsfs font definition file (jk)
 )
-Overfull \hbox (15.0pt too wide) in paragraph at lines 70--70
+Overfull \hbox (15.0pt too wide) in paragraph at lines 73--73
 []$[]$ 
  []
 
-LaTeX Font Info:    Trying to load font information for T1+qag on input line 70.
+LaTeX Font Info:    Trying to load font information for T1+qag on input line 73.
 (/usr/share/texmf/tex/latex/tex-gyre/t1qag.fd
 File: t1qag.fd 2009/09/25 v1.2 font definition file for T1/qag
 ) [1
@@ -971,10 +971,10 @@ File: t1qag.fd 2009/09/25 v1.2 font definition file for T1/qag
 ]
 File: vub_logo_cmyk.pdf Graphic file (type pdf)
 <use vub_logo_cmyk.pdf>
-Package pdftex.def Info: vub_logo_cmyk.pdf  used on input line 78.
+Package pdftex.def Info: vub_logo_cmyk.pdf  used on input line 81.
 (pdftex.def)             Requested size: 161.0427pt x 56.76566pt.
 
-Overfull \hbox (15.0pt too wide) in paragraph at lines 78--78
+Overfull \hbox (15.0pt too wide) in paragraph at lines 81--81
 []$[]$ 
  []
 
@@ -983,12 +983,11 @@ Overfull \hbox (15.0pt too wide) in paragraph at lines 78--78
 
 ] [3] [4
 
-]
-No file thesis.toc.
+] (./thesis.toc)
 \tf@toc=\write6
 \openout6 = `thesis.toc'.
 
-[5] [6
+ [5] [6
 
 ]
 Chapter 1.
@@ -998,147 +997,44 @@ Chapter 1.
 
 ]
 Chapter 2.
+[3] [4]
 
-LaTeX Warning: Citation 'davison' on page 3 undefined on input line 116.
+LaTeX Warning: Reference `model:mack' on page 1 undefined on input line 188.
 
-[3]
+[5]
 
-LaTeX Warning: Citation 'mack' on page 4 undefined on input line 132.
-
-
-LaTeX Warning: Reference `mack1' on page 4 undefined on input line 150.
+LaTeX Warning: Reference `model:mack' on page 1 undefined on input line 192.
 
 
-LaTeX Warning: Reference `mack2' on page 4 undefined on input line 150.
-
-
-LaTeX Warning: Reference `mack3' on page 4 undefined on input line 150.
-
-[4]
-
-LaTeX Warning: Citation 'wuthrich:mse' on page 5 undefined on input line 162.
-
-
-Underfull \vbox (badness 2591) has occurred while \output is active []
-
- [5]
-
-LaTeX Warning: Citation 'wuthrich:stoch' on page 6 undefined on input line 205.
-
-
-LaTeX Warning: Citation 'mack:var' on page 6 undefined on input line 205.
-
-
-Overfull \hbox (30.0604pt too wide) in paragraph at lines 205--206
-[]\OT1/cmr/m/n/10 Several ways of achiev-ing this have been pro-posed in the lit-er-a-ture, see for ex-am-ple [[]]
+Overfull \hbox (6.49916pt too wide) in paragraph at lines 216--217
+\OT1/cmr/m/n/10 non-trivial task. Had we been deal-ing with a sim-ple lin-ear re-gres-sion of pairs $[]$,
  []
 
-[6]
-
-LaTeX Warning: Reference `mack' on page 7 undefined on input line 220.
+[6] [7] [8] [9] [10] [11
 
 
-LaTeX Warning: Reference `uncond' on page 7 undefined on input line 224.
+] [12
 
-
-LaTeX Warning: Reference `tsmodel' on page 7 undefined on input line 226.
-
-
-LaTeX Warning: Reference `sec:num' on page 1 undefined on input line 233.
-
-
-LaTeX Warning: Reference `sec:boot' on page 1 undefined on input line 237.
-
-
-LaTeX Warning: Reference `tsmodel' on page 7 undefined on input line 241.
-
-[7]
-
-/home/othman/repos/masters_thesis/text/thesis.tex:260: LaTeX Error: Lonely \item--perhaps a missing list environment.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.260 \Require
-              {Loss triangle $\mathcal{D}_I = (C_{ij})_{1 \leq i, j \leq I}$...
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-Underfull \hbox (badness 10000) detected at line 260
-[][]
- []
-
-
-/home/othman/repos/masters_thesis/text/thesis.tex:262: LaTeX Error: Lonely \item--perhaps a missing list environment.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.262         \Ensure
-                     {Simulated reserve sample $\hat{R}_1, \dots, \hat{R}_N$}
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-Underfull \hbox (badness 10000) detected at line 262
-[][]
- []
-
-
-/home/othman/repos/masters_thesis/text/thesis.tex:278: Package algorithmicx Error: Some blocks are not closed!!!.
-
-See the algorithmicx package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.278     \end{algorithmic}
-                           
-This error message was generated by an \errmessage
-command, so I can't give any explicit help.
-Pretend that you're Hercule Poirot: Examine all clues,
-and deduce the truth by order and method.
-
-
-LaTeX Warning: Citation 'england:dist' on page 8 undefined on input line 286.
-
-[8]
-
-LaTeX Warning: Empty bibliography on input line 317.
-
-[9
-
-
-] (./thesis.aux)
+] [13] (./thesis.aux)
 
 LaTeX Warning: There were undefined references.
-
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
-
-Package biblatex Warning: Please (re)run BibTeX on the file(s):
-(biblatex)                thesis
-(biblatex)                and rerun LaTeX afterwards.
 
 Package logreq Info: Writing requests to 'thesis.run.xml'.
 \openout1 = `thesis.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 30419 strings out of 478287
- 640243 string characters out of 5849288
- 1271063 words of memory out of 5000000
- 48136 multiletter control sequences out of 15000+600000
- 507358 words of font info for 93 fonts, out of 8000000 for 9000
+ 30507 strings out of 478287
+ 642693 string characters out of 5849288
+ 1274337 words of memory out of 5000000
+ 48216 multiletter control sequences out of 15000+600000
+ 508914 words of font info for 98 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 100i,24n,104p,1878b,1245s stack positions out of 5000i,500n,10000p,200000b,80000s
-{/usr/share/texmf/fonts/enc/dvips/tex-gyre/q-ec.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmbsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmcsc10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmmib7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsl10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qagb.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qagr.pfb>
-Output written on thesis.pdf (17 pages, 364084 bytes).
+ 100i,24n,104p,1878b,1902s stack positions out of 5000i,500n,10000p,200000b,80000s
+{/usr/share/texmf/fonts/enc/dvips/tex-gyre/q-ec.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmmib7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsl10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qagb.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qagr.pfb>
+Output written on thesis.pdf (21 pages, 364216 bytes).
 PDF statistics:
- 199 PDF objects out of 1000 (max. 8388607)
+ 197 PDF objects out of 1000 (max. 8388607)
  124 compressed objects within 2 object streams
  0 named destinations out of 1000 (max. 500000)
  18 words of extra memory for PDF output out of 10000 (max. 10000000)
