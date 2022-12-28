@@ -135,7 +135,7 @@ Although we introduced the bootstrap in this section as a device for estimating 
 \section{Mack's model}
 
 We begin by considering the distribution-free model due to Mack \footfullcite{mack}, which applies to the cumulative claims triangle $\mathcal{D}_I = (C_{ij})$, and makes the following assumptions:
-\begin{model}[Mack Chain Ladder] \label{mack} \leavevmode
+\begin{model}[Mack Chain Ladder] \label{model:mack} \leavevmode
     \begin{enumerate}[(i)]
         \item \label{mack1} There exist development factors $f_1, \dots, f_{I - 1}$ such that
         \begin{displaymath}
@@ -191,7 +191,7 @@ If we attempt to apply the methodology of \Cref{sec:boot} to \eqref{eq:reserve_p
 \end{equation}
 It can easily be verified that this is compatible with \Cref{model:mack}. Its error terms are given by
 \begin{equation}
-    \hat{\varepsilon}_{ij} \coloneqq \frac{(F_{i, j} - f_j)\sqrt{C_{i, j}}}{\sigma_j} \,,
+    \varepsilon_{ij} \coloneqq \frac{(F_{i, j} - f_j)\sqrt{C_{i, j}}}{\sigma_j} \,,
 \end{equation}
 and we can obtain residuals by substituting appropriate estimators for the unknown parameters in this expression. For $f_j$, these will be the chain-ladder estimators \ref{eq:chain-ladder-estimator}, but we haven't discussed how to estimate the $\sigma_j$'s yet. The next theorem, which we state without proof \footcite[The relevant proofs can be found in][17 \psqq]{wuthrich:stochastic-reserving}, remedies this, as well as giving some useful properties of these estimators.
 \begin{theorem}
@@ -211,7 +211,6 @@ For the residuals, a multitude of different choices are available. The most obvi
 \hat{\varepsilon}_{ij} \coloneqq \frac{(F_{i, j} - \hat{f}_j)\sqrt{C_{i, j}}}{\hat{\sigma}_j} \,,
 \end{equation}
 which have the advantage of being intuitive and simple to implement.
-
 
 Note that the recursive dependence of loss amounts with the same origin year makes this a non-trivial task. Had we been dealing with a simple linear regression of pairs ${(X_1, Y_1), \dots, (X_n, Y_n)}$, for example, then we could use the fitted model and resampled residuals directly to generate simulated responses
 \begin{equation}

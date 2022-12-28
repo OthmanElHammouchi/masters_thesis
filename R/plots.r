@@ -2,9 +2,9 @@ library(ggplot2)
 library(data.table)
 source("R/helpers.r")
 
-single.outlier.results <- readRDS("results/data_objects/single_outlier.RDS")
-calendar.year.results <- readRDS("results/data_objects/calendar_outlier.RDS")
-origin.year.results <- readRDS("results/data_objects/origin_outlier.RDS")
+# single.outlier.results <- readRDS("results/data_objects/single_outlier.RDS")
+# calendar.year.results <- readRDS("results/data_objects/calendar_outlier.RDS")
+# origin.year.results <- readRDS("results/data_objects/origin_outlier.RDS")
 
 ndev <- max(single.outlier.results$outlier.colidx)
 
@@ -59,60 +59,60 @@ for (rowidx in seq_len(nconfig)) {
     setTxtProgressBar(progress.bar, rowidx)
 
     #density plots
-    contaminated <- single.outlier.results[
-            resids.type == plot.config$resids.type[rowidx] &
-            boot.type == plot.config$boot.type[rowidx] &
-            dist == plot.config$dist[rowidx] &
-            factor == plot.config$factor[rowidx] &
-            outlier.colidx != excl.colidx &
-            outlier.rowidx != excl.rowidx]
+    # contaminated <- single.outlier.results[
+    #         resids.type == plot.config$resids.type[rowidx] &
+    #         boot.type == plot.config$boot.type[rowidx] &
+    #         dist == plot.config$dist[rowidx] &
+    #         factor == plot.config$factor[rowidx] &
+    #         outlier.colidx != excl.colidx &
+    #         outlier.rowidx != excl.rowidx]
 
-    uncontaminated <- single.outlier.results[
-        resids.type == plot.config$resids.type[rowidx] &
-        boot.type == plot.config$boot.type[rowidx] &
-        dist == plot.config$dist[rowidx] &
-        factor == plot.config$factor[rowidx] &
-        outlier.colidx == excl.colidx &
-        outlier.rowidx == excl.rowidx]
+    # uncontaminated <- single.outlier.results[
+    #     resids.type == plot.config$resids.type[rowidx] &
+    #     boot.type == plot.config$boot.type[rowidx] &
+    #     dist == plot.config$dist[rowidx] &
+    #     factor == plot.config$factor[rowidx] &
+    #     outlier.colidx == excl.colidx &
+    #     outlier.rowidx == excl.rowidx]
 
-    row.labels <- paste(rep("Outlier row:"), 1:ndev)
-    names(row.labels) <- 1:ndev
-    col.labels <- paste(rep("Outlier column:"), 1:ndev)
-    names(col.labels) <- 1:ndev
+    # row.labels <- paste(rep("Outlier row:"), 1:ndev)
+    # names(row.labels) <- 1:ndev
+    # col.labels <- paste(rep("Outlier column:"), 1:ndev)
+    # names(col.labels) <- 1:ndev
 
 
-    p <- ggplot() +
-        geom_density(
-            data = contaminated,
-            aes(reserve, after_stat(scaled), group = interaction(excl.colidx, excl.rowidx))) +
-        geom_density(
-            data = uncontaminated,
-            aes(reserve, after_stat(scaled)),
-            colour = "red") +
-        facet_wrap(vars(outlier.rowidx, outlier.colidx),
-            scales = "free_x",
-            labeller = labeller(
-                outlier.rowidx = as_labeller(row.labels),
-                outlier.colidx = as_labeller(col.labels))
-          )  +
-        labs(
-            title = "Reserve distributions for different outlier points",
-            subtitle = sprintf("Perturbation factor: %.2f", factor),
-            x = "Reserve",
-            y = "Density")
+    # p <- ggplot() +
+    #     geom_density(
+    #         data = contaminated,
+    #         aes(reserve, group = interaction(excl.colidx, excl.rowidx))) +
+    #     geom_density(
+    #         data = uncontaminated,
+    #         aes(reserve),
+    #         colour = "red") +
+    #     facet_wrap(vars(outlier.rowidx, outlier.colidx),
+    #         scales = "free_x",
+    #         labeller = labeller(
+    #             outlier.rowidx = as_labeller(row.labels),
+    #             outlier.colidx = as_labeller(col.labels))
+    #       )  +
+    #     labs(
+    #         title = "Reserve distributions for different outlier points",
+    #         subtitle = sprintf("Perturbation factor: %.2f", plot.config$factor[rowidx]),
+    #         x = "Reserve",
+    #         y = "Density")
 
-    suppressMessages(
-        ggsave(
-            sprintf(
-                "results/graphs/single_outlier/densities_%s_%s_%s_factor_%.2f.svg",
-                plot.config$resids.type[rowidx],
-                plot.config$boot.type[rowidx],
-                plot.config$dist[rowidx],
-                plot.config$factor[rowidx]
-            ),
-            plot = p
-        )
-    )
+    # suppressMessages(
+    #     ggsave(
+    #         sprintf(
+    #             "results/graphs/single_outlier/densities_%s_%s_%s_factor_%.2f.svg",
+    #             plot.config$resids.type[rowidx],
+    #             plot.config$boot.type[rowidx],
+    #             plot.config$dist[rowidx],
+    #             plot.config$factor[rowidx]
+    #         ),
+    #         plot = p
+    #     )
+    # )
 
     contaminated <- calendar.year.results[
         resids.type == plot.config$resids.type[rowidx] &
@@ -129,15 +129,15 @@ for (rowidx in seq_len(nconfig)) {
         outlier.diagidx == excl.diagidx]
 
     labels <- paste(rep("Outlier diag:"), 1:(ndev - 1))
-    names(row.labels) <- 1:(ndev - 1)
+    names(labels) <- 1:(ndev - 1)
 
     p <- ggplot() +
         geom_density(
             data = contaminated,
-            aes(reserve, after_stat(scaled), group = excl.diagidx)) +
+            aes(reserve, group = excl.diagidx)) +
         geom_density(
             data = uncontaminated,
-            aes(reserve, after_stat(scaled)),
+            aes(reserve),
             colour = "red") +
         facet_wrap(vars(outlier.diagidx),
             scales = "free_x",
@@ -145,14 +145,15 @@ for (rowidx in seq_len(nconfig)) {
           )  +
         labs(
             title = "Reserve distributions for different outlier points",
-            subtitle = sprintf("Perturbation factor: %.2f", factor),
+            subtitle = sprintf("Perturbation factor: %.2f", plot.config$factor[rowidx]),
             x = "Reserve",
             y = "Density")
+
 
     suppressMessages(
         ggsave(
             sprintf(
-                "results/graphs/calendar_outlier/densities_%s_%s_%s_factor_%.2f.svg",
+                "results/graphs/calendar_outlier/calendar_outlier_densities_%s_%s_%s_factor_%.2f.svg",
                 plot.config$resids.type[rowidx],
                 plot.config$boot.type[rowidx],
                 plot.config$dist[rowidx],
@@ -162,53 +163,54 @@ for (rowidx in seq_len(nconfig)) {
         )
     )
 
-    contaminated <- single.outlier.results[
-            resids.type == plot.config$resids.type[rowidx] &
-            boot.type == plot.config$boot.type[rowidx] &
-            dist == plot.config$dist[rowidx] &
-            factor == plot.config$factor[rowidx] &
-            outlier.rowidx != excl.rowidx]
 
-    uncontaminated <- single.outlier.results[
-        resids.type == plot.config$resids.type[rowidx] &
-        boot.type == plot.config$boot.type[rowidx] &
-        dist == plot.config$dist[rowidx] &
-        factor == plot.config$factor[rowidx] &
-        outlier.rowidx == excl.rowidx]
+    # contaminated <- origin.outlier.results[
+    #         resids.type == plot.config$resids.type[rowidx] &
+    #         boot.type == plot.config$boot.type[rowidx] &
+    #         dist == plot.config$dist[rowidx] &
+    #         factor == plot.config$factor[rowidx] &
+    #         outlier.rowidx != excl.rowidx]
 
-    labels <- paste(rep("Outlier row:"), 1:ndev)
-    names(labels) <- 1:ndev
+    # uncontaminated <- origin.outlier.results[
+    #     resids.type == plot.config$resids.type[rowidx] &
+    #     boot.type == plot.config$boot.type[rowidx] &
+    #     dist == plot.config$dist[rowidx] &
+    #     factor == plot.config$factor[rowidx] &
+    #     outlier.rowidx == excl.rowidx]
 
-    p <- ggplot() +
-        geom_density(
-            data = contaminated,
-            aes(reserve, after_stat(scaled), group = excl.rowidx)) +
-        geom_density(
-            data = uncontaminated,
-            aes(reserve, after_stat(scaled)),
-            colour = "red") +
-        facet_wrap(vars(outlier.rowidx),
-            scales = "free_x",
-            labeller = as_labeller(labels)
-          )  +
-        labs(
-            title = "Reserve distributions for different outlier points",
-            subtitle = sprintf("Perturbation factor: %.2f", factor),
-            x = "Reserve",
-            y = "Density")
+    # labels <- paste(rep("Outlier row:"), 1:ndev)
+    # names(labels) <- 1:ndev
 
-    suppressMessages(
-        ggsave(
-            sprintf(
-                "results/graphs/origin_outlier/densities_%s_%s_%s_factor_%.2f.svg",
-                plot.config$resids.type[rowidx],
-                plot.config$boot.type[rowidx],
-                plot.config$dist[rowidx],
-                plot.config$factor[rowidx]
-            ),
-            plot = p
-        )
-    )
+    # p <- ggplot() +
+    #     geom_density(
+    #         data = contaminated,
+    #         aes(reserve, group = excl.rowidx)) +
+    #     geom_density(
+    #         data = uncontaminated,
+    #         aes(reserve),
+    #         colour = "red") +
+    #     facet_wrap(vars(outlier.rowidx),
+    #         scales = "free_x",
+    #         labeller = as_labeller(labels)
+    #       )  +
+    #     labs(
+    #         title = "Reserve distributions for different outlier points",
+    #         subtitle = sprintf("Perturbation factor: %.2f", plot.config$factor[rowidx]),
+    #         x = "Reserve",
+    #         y = "Density")
+
+    # suppressMessages(
+    #     ggsave(
+    #         sprintf(
+    #             "results/graphs/origin_outlier/origin_outlier_densities_%s_%s_%s_factor_%.2f.svg",
+    #             plot.config$resids.type[rowidx],
+    #             plot.config$boot.type[rowidx],
+    #             plot.config$dist[rowidx],
+    #             plot.config$factor[rowidx]
+    #         ),
+    #         plot = p
+    #     )
+    # )
 
     #mean plots
     # contaminated.mean <- results[
