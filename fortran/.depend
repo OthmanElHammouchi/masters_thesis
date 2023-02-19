@@ -1,5 +1,0 @@
-build/dispmodule.o : src/dispmodule.f90 
-build/progressbar.o : src/progressbar.f90 
-build/random.o : src/random.f90 
-build/reserve_boot.o : src/reserve_boot.f90 build/dispmodule.o 
-build/reserve_sim.o : src/reserve_sim.f90 build/progressbar.o build/dispmodule.o 

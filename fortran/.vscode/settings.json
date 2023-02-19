@@ -1,5 +1,0 @@
-{
-    "fortran.linter.extraArgs": [
-        "-J/tmp"
-    ]
-}

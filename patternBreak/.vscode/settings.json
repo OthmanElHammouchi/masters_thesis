@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "rinternals.h": "c",
+        "r.h": "c",
+        "rdynload.h": "c",
+        "print.h": "c",
+        "rinterface.h": "c",
+        "blas.h": "c",
+        "f_interface.h": "FortranFreeForm",
+        "c_interface.h": "c",
+        "stdio.h": "c"
+    }
+}

@@ -108,7 +108,7 @@ A special difficulty which arises in the actuarial context is the relatively sma
 \end{equation}
 To simplify the formulas, we assume throughout this exposition that $I = J$. Embedding $\mathcal{D}_I$ into a matrix as the triangle on and above the anti-diagonal, the reserving actuary then seeks to estimate the \emph{total outstanding loss liabilities}
 \begin{equation}
-    R = \sum_{i = 1}^I (C_{i, I} - C_{i, I + 1- i})
+    R = \sum_{i = 2}^I (C_{i, I} - C_{i, I + 1- i})
 \end{equation}
 by forecasting the values in the lower triangle $\mathcal{D}^{\mathsf{c}}_I$. 
 
@@ -218,22 +218,19 @@ Note that the recursive dependence of loss amounts with the same origin year mak
 \end{equation}
 By contrast, it is not immediately clear how a resampled loss triangle can be obtained from $\hat{f}_j$, $\hat{\sigma}_j$ and $\hat{\varepsilon}^*_{ij}$. A number of different approaches have been proposed in the literature  \footcites[See, for example,][Section~D6]{mack:chain-ladder-variability}{wuthrich:chain-ladder-msep}, where they are framed in terms of producing a bootstrap estimate of \eqref{eq:msep}, which is why we choose to adopt this point of view as well. Our exposition closely follows \cite[45\psqq]{wuthrich:stochastic-reserving}, focusing on two methods in particular, which, for reasons that will become apparant shortly, we will refer to as the \emph{conditional} and \emph{unconditional} approach.
 
-Our first task is to obtain a more manageable expression for the total MSEP by breaking it down into components which depend on the individual accident years:
+Our first task is to obtain a more manageable expression for the total MSEP by breaking it down in terms of that of the individual accident years:
 \begin{align}
-    \begin{split}
     \condexp*{(\hat{R} - R)^2}{\mathcal{D}_I} &=
-        \sum_{i=1}^I \mathrm{Var}(C_{iI} - C_{i, I + 1 - i} \, \Vert \, \mathcal{D}_I) \\ 
-        &\phantom{{}=1} + \left( \sum_{i=2}^I \mathbb{E} \left[ (\hat{C}_{iI} - C_{iI}) \, \Big \rVert \, \mathcal{D}_I \right] - \sum_{i=2}^I (\hat{C}_{iI} - C_{i, I + 1 - i}) \right)^2
-    \end{split} \\
+        \condexp*{\left( \left \lbrace \sum_{i=2}^I \hat{C}_{iI} - C_{i, I + 1 - i} \right \rbrace - \left \lbrace \sum_{i=2}^I C_{iI} - C_{i, I + 1 - i} \right \rbrace \right) ^2}{\mathcal{D}_I} \\
     %
-    &= \sum_{i=2}^I \mathrm{Var}(C_{iI} \, \Vert \, \mathcal{D}_I) + \left( \sum_{i=2}^I \condexp*{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI} \right)^2 \\
+    &= \condexp*{\left( \sum_{i=2}^I \hat{C}_{iI} - C_{iI} \right)^2}{\mathcal{D}_I} \\
     %
     \begin{split} \label{eq:msep-decomposition}
-    &= \sum_{i=2}^I \underbrace{\left(\mathrm{Var}(C_{iI} \, \Vert \, \mathcal{D}_I) + (\condexp*{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})^2 \right)}_{\eqqcolon \underset{C_{iI} \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\hat{C}_{iI})} \\
-    &\phantom{{}=1} + \sum_{\substack{2 \leq i, j \leq I \\ i \neq j}} (\condexp*{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})(\condexp*{C_{jI}}{\mathcal{D}_I} - \hat{C}_{jI}) \,.
+    &= \sum_{i=2}^I \underbrace{\condexp*{(\hat{C}_{iI} - C_{iI})^2}{\mathcal{D}_I}}_{= \underset{C_{iI} \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\hat{C}_{iI})} \\
+    &\phantom{{}=1} + \sum_{\substack{2 \leq i, j \leq I \\ i \neq j}} \condexp*{(\hat{C}_{iI} - C_{iI})(\hat{C}_{jI} - C_{jI})}{\mathcal{D}_I} \,.
     \end{split}
 \end{align}
-The problem has thus been reduced to estimation of the MSEP for a single accident along with some additional cross terms. The latter are only relevant for obtaining a closed formula and we will therefore ignore them in the sequal. It then remains for us to deal with the parameter and process error of individual accident years.
+The problem has thus been reduced to estimation of the MSEP for a single accident along with some additional cross terms. The latter are only relevant for obtaining a closed formula and we will therefore ignore them in the sequel. It then remains for us to deal with the parameter and process error of individual accident years.
 
 \subsection{Bootstrapping the parameter error}
 

@@ -1,0 +1,15 @@
+Package: patternBreak
+Type: Package
+Title: Bootstrap Simulations for Claims Reserving
+Version: 1.0
+Date: 2023-02-08
+Author: Othman El Hammouchi
+Maintainer: Othman El Hammouchi <othman.el.hammouchi@vub.be>
+Description: More about what it does (maybe more than one line)
+License: MIT
+Imports:
+    data.table
+Encoding: UTF-8
+RoxygenNote: 7.2.3
+Roxygen: list(load = "source")
+

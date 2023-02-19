@@ -1,0 +1,4 @@
+FC = @FC@
+CC = @CC@
+
+PKG_FFLAGS=-cpp -ffree-line-length-512
