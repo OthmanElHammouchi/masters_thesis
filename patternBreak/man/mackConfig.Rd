@@ -2,26 +2,35 @@
 % Please edit documentation in R/helpers.r
 \name{mackConfig}
 \alias{mackConfig}
-\title{mackConfig}
+\title{Generate configuration for Mack bootstrap simulations.}
 \usage{
 mackConfig(
   ndev,
-  outlier.points = NULL,
-  excl.points = NULL,
   factors,
   resids.type = c("raw", "scaled", "parametric"),
   boot.type = c("conditional", "unconditional"),
-  dist = c("normal", "gamma")
+  dist = c("normal", "gamma"),
+  type = "single"
 )
 }
 \arguments{
-\item{...}{DESCRIPTION.}
+\item{ndev}{DESCRIPTION.}
+
+\item{factors}{DESCRIPTION.}
+
+\item{resids.type}{DESCRIPTION.}
+
+\item{boot.type}{DESCRIPTION.}
+
+\item{dist}{DESCRIPTION.}
+
+\item{type}{DESCRIPTION.}
 }
 \value{
 RETURN_DESCRIPTION
 }
 \description{
-Generate configuration
+FUNCTION_DESCRIPTION
 }
 \examples{
 # ADD_EXAMPLES_HERE

@@ -6,8 +6,8 @@
         "print.h": "c",
         "rinterface.h": "c",
         "blas.h": "c",
-        "f_interface.h": "FortranFreeForm",
-        "c_interface.h": "c",
+        "rng_fort_interface.h": "FortranFreeForm",
+        "rng_c_interface.h": "c",
         "stdio.h": "c"
     }
 }

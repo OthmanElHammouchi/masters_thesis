@@ -2,5 +2,5 @@
 
 export(glmBoot)
 export(mackBoot)
-export(mackConfig)
+export(mackSim)
 useDynLib(patternBreak, .registration=TRUE)

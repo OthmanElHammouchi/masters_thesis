@@ -21,11 +21,11 @@ mackConfig <- function(ndev,
 
     if (type == "single") {
 
-        npts <- (ndev ** 2 + ndev) / 2
+        npts <- (ndev ** 2 - ndev) / 2  # First column can't be outlier.
         outlier.points <- matrix(rep(0, 2 * npts), ncol = 2)
         k <- 1
-        for (i in seq_len(ndev)) {
-            for (j in seq_len(ndev + 1 - i)) {
+        for (i in seq_len(ndev - 1)) {
+            for (j in seq(2, ndev + 1 - i)) {
                 outlier.points[k, ] <- c(i, j)
                 k <- k + 1
             }
