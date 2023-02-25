@@ -4,6 +4,7 @@ module mack
    use constants
    use helpers
    use rng_fort_interface
+   use print_fort_interface
 
    implicit none
 
@@ -16,7 +17,7 @@ contains
       real(c_double), intent(in) :: triangle(n_dev, n_dev)
       real(c_double), intent(out) :: results(n_boot * n_config, m_config + 1)
 
-      integer(c_int) :: i, j, k, i_sim, n_rows
+      integer(c_int) :: i, j, k, i_sim, counter, n_rows
       integer(c_int) :: outlier_rowidx
       integer(c_int) :: outlier_colidx
       integer(c_int) :: outlier_diagidx
@@ -34,16 +35,18 @@ contains
 
       integer(c_int) :: resids_type, boot_type, dist
 
-      real(c_double) :: pct_completed
+      real(c_double) :: pct_progress
+      real(c_double) :: progress
+      character(len=999, kind=c_char) :: progress_str
 
       init_col = triangle(:, 1)
 
       call mack_fit(triangle, dev_facs, sigmas)
 
-      do i_sim = 1, n_config
+      counter = 0
 
-         pct_completed = real(100 * (i_sim / n_config), kind=c_double)
-         call dblepr1("Progress: ", -1, pct_completed)
+      !$OMP PARALLEL DO SHARED(counter) PRIVATE(excl_resids)
+      do i_sim = 1, n_config
 
          if (type == SINGLE) then
 
@@ -125,7 +128,23 @@ contains
 
          end if
 
+         progress = real(counter, kind=c_double) / real(n_config, kind=c_double)
+
+         if (abs(mod(progress, 0.005_c_double)) <= 1e-4_c_double) then
+            pct_progress = 100*progress
+            write(progress_str, "('Progress: ', f5.2)") pct_progress
+            call Rprintf(achar(13) // c_null_char)
+            call Rprintf(repeat(" ", 118) // c_null_char)
+            call Rprintf(achar(13) // c_null_char)
+            call Rprintf(trim(progress_str) // c_null_char )
+            call Rprintf(achar(13) // c_null_char)
+            call R_FlushConsole()
+         end if
+
+         counter = counter + 1
+
       end do
+      !$OMP END PARALLEL DO
 
    end subroutine mack_sim
 

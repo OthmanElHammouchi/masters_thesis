@@ -77,6 +77,14 @@ mackSim <- function(triangle, nboot, config, type) {
 
     config <- as.matrix(config)
 
+    if (any(is.na(triangle))) {
+        triangle[is.na(triangle)] <- 0
+    }
+
+    if (!is.double(triangle)) storage.mode(triangle) <- "double"
+    if (!is.integer(nboot)) storage.mode(nboot) <- "integer"
+    if (!is.double(config)) storage.mode(config) <- "double"
+    
     .Call("mack_sim_wrapper", triangle, nboot, config, type)
 
 }

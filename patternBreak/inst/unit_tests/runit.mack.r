@@ -13,7 +13,7 @@ test.mackSim <- function() {
         triangle <- datasets[[1]]
 
         ndev <- dim(triangle)[1]
-        config <- mackConfig(ndev, factors = seq(0.5, 1.5, by = 0.25))
+        config <- patternBreak:::mackConfig(ndev, factors = seq(0.5, 1.5, by = 0.25))
 
         results <- mackSim(triangle, 1e3, config, 1)
 

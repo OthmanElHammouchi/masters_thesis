@@ -4,6 +4,7 @@
 #include <Rinterface.h>
 
 #include "rng_c_interface.h"
+#include "print_c_interface.h"
 
 void F77_NAME(mack_boot)(int n_dev, double triangle[n_dev][n_dev], int resids_type, int boot_type, int dist, int n_boot, double reserve[n_boot]);
 
