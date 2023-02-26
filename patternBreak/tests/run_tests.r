@@ -2,6 +2,8 @@ if (require("RUnit", quietly = TRUE)) {
 
     require("patternBreak")
 
+    load(file.path(system.file(package = "patternBreak"), "data", "test_triangle.RData"))
+
     test.dir <- system.file("unit_tests", package = "patternBreak")
 
     testsuite <- defineTestSuite("patternBreak",

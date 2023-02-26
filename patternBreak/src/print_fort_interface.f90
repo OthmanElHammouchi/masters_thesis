@@ -17,7 +17,7 @@ module print_fort_interface
         subroutine R_FlushConsole() bind(C, name="R_FlushConsole")
 
         end subroutine R_FlushConsole
-
+        
     end interface
     
 end module print_fort_interface

@@ -117,6 +117,9 @@ SEXP mack_sim_wrapper(SEXP triangle_in, SEXP n_boot, SEXP config_in, SEXP type) 
   return(results);
 };
 
+void F77_NAME(glm_sim)(int n_dev, double triangle[n_dev][n_dev], int n_config, int m_config, double config[n_config][m_config], int type, int n_boot, double results[n_boot * n_config][m_config + 1]);
+
+
 static const R_CallMethodDef callRoutines[] = {
     {"mack_boot_wrapper", (DL_FUNC) &mack_boot_wrapper, 5},
     {"glm_boot_wrapper", (DL_FUNC) &glm_boot_wrapper, 2},

@@ -3,12 +3,13 @@ module helpers
    use iso_c_binding
    use constants
    use rng_fort_interface
+   use print_fort_interface
 
    implicit none
 
 contains
 
-   function single_outlier(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist) result(triangle)
+   function single_outlier_mack(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist) result(triangle)
 
       integer, intent(in):: outlier_rowidx, outlier_colidx
       real(c_double), intent(in) :: init_col(:), dev_facs(:), sigmas(:)
@@ -91,9 +92,9 @@ contains
 
       end if
 
-   end function single_outlier
+   end function single_outlier_mack
 
-   function calendar_outlier(outlier_diagidx, factor, triangle, dev_facs, sigmas, dist) result(sim_triangle)
+   function calendar_outlier_mack(outlier_diagidx, factor, triangle, dev_facs, sigmas, dist) result(sim_triangle)
 
       integer, intent(in) :: outlier_diagidx
       real(c_double), intent(in):: factor
@@ -156,9 +157,9 @@ contains
          end if
       end do
 
-   end function calendar_outlier
+   end function calendar_outlier_mack
 
-   function origin_outlier(outlier_rowidx, factor, triangle, dev_facs, sigmas, dist) result(sim_triangle)
+   function origin_outlier_mack(outlier_rowidx, factor, triangle, dev_facs, sigmas, dist) result(sim_triangle)
 
       integer, intent(in):: outlier_rowidx
       real(c_double), intent(in) :: triangle(:, :), dev_facs(:), sigmas(:)
@@ -191,6 +192,124 @@ contains
          end if
       end do
 
-   end function origin_outlier
+   end function origin_outlier_mack
+
+   subroutine single_outlier_glm(triangle, outlier_rowidx, outlier_colidx, factor, betas)
+      integer(c_int), intent(in) :: outlier_rowidx
+      integer(c_int), intent(in) :: outlier_colidx
+      real(c_double), intent(in) :: factor
+      real(c_double), intent(in) :: betas(:)
+      real(c_double), intent(inout) :: triangle(:, :)
+      
+      real(c_double) :: lambda
+
+      lambda = factor * exp(betas(1) + betas(outlier_rowidx - 1) + betas(outlier_colidx - 1))
+      triangle(outlier_rowidx, outlier_colidx) = rpois(lambda) 
+
+   end subroutine single_outlier_glm
+
+   subroutine calendar_outlier_glm(triangle, outlier_diagidx, factor, betas)
+      integer(c_int), intent(in) :: outlier_diagidx
+      real(c_double), intent(in) :: factor
+      real(c_double), intent(in) :: betas(:)
+      real(c_double), intent(inout) :: triangle(:, :)
+      
+      real(c_double) :: lambda
+      integer(c_int) :: i, j, n_dev
+
+      n_dev = size(triangle, dim=1)
+
+      do i = 1, n_dev
+
+         j = n_dev + 2 - outlier_diagidx - i
+         if (j < 1) cycle
+
+         if (j == 1 .and. i == 1) then 
+            lambda = factor * exp(betas(1))
+         else if (j == 1) then
+            lambda = factor * exp(betas(1) + betas(i - 1))
+         else if (i == 1) then
+            lambda = factor * exp(betas(1) + betas(j - 1))
+         else
+            lambda = factor * exp(betas(1) + betas(i - 1) + betas(j - 1))
+         end if
+
+         triangle(i, j) = rpois(lambda) 
+
+      end do
+
+   end subroutine calendar_outlier_glm
+
+   subroutine origin_outlier_glm(triangle, outlier_rowidx, factor, betas)
+      integer(c_int), intent(in) :: outlier_rowidx
+      real(c_double), intent(in) :: factor
+      real(c_double), intent(in) :: betas(:)
+      real(c_double), intent(inout) :: triangle(:, :)
+      
+      real(c_double) :: lambda
+      integer(c_int) :: i, j, n_dev
+
+      n_dev = size(triangle, dim=1)
+
+      i = outlier_rowidx
+
+      do j = 1, n_dev + 1 - i
+
+         if (j == 1 .and. i == 1) then 
+            lambda = factor * exp(betas(1))
+         else if (j == 1) then
+            lambda = factor * exp(betas(1) + betas(i - 1))
+         else if (i == 1) then
+            lambda = factor * exp(betas(1) + betas(j - 1))
+         else
+            lambda = factor * exp(betas(1) + betas(i - 1) + betas(j - 1))
+         end if   
+         
+         triangle(i, j) = rpois(lambda) 
+
+      end do
+
+   end subroutine origin_outlier_glm
+
+   subroutine progress_bar(counter, max, inc)
+
+      integer(c_int), intent(in) :: counter
+      integer(c_int), intent(in) :: max
+      integer(c_int), intent(in) :: inc
+
+      character(len=999) :: buf
+      character(kind=c_char, len=999) :: progress_str   
+      integer :: cols
+      real(c_double) :: progress
+      real(c_double) :: pct_progress
+
+      if (mod(counter, inc) == 0) then
+
+         progress = real(counter, kind=c_double) / real(max, kind=c_double)
+         pct_progress = 100*progress
+
+         call get_environment_variable("COLUMNS", buf)
+         read(buf, *) cols
+
+         write(progress_str, "('Progress: ', f6.2)") pct_progress
+         call Rprintf(achar(13) // c_null_char)
+         call Rprintf(repeat(" ", cols) // c_null_char)
+         call Rprintf(achar(13) // c_null_char)
+         call Rprintf(trim(progress_str) // c_null_char )
+         call Rprintf(achar(13) // c_null_char)
+         call R_FlushConsole()
+
+      end if
+
+      if (counter == max) then
+
+         call get_environment_variable("COLUMNS", buf)
+         read(buf, *) cols
+
+         call Rprintf(repeat(" ", cols) // c_null_char)
+
+      end if
+         
+   end subroutine progress_bar
 
 end module helpers

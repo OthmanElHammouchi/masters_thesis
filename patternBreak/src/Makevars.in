@@ -1,10 +1,10 @@
 FC = @FC@
 CC = @CC@
 
-PKG_FFLAGS=-cpp -ffree-line-length-512 $(SHLIB_OPENMP_FFLAGS)
+PKG_FFLAGS=-cpp -ffree-line-length-512
 
 all: $(SHLIB)
 
-helpers.o: constants.o rng_fort_interface.o
+helpers.o: constants.o rng_fort_interface.o print_fort_interface.o
 mack.o: helpers.o rng_fort_interface.o print_fort_interface.o
 glm.o: helpers.o rng_fort_interface.o print_fort_interface.o

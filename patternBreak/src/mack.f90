@@ -17,7 +17,7 @@ contains
       real(c_double), intent(in) :: triangle(n_dev, n_dev)
       real(c_double), intent(out) :: results(n_boot * n_config, m_config + 1)
 
-      integer(c_int) :: i, j, k, i_sim, counter, n_rows
+      integer(c_int) :: i, j, k, i_sim, counter, n_rows, inc
       integer(c_int) :: outlier_rowidx
       integer(c_int) :: outlier_colidx
       integer(c_int) :: outlier_diagidx
@@ -35,17 +35,12 @@ contains
 
       integer(c_int) :: resids_type, boot_type, dist
 
-      real(c_double) :: pct_progress
-      real(c_double) :: progress
-      character(len=999, kind=c_char) :: progress_str
-
       init_col = triangle(:, 1)
 
       call mack_fit(triangle, dev_facs, sigmas)
 
       counter = 0
 
-      !$OMP PARALLEL DO SHARED(counter) PRIVATE(excl_resids)
       do i_sim = 1, n_config
 
          if (type == SINGLE) then
@@ -61,7 +56,7 @@ contains
             outlier_colidx = int(config(i_sim, 2))
             factor = config(i_sim, 3)
 
-            triangle_sim = single_outlier(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist)
+            triangle_sim = single_outlier_mack(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist)
 
             call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids)
 
@@ -90,7 +85,7 @@ contains
                k = k + 1
             end do
 
-            triangle_sim = calendar_outlier(outlier_diagidx, factor, triangle, dev_facs, sigmas, dist)
+            triangle_sim = calendar_outlier_mack(outlier_diagidx, factor, triangle, dev_facs, sigmas, dist)
 
             call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids)
 
@@ -117,7 +112,7 @@ contains
                k = k + 1
             end do
 
-            triangle_sim = origin_outlier(outlier_rowidx, factor, triangle, dev_facs, sigmas, dist)
+            triangle_sim = origin_outlier_mack(outlier_rowidx, factor, triangle, dev_facs, sigmas, dist)
 
             call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids)
 
@@ -128,23 +123,11 @@ contains
 
          end if
 
-         progress = real(counter, kind=c_double) / real(n_config, kind=c_double)
-
-         if (abs(mod(progress, 0.005_c_double)) <= 1e-4_c_double) then
-            pct_progress = 100*progress
-            write(progress_str, "('Progress: ', f5.2)") pct_progress
-            call Rprintf(achar(13) // c_null_char)
-            call Rprintf(repeat(" ", 118) // c_null_char)
-            call Rprintf(achar(13) // c_null_char)
-            call Rprintf(trim(progress_str) // c_null_char )
-            call Rprintf(achar(13) // c_null_char)
-            call R_FlushConsole()
-         end if
-
+         inc = max(n_config/1000, 1)
+         call progress_bar(counter, n_config, inc)
          counter = counter + 1
 
       end do
-      !$OMP END PARALLEL DO
 
    end subroutine mack_sim
 
