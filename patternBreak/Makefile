@@ -3,8 +3,18 @@ R ?= R
 .PHONY: all
 all:
 	$(MAKE) clean
+	$(MAKE) attrs
+	$(MAKE) docs
 	$(MAKE) build
 	$(MAKE) install
+
+.PHONY: attrs
+attrs :
+	Rscript -e "library(Rcpp) ; compileAttributes(verbose=TRUE)"
+
+.PHONY: docs
+docs:
+	Rscript -e "library(roxygen2) ; roxygenise()"
 
 .PHONY: build
 build:

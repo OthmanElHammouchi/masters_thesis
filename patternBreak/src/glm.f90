@@ -3,26 +3,28 @@ module glm
    use, intrinsic :: iso_c_binding
    use constants
    use helpers
-   use rng_fort_interface
+   use interface
 
    implicit none
 
 contains
 
-   subroutine glm_boot(n_dev, triangle, reserve, n_boot, excl_resids)
+   subroutine glm_boot(n_dev, triangle, reserve, n_boot, excl_resids, lrng)
 
       real(c_double), intent(in) :: triangle(n_dev, n_dev)
       real(c_double), intent(inout) :: reserve(n_boot)
-
       integer(c_int), intent(in) :: n_dev, n_boot
-
       integer(c_int), intent(in), optional :: excl_resids(:, :)
+      type(c_ptr), intent(in) :: lrng
+
 
       integer(c_int) :: n_pts, n_covs, n_pred
       real(c_double), allocatable :: betas(:)
       real(c_double), allocatable :: X_pred(:, :) 
       real(c_double), allocatable :: y_pred(:)
       real(c_double), allocatable :: resids(:, :)
+
+      real(c_double) :: lambda
 
       real(c_double), allocatable :: triangle_boot(:, :)
       real(c_double), allocatable :: betas_boot(:)
@@ -36,35 +38,31 @@ contains
 
       n_pts = (n_dev**2 + n_dev) / 2
       n_covs = 2*n_dev - 1
-
       n_pred = n_dev ** 2 - n_pts
 
-      allocate(X_pred(n_pred, n_covs))
       allocate(betas(n_covs))
-
-      allocate(resids_boot(n_pts, n_pts))
-      allocate(betas_boot(n_covs))
-      allocate(triangle_boot(n_pts, n_pts))
-      allocate(y_pred(n_pred))
-
       allocate(resids(n_dev, n_dev))
-
       allocate(flat_resids(n_pts))
       allocate(resids_mask(n_dev, n_dev))
+
+      allocate(resids_boot(n_pts, n_pts))
+      allocate(triangle_boot(n_dev, n_dev))
+
+      allocate(X_pred(n_pred, n_covs))
+      allocate(y_pred(n_pred))
+      allocate(betas_boot(n_covs))
 
       resids_mask = .true.
 
       n_resids = ((n_dev - 1)**2 + (n_dev - 1))/2 - 1
 
       if (present(excl_resids)) then
-
          n_excl_resids = size(excl_resids, dim=1)
          n_resids = n_resids - n_excl_resids
 
          do i = 1, n_excl_resids
-            resids_mask(excl_resids(i, 1), excl_resids(i, 2) - 1) = .false.
+            resids_mask(excl_resids(i, 1), excl_resids(i, 2)) = .false.
          end do
-
       end if
 
       call poisson_fit(triangle, betas, resids)
@@ -72,20 +70,21 @@ contains
       flat_resids = pack(resids, resids_mask)
 
       ! Resample residuals and simulate triangle.
-      call GetRNGstate()
 
       do i_boot = 1, n_boot
-
+         triangle_boot = 0
+         resids_boot = 0
          do i = 1, n_dev
             do j = 1, n_dev + 1 - i
-               resids_boot(i, j) = flat_resids(1 + int(n_pts * rand()))
+               resids_boot(i, j) = flat_resids(1 + int(n_pts * runif_par(lrng)))
                triangle_boot(i, j) = resids_boot(i, j) * sqrt(triangle(i, j)) + triangle(i, j)
             end do
          end do
 
          call poisson_fit(triangle_boot, betas_boot)
 
-         X_pred(:, 1) = 1._c_double
+         X_pred = 0.0
+         X_pred(:, 1) = 1.0
 
          k = 1
          do i = 2, n_dev
@@ -99,18 +98,16 @@ contains
          y_pred = exp(matmul(X_pred, betas_boot))
 
          do i = 1, n_pred
-            y_pred(i) = rpois(y_pred(i))
+            lambda = y_pred(i)
+            y_pred(i) = rpois_par(lrng, lambda)
          end do
 
          reserve(i_boot) = sum(y_pred)
-
       end do
-
-      call PutRNGstate()
 
    end subroutine glm_boot
 
-   subroutine glm_sim(n_dev, triangle, n_config, m_config, config, type, n_boot, results) bind(C, name='glm_sim_')
+   subroutine glm_sim_f(n_dev, triangle, n_config, m_config, config, type, n_boot, results) bind(c)
 
       integer(c_int), intent(in), value :: n_dev, n_boot, n_config, m_config, type
       real(c_double), intent(in) :: config(n_config, m_config)
@@ -136,28 +133,44 @@ contains
       integer(c_int) :: n_covs
       real(c_double), allocatable :: betas(:)
 
+      integer(c_int) :: i_thread
+      integer(c_int) :: n_threads
+
+      type(c_ptr), allocatable :: lrngs(:)
+      type(c_ptr) :: rng, lrng
+      type(c_ptr) ::pgbar
+
       n_covs = 2*n_dev - 1
 
       allocate(betas(n_covs))
       call poisson_fit(triangle, betas)
 
-      counter = 0
+      n_threads = init_omp()
+      rng = init_rng(42)
+      allocate(lrngs(n_threads))
 
+      do i = 1, n_threads
+         lrngs(i) = lrng_create(rng, n_threads, i - 1)
+      end do
+
+      pgbar = pgbar_create(n_config, 5)
+
+      !$omp parallel do num_threads(n_threads) default(firstprivate) shared(config, results) schedule(dynamic, 25)
       do i_sim = 1, n_config
+         i_thread = omp_get_thread_num()
+         lrng = lrngs(i_thread + 1)
 
          if (type == SINGLE) then
-
-
             allocate(excl_resids(1, 2))
             excl_resids(1, :) = int(config(i_sim, 4:5))
-
             outlier_rowidx = int(config(i_sim, 1))
             outlier_colidx = int(config(i_sim, 2))
             factor = config(i_sim, 3)
 
-            call single_outlier_glm(triangle_sim, outlier_rowidx, outlier_colidx, factor, betas)
+            triangle_sim = triangle
+            call single_outlier_glm(triangle_sim, outlier_rowidx, outlier_colidx, factor, betas, lrng)
 
-            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids)
+            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids, lrng)
 
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), 1:m_config) = transpose(spread(config(i_sim, :), 2, n_boot))
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
@@ -165,8 +178,6 @@ contains
             deallocate(excl_resids)
 
          else if (type == CALENDAR) then
-
-
             outlier_diagidx = int(config(i_sim, 1))
             excl_diagidx = int(config(i_sim, 3))
             factor = config(i_sim, 2)
@@ -181,9 +192,11 @@ contains
                k = k + 1
             end do
 
-            call calendar_outlier_glm(triangle_sim, outlier_diagidx, factor, betas)
+            triangle_sim = triangle
 
-            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids)
+            call calendar_outlier_glm(triangle_sim, outlier_diagidx, factor, betas, lrng)
+
+            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids, lrng)
 
             deallocate(excl_resids)
 
@@ -191,8 +204,6 @@ contains
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
 
          else if (type == ORIGIN) then
-
-
             outlier_rowidx = int(config(i_sim, 1))
             excl_rowidx = int(config(i_sim, 3))
             factor = config(i_sim, 2)
@@ -205,28 +216,28 @@ contains
                k = k + 1
             end do
 
-            call origin_outlier_glm(triangle_sim, outlier_rowidx, factor, betas)
+            triangle_sim = triangle
 
-            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids)
+            call origin_outlier_glm(triangle_sim, outlier_rowidx, factor, betas, lrng)
+
+            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids, lrng)
 
             deallocate(excl_resids)
 
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), 1:m_config) = transpose(spread(config(i_sim, :), 2, n_boot))
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
-
          end if
 
-         inc = max(n_config/1000, 1)
-         call progress_bar(counter, n_config, inc)
-         counter = counter + 1
-
+         call pgbar_incr(pgbar)
+         call check_user_input()
       end do
+      !$omp end parallel do
 
-   end subroutine glm_sim
+   end subroutine glm_sim_f
 
    subroutine poisson_fit(triangle, betas, resids)
       real(c_double), intent(in) :: triangle(:, :)
-      real(c_double), intent(inout) :: betas(:)
+      real(c_double), intent(out) :: betas(:)
       real(c_double), intent(inout), optional :: resids(:, :)
 
       real(c_double), allocatable :: X(:, :)
@@ -265,6 +276,7 @@ contains
       allocate(y_fit(n_pts))
 
       ! Set up feature matrix and response vector.
+      X = 0
       X(:, 1) = 1._c_double
 
       k = 1
@@ -285,7 +297,7 @@ contains
 
       ! Fit Poisson GLM using IRWLS.
       diff = 1E6
-      eps = 1E-6
+      eps = 1E-3
       do while (diff > eps)
 
          eta = matmul(X, betas)
@@ -333,15 +345,19 @@ contains
 
    end subroutine poisson_fit
 
-   subroutine glm_boot_centry(n_dev, triangle, n_boot, reserve) bind(C, name='glm_boot_')
+   subroutine glm_boot_f(n_dev, triangle, n_boot, reserve) bind(C)
 
       real(c_double), intent(in) :: triangle(n_dev, n_dev)
       real(c_double), intent(inout) :: reserve(n_boot)
 
       integer(c_int), intent(in), value :: n_dev, n_boot
+      
+      type(c_ptr) :: rng
 
-      call glm_boot(n_dev, triangle, reserve, n_boot)
+      rng = init_rng(42)
 
-   end subroutine glm_boot_centry
+      call glm_boot(n_dev, triangle, reserve, n_boot, lrng=rng)
+
+   end subroutine glm_boot_f
 
 end module glm

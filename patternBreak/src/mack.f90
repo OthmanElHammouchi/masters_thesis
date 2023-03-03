@@ -1,16 +1,16 @@
 module mack
 
    use, intrinsic :: iso_c_binding
+   use omp_lib
    use constants
    use helpers
-   use rng_fort_interface
-   use print_fort_interface
+   use interface
 
    implicit none
 
 contains
 
-   subroutine mack_sim(n_dev, triangle, n_config, m_config, config, type, n_boot, results) bind(C, name='mack_sim_')
+   subroutine mack_sim_f(n_dev, triangle, n_config, m_config, config, type, n_boot, results) bind(c)
 
       integer(c_int), intent(in), value :: n_dev, n_boot, n_config, m_config, type
       real(c_double), intent(in) :: config(n_config, m_config)
@@ -28,23 +28,39 @@ contains
       real(c_double) :: indiv_dev_facs(n_dev - 1, n_dev - 1)
       real(c_double) :: dev_facs(n_dev - 1)
       real(c_double) :: sigmas(n_dev - 1)
-      real(c_double) :: reserve(n_boot) 
+      real(c_double), allocatable :: reserve(:) 
       real(c_double) :: init_col(n_dev)
       real(c_double) :: triangle_sim(n_dev, n_dev)
       real(c_double) :: factor
-
       integer(c_int) :: resids_type, boot_type, dist
+
+      integer(c_int) :: i_thread
+      integer(c_int) :: n_threads
+
+      type(c_ptr), allocatable :: lrngs(:)
+      type(c_ptr) :: rng, lrng
+      type(c_ptr) ::pgbar
 
       init_col = triangle(:, 1)
 
       call mack_fit(triangle, dev_facs, sigmas)
 
-      counter = 0
+      n_threads = init_omp()
+      rng = init_rng(42)
+      allocate(lrngs(n_threads))
 
+      do i = 1, n_threads
+         lrngs(i) = lrng_create(rng, n_threads, i - 1)
+      end do
+
+      pgbar = pgbar_create(n_config, 5)
+
+      !$omp parallel do num_threads(n_threads) default(firstprivate) shared(config, results) schedule(dynamic, 25)
       do i_sim = 1, n_config
+         i_thread = omp_get_thread_num()
+         lrng = lrngs(i_thread + 1)
 
          if (type == SINGLE) then
-
             resids_type = int(config(i_sim, 6))
             boot_type = int(config(i_sim, 7))
             dist = int(config(i_sim, 8))
@@ -56,17 +72,19 @@ contains
             outlier_colidx = int(config(i_sim, 2))
             factor = config(i_sim, 3)
 
-            triangle_sim = single_outlier_mack(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist)
-
-            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids)
+            allocate(reserve(n_boot))
+            
+            triangle_sim = single_outlier_mack(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist, lrng)
+            
+            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids, lrng)
 
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), 1:m_config) = transpose(spread(config(i_sim, :), 2, n_boot))
-            results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
+            results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve            
 
             deallocate(excl_resids)
+            deallocate(reserve)
 
          else if (type == CALENDAR) then
-
             resids_type = int(config(i_sim, 4))
             boot_type = int(config(i_sim, 5))
             dist = int(config(i_sim, 6))
@@ -85,9 +103,9 @@ contains
                k = k + 1
             end do
 
-            triangle_sim = calendar_outlier_mack(outlier_diagidx, factor, triangle, dev_facs, sigmas, dist)
+            triangle_sim = calendar_outlier_mack(outlier_diagidx, factor, triangle, dev_facs, sigmas, dist, lrng)
 
-            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids)
+            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids, lrng)
 
             deallocate(excl_resids)
 
@@ -95,7 +113,6 @@ contains
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
 
          else if (type == ORIGIN) then
-
             resids_type = int(config(i_sim, 4))
             boot_type = int(config(i_sim, 5))
             dist = int(config(i_sim, 6))
@@ -112,31 +129,31 @@ contains
                k = k + 1
             end do
 
-            triangle_sim = origin_outlier_mack(outlier_rowidx, factor, triangle, dev_facs, sigmas, dist)
+            triangle_sim = origin_outlier_mack(outlier_rowidx, factor, triangle, dev_facs, sigmas, dist, lrng)
 
-            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids)
+            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids, lrng)
 
             deallocate(excl_resids)
 
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), 1:m_config) = transpose(spread(config(i_sim, :), 2, n_boot))
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
-
          end if
 
-         inc = max(n_config/1000, 1)
-         call progress_bar(counter, n_config, inc)
-         counter = counter + 1
-
+         call pgbar_incr(pgbar)
+         call check_user_input()
       end do
+      !$omp end parallel do
 
-   end subroutine mack_sim
+   end subroutine mack_sim_f
 
    ! Subroutine implementing bootstrap of Mack's model for claims reserving.
-   subroutine mack_boot(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve, excl_resids)
+   subroutine mack_boot(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve, excl_resids, lrng)
 
       integer(c_int), intent(in) :: n_boot, n_dev, dist, resids_type, boot_type
       real(c_double), intent(in) :: triangle(n_dev, n_dev)
       integer(c_int), intent(in), optional :: excl_resids(:, :) ! Long format list of points to exclude.
+
+      type(c_ptr), intent(in) :: lrng
 
       integer(c_int) :: i, j, k, i_diag, i_boot, n_rows, n_resids, n_excl_resids ! Bookkeeping variables.
 
@@ -163,15 +180,12 @@ contains
       real(c_double) :: mean, sd ! Normal distribution parameters.
       real(c_double) :: shape, scale ! Gamma distribution parameters.
 
-      Call GetRNGstate()
-
       triangle_mask = .true.
       resids_mask = .true.
 
       n_resids = ((n_dev - 1)**2 + (n_dev - 1))/2 - 1    ! Discard residual from upper right corner.
 
       if (present(excl_resids)) then
-
          n_excl_resids = size(excl_resids, dim=1)
          n_resids = n_resids - n_excl_resids
 
@@ -179,7 +193,6 @@ contains
             triangle_mask(excl_resids(i, 1), excl_resids(i, 2)) = .false.
             resids_mask(excl_resids(i, 1), excl_resids(i, 2) - 1) = .false.
          end do
-
       end if
 
       if (resids_type == PARAMETRIC) then
@@ -189,19 +202,16 @@ contains
          flat_resids = pack(resids, resids_mask)
       end if
 
-
       main_loop: do i_boot = 1, n_boot
 
          if (resids_type /= PARAMETRIC) then
-
             do i = 1, n_dev - 1
                do j = 1, n_dev - 1
                   do k = 1, n_dev - 1
-                     resids_boot(i, j, k) = flat_resids(1 + int(n_resids * rand()))
+                     resids_boot(i, j, k) = flat_resids(1 + int(n_resids * runif_par(lrng)))
                   end do
                end do
             end do
-
          end if
 
          ! Parameter error.
@@ -214,32 +224,25 @@ contains
                do k = 1, n_dev - 1
                   do j = 2, n_dev
                      do i = 1, n_dev + 1 - j
-
                         if (dist == NORMAL) then
-
                            mean = dev_facs(j - 1) * triangle(i, j - 1)
                            sd = sigmas(j - 1) * sqrt(triangle(i, j - 1))
 
-                           resampled_triangle(i, j, k) = rnorm(mean, sd)
+                           resampled_triangle(i, j, k) = rnorm_par(lrng, mean, sd)
 
                         else if (dist == GAMMA) then
-
                            shape = (dev_facs(j - 1)**2 * triangle(i, j - 1)) / sigmas(j - 1) **2
                            scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
 
-                           resampled_triangle(i, j, k) = rgamma(shape, scale)
-
+                           resampled_triangle(i, j, k) = rgamma_par(lrng, shape, scale)
                         end if
-
                      end do
                   end do
 
                   call mack_fit(resampled_triangle(:, :, k), dev_facs_boot(:, k), sigmas_boot(:, k))
-
                end do
 
             else
-
                do k = 1, n_dev - 1
                   do j = 1, n_dev - 1
                      n_rows = n_dev - j
@@ -260,7 +263,6 @@ contains
 
                   if (any(sigmas_boot < 0) .or. any(isnan(sigmas_boot))) cycle main_loop
                end do
-
             end if
 
          else if (boot_type == UNCONDITIONAL) then
@@ -272,21 +274,17 @@ contains
                do k = 1, n_dev - 1
                   do j = 2, n_dev
                      do i = 1, n_dev + 1 - j
-
                         if (dist == NORMAL) then
-
                            mean = dev_facs(j - 1) * resampled_triangle(i, j - 1, k)
                            sd = sigmas(j - 1) * sqrt(resampled_triangle(i, j - 1, k))
 
-                           resampled_triangle(i, j, k) = rnorm(mean, sd)
+                           resampled_triangle(i, j, k) = rnorm_par(lrng, mean, sd)
 
                         else if (dist == GAMMA) then
-
                            shape = (dev_facs(j - 1)**2 * resampled_triangle(i, j - 1, k)) / sigmas(j - 1) **2
                            scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
 
-                           resampled_triangle(i, j, k) = rgamma(shape, scale)
-
+                           resampled_triangle(i, j, k) = rgamma_par(lrng, shape, scale)
                         end if
 
                      end do
@@ -295,15 +293,12 @@ contains
                   call mack_fit(resampled_triangle(:, :, k), dev_facs_boot(:, k), sigmas_boot(:, k))
 
                end do
-
             else
 
                do k = 1, n_dev - 1
-
                   resampled_triangle(:, 1, k) = triangle(:, 1)
 
                   do j = 1, n_dev - 1
-
                      n_rows = n_dev - j
 
                      resampled_triangle(1:n_rows, j + 1, k) = dev_facs(j) * resampled_triangle(1:n_rows, j, k) + &
@@ -328,18 +323,14 @@ contains
                   end do
 
                   if (any(sigmas_boot < 0) .or. any(isnan(sigmas_boot))) cycle main_loop
-
                end do
-
             end if
-
          end if
 
          ! Process error.
          triangle_boot = triangle
 
          if (dist == NORMAL) then
-
             do i_diag = 1, n_dev - 1
                do i = i_diag + 1, n_dev
 
@@ -348,7 +339,7 @@ contains
                   mean = dev_facs_boot(j - 1, i - 1) * triangle_boot(i, j - 1)
                   sd = sigmas_boot(j - 1, i - 1) * sqrt(triangle_boot(i, j - 1))
 
-                  triangle_boot(i, j) = rnorm(mean, sd)
+                  triangle_boot(i, j) = rnorm_par(lrng, mean, sd)
 
                   if (triangle_boot(i, j) <= 0) then
                      cycle main_loop
@@ -364,7 +355,6 @@ contains
             reserve(i_boot) = sum(triangle_boot(:, n_dev)) - sum(latest)
 
          else if (dist == GAMMA) then
-
             do i_diag = 1, n_dev - 1
                do i = i_diag + 1, n_dev
 
@@ -375,7 +365,7 @@ contains
 
                   if (shape <= tiny(1.0) .or. isnan(shape)) cycle main_loop
 
-                  triangle_boot(i, j) = rgamma(shape, scale)
+                  triangle_boot(i, j) = rgamma_par(lrng, shape, scale)
 
                end do
             end do
@@ -388,8 +378,6 @@ contains
          end if
 
       end do main_loop
-
-      Call PutRNGstate()
 
    end subroutine mack_boot
 
@@ -406,7 +394,6 @@ contains
       logical(c_bool), allocatable :: triangle_mask_(:, :)
       real(c_double), allocatable :: indiv_dev_facs(:, :)
       real(c_double), allocatable :: scale_facs(:, :)
-
 
       n_dev = size(triangle, 1)
 
@@ -452,23 +439,24 @@ contains
                   sqrt(triangle(1:n_rows, j)) / (sigmas(j) * scale_facs(1:n_rows, j))
 
             end if
-
          end if
-
       end do
 
    end subroutine mack_fit
 
 
-   ! Entry point for C wrapper, to omit excl_resids argument.
-   subroutine mack_boot_centry(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve) bind(C, name='mack_boot_')
-
+   !Entry point for C wrapper, to omit excl_resids argument.
+   subroutine mack_boot_f(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve) bind(c)
       integer(c_int), intent(in), value :: n_boot, n_dev, dist, resids_type, boot_type
       real(c_double), intent(in) :: triangle(n_dev, n_dev)
       real(c_double), intent(inout) :: reserve(n_boot)
 
-      call mack_boot(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve)
+      type(c_ptr) :: rng
 
-   end subroutine mack_boot_centry
+      rng = init_rng(42)
+
+      call mack_boot(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve, lrng=rng)
+
+   end subroutine mack_boot_f
 
 end module mack

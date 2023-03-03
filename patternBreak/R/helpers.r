@@ -180,6 +180,7 @@ glmConfig <- function(ndev,
 #' @return RETURN_DESCRIPTION
 #' @examples
 #' # ADD_EXAMPLES_HERE
+#' @export
 cum2incr <- function(triangle) {
 
     ndev <- ncol(triangle)
@@ -203,6 +204,7 @@ cum2incr <- function(triangle) {
 #' @return RETURN_DESCRIPTION
 #' @examples
 #' # ADD_EXAMPLES_HERE
+#' @export
 incr2cum <- function(triangle) {
 
     ndev <- ncol(triangle)

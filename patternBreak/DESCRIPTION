@@ -7,11 +7,12 @@ Author: Othman El Hammouchi
 Maintainer: Othman El Hammouchi <othman.el.hammouchi@vub.be>
 Description: More about what it does (maybe more than one line)
 License: MIT
-Depends:
-    data.table
-Suggests:
-    RUnit
+Depends: R (>= 3.5.0), data.table
+Imports: Rcpp (>= 0.11.0), rTRNG
+LinkingTo: Rcpp, rTRNG, RcppThread
+Suggests: RUnit
 Encoding: UTF-8
 RoxygenNote: 7.2.3
 Roxygen: list(load = "source")
-
+NeedsCompilation: yes
+Packaged: 2023-02-26 18:07:38 UTC; othman

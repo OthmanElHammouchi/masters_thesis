@@ -1,10 +1,13 @@
 FC = @FC@
 CC = @CC@
 
-PKG_FFLAGS=-cpp -ffree-line-length-512
+PKG_FFLAGS=-cpp -ffree-line-length-512 $(SHLIB_OPENMP_FFLAGS)
+PKG_LIBS = $(shell ${R_HOME}/bin/Rscript -e "rTRNG::LdFlags()") $(shell ${R_HOME}/bin/Rscript -e "RcppThread::LdFlags()") $(SHLIB_OPENMP_CFLAGS)
+
+CXX_STD = CXX11
 
 all: $(SHLIB)
 
-helpers.o: constants.o rng_fort_interface.o print_fort_interface.o
-mack.o: helpers.o rng_fort_interface.o print_fort_interface.o
-glm.o: helpers.o rng_fort_interface.o print_fort_interface.o
+helpers.o: constants.o interface.o
+mack.o: helpers.o interface.o
+glm.o: helpers.o interface.o

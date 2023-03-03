@@ -1,41 +1,41 @@
-#' Compute bootstrap reserve based on Mack's model.
-#'
-#' FUNCTION_DESCRIPTION
-#'
-#' @param triangle Run-off triangle.
-#' @param nboot Number of bootstrap samples.
-#' @param resids.type Type of residuals.
-#' @param boot.type Type of bootstrap.
-#' @param dist Distribution.
-#'
-#' @return A vector of bootstrap reserve estimates.
-#' @examples
-#' # ADD_EXAMPLES_HERE
-#' @export
-mackBoot <- function(triangle, nboot, resids.type, boot.type, dist) {
+# #' Compute bootstrap reserve based on Mack's model.
+# #'
+# #' FUNCTION_DESCRIPTION
+# #'
+# #' @param triangle Run-off triangle.
+# #' @param nboot Number of bootstrap samples.
+# #' @param resids.type Type of residuals.
+# #' @param boot.type Type of bootstrap.
+# #' @param dist Distribution.
+# #'
+# #' @return A vector of bootstrap reserve estimates.
+# #' @examples
+# #' # ADD_EXAMPLES_HERE
+# #' @export
+# mackBoot <- function(triangle, nboot, resids.type, boot.type, dist) {
 
-    key <- list(
-        normal = 1L,
-        gamma = 2L,
-        raw = 1L,
-        scaled = 2L,
-        parametric = 3L,
-        conditional = 1L,
-        unconditional = 2L)
+#     key <- list(
+#         normal = 1L,
+#         gamma = 2L,
+#         raw = 1L,
+#         scaled = 2L,
+#         parametric = 3L,
+#         conditional = 1L,
+#         unconditional = 2L)
 
-    if (any(is.na(triangle))) {
-        triangle[is.na(triangle)] <- 0
-    }
+#     if (any(is.na(triangle))) {
+#         triangle[is.na(triangle)] <- 0
+#     }
 
-    if (!is.double(triangle)) storage.mode(triangle) <- "double"
-    if (!is.integer(nboot)) storage.mode(nboot) <- "integer"
+#     if (!is.double(triangle)) storage.mode(triangle) <- "double"
+#     if (!is.integer(nboot)) storage.mode(nboot) <- "integer"
 
-    resids.type <- key[[resids.type]]
-    boot.type <- key[[boot.type]]
-    dist <- key[[dist]]
+#     resids.type <- key[[resids.type]]
+#     boot.type <- key[[boot.type]]
+#     dist <- key[[dist]]
 
-    .Call("mack_boot_wrapper", triangle, nboot, resids.type, boot.type, dist)
-}
+#     .Call("mack_boot_cpp", triangle, nboot, resids.type, boot.type, dist)
+# }
 
 
 #' Bootstrap simulation based on Mack's model.
@@ -85,6 +85,8 @@ mackSim <- function(triangle, nboot, config, type) {
     if (!is.integer(nboot)) storage.mode(nboot) <- "integer"
     if (!is.double(config)) storage.mode(config) <- "double"
     
-    .Call("mack_sim_wrapper", triangle, nboot, config, type)
+    result <- .mackSim(triangle, nboot, config, type)
+
+    return(result)
 
 }
