@@ -9,20 +9,21 @@ module glm
 
 contains
 
-   subroutine glm_boot(n_dev, triangle, reserve, n_boot, excl_resids, lrng)
+   subroutine glm_boot(n_dev, triangle, reserve, n_boot, excl_resids, rng, i_thread)
 
       real(c_double), intent(in) :: triangle(n_dev, n_dev)
       real(c_double), intent(inout) :: reserve(n_boot)
       integer(c_int), intent(in) :: n_dev, n_boot
       integer(c_int), intent(in), optional :: excl_resids(:, :)
-      type(c_ptr), intent(in) :: lrng
-
+      type(c_ptr), intent(in) :: rng
+      integer(c_int), intent(in) :: i_thread
 
       integer(c_int) :: n_pts, n_covs, n_pred
       real(c_double), allocatable :: betas(:)
       real(c_double), allocatable :: X_pred(:, :) 
       real(c_double), allocatable :: y_pred(:)
       real(c_double), allocatable :: resids(:, :)
+      real(c_double), allocatable :: triangle_fit(:, :)
 
       real(c_double) :: lambda
 
@@ -42,6 +43,7 @@ contains
 
       allocate(betas(n_covs))
       allocate(resids(n_dev, n_dev))
+      allocate(triangle_fit(n_dev, n_dev))
       allocate(flat_resids(n_pts))
       allocate(resids_mask(n_dev, n_dev))
 
@@ -65,19 +67,20 @@ contains
          end do
       end if
 
-      call poisson_fit(triangle, betas, resids)
+      call poisson_fit(triangle, betas, resids=resids, triangle_fit=triangle_fit)
 
       flat_resids = pack(resids, resids_mask)
 
       ! Resample residuals and simulate triangle.
 
-      do i_boot = 1, n_boot
+      main_loop: do i_boot = 1, n_boot
          triangle_boot = 0
          resids_boot = 0
          do i = 1, n_dev
             do j = 1, n_dev + 1 - i
-               resids_boot(i, j) = flat_resids(1 + int(n_pts * runif_par(lrng)))
-               triangle_boot(i, j) = resids_boot(i, j) * sqrt(triangle(i, j)) + triangle(i, j)
+               resids_boot(i, j) = flat_resids(1 + int(n_pts * runif_par(rng, i_thread)))
+               triangle_boot(i, j) = resids_boot(i, j) * sqrt(triangle_fit(i, j)) + triangle_fit(i, j)
+               if (triangle_boot(i, j) < 0) cycle main_loop
             end do
          end do
 
@@ -99,11 +102,12 @@ contains
 
          do i = 1, n_pred
             lambda = y_pred(i)
-            y_pred(i) = rpois_par(lrng, lambda)
+            if (lambda > 1e7) cycle main_loop
+            y_pred(i) = rpois_par(rng, i_thread, lambda)
          end do
 
          reserve(i_boot) = sum(y_pred)
-      end do
+      end do main_loop
 
    end subroutine glm_boot
 
@@ -136,8 +140,7 @@ contains
       integer(c_int) :: i_thread
       integer(c_int) :: n_threads
 
-      type(c_ptr), allocatable :: lrngs(:)
-      type(c_ptr) :: rng, lrng
+      type(c_ptr) :: rng
       type(c_ptr) ::pgbar
 
       n_covs = 2*n_dev - 1
@@ -146,19 +149,13 @@ contains
       call poisson_fit(triangle, betas)
 
       n_threads = init_omp()
-      rng = init_rng(42)
-      allocate(lrngs(n_threads))
-
-      do i = 1, n_threads
-         lrngs(i) = lrng_create(rng, n_threads, i - 1)
-      end do
+      rng = init_rng(n_threads, 42)
 
       pgbar = pgbar_create(n_config, 5)
 
       !$omp parallel do num_threads(n_threads) default(firstprivate) shared(config, results) schedule(dynamic, 25)
       do i_sim = 1, n_config
          i_thread = omp_get_thread_num()
-         lrng = lrngs(i_thread + 1)
 
          if (type == SINGLE) then
             allocate(excl_resids(1, 2))
@@ -168,9 +165,9 @@ contains
             factor = config(i_sim, 3)
 
             triangle_sim = triangle
-            call single_outlier_glm(triangle_sim, outlier_rowidx, outlier_colidx, factor, betas, lrng)
+            call single_outlier_glm(triangle_sim, outlier_rowidx, outlier_colidx, factor, betas, rng, i_thread)
 
-            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids, lrng)
+            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids, rng, i_thread)
 
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), 1:m_config) = transpose(spread(config(i_sim, :), 2, n_boot))
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
@@ -194,9 +191,9 @@ contains
 
             triangle_sim = triangle
 
-            call calendar_outlier_glm(triangle_sim, outlier_diagidx, factor, betas, lrng)
+            call calendar_outlier_glm(triangle_sim, outlier_diagidx, factor, betas, rng, i_thread)
 
-            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids, lrng)
+            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids, rng, i_thread)
 
             deallocate(excl_resids)
 
@@ -218,9 +215,9 @@ contains
 
             triangle_sim = triangle
 
-            call origin_outlier_glm(triangle_sim, outlier_rowidx, factor, betas, lrng)
+            call origin_outlier_glm(triangle_sim, outlier_rowidx, factor, betas, rng, i_thread)
 
-            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids, lrng)
+            call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids, rng, i_thread)
 
             deallocate(excl_resids)
 
@@ -235,13 +232,16 @@ contains
 
    end subroutine glm_sim_f
 
-   subroutine poisson_fit(triangle, betas, resids)
+   subroutine poisson_fit(triangle, betas, resids, triangle_fit)
       real(c_double), intent(in) :: triangle(:, :)
       real(c_double), intent(out) :: betas(:)
       real(c_double), intent(inout), optional :: resids(:, :)
+      real(c_double), intent(inout), optional :: triangle_fit(:, :)
+
 
       real(c_double), allocatable :: X(:, :)
       real(c_double), allocatable :: y(:)
+      real(c_double), allocatable :: triangle_fit_(:, :)
 
       integer(c_int) :: n_pts, n_covs, n_dev
       integer(c_int) :: i, j, k
@@ -251,7 +251,6 @@ contains
       real(c_double), allocatable :: W(:, :), z(:), eta(:)
       integer(c_int) :: info
 
-      real(c_double), allocatable :: triangle_fit(:, :)
       real(c_double), allocatable :: y_fit(:)
 
       n_dev = size(triangle, dim=1)
@@ -272,7 +271,7 @@ contains
       allocate(rhs(n_covs))
       allocate(lhs(n_covs, n_covs))
 
-      allocate(triangle_fit(n_dev, n_dev))
+      allocate(triangle_fit_(n_dev, n_dev))
       allocate(y_fit(n_pts))
 
       ! Set up feature matrix and response vector.
@@ -327,7 +326,7 @@ contains
       k = 1
       do i = 1, n_dev
          do j = 1, n_dev + 1 - i
-            triangle_fit(i, j) = y_fit(k)
+            triangle_fit_(i, j) = y_fit(k)
             k = k + 1
          end do
       end do
@@ -337,9 +336,11 @@ contains
 
          do i = 1, n_dev
             do j = 1, n_dev + 1 - i
-               resids(i, j) = (triangle(i, j) - triangle_fit(i, j)) / sqrt(triangle_fit(i, j))
+               resids(i, j) = (triangle(i, j) - triangle_fit_(i, j)) / sqrt(triangle_fit_(i, j))
             end do
          end do
+      
+      if (present(triangle_fit)) triangle_fit = triangle_fit_
 
       end if
 
@@ -354,9 +355,9 @@ contains
       
       type(c_ptr) :: rng
 
-      rng = init_rng(42)
+      rng = init_rng(1, 42)
 
-      call glm_boot(n_dev, triangle, reserve, n_boot, lrng=rng)
+      call glm_boot(n_dev, triangle, reserve, n_boot, rng=rng, i_thread=1)
 
    end subroutine glm_boot_f
 

@@ -2,7 +2,10 @@ FC = @FC@
 CC = @CC@
 
 PKG_FFLAGS=-cpp -ffree-line-length-512 $(SHLIB_OPENMP_FFLAGS)
-PKG_LIBS = $(shell ${R_HOME}/bin/Rscript -e "rTRNG::LdFlags()") $(shell ${R_HOME}/bin/Rscript -e "RcppThread::LdFlags()") $(SHLIB_OPENMP_CFLAGS)
+
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+
+PKG_LIBS = $(shell ${R_HOME}/bin/Rscript -e "rTRNG::LdFlags()") $(shell ${R_HOME}/bin/Rscript -e "RcppThread::LdFlags()") $(SHLIB_OPENMP_CFLAGS) $(SHLIB_OPENMP_CXXFLAGS)
 
 CXX_STD = CXX11
 

@@ -9,7 +9,7 @@ Description: More about what it does (maybe more than one line)
 License: MIT
 Depends: R (>= 3.5.0), data.table
 Imports: Rcpp (>= 0.11.0), rTRNG
-LinkingTo: Rcpp, rTRNG, RcppThread
+LinkingTo: Rcpp, rTRNG, RcppThread, dust, BH
 Suggests: RUnit
 Encoding: UTF-8
 RoxygenNote: 7.2.3

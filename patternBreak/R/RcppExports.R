@@ -49,11 +49,3 @@ glmBoot <- function(triangle, n_boot) {
     .Call('_patternBreak_glm_sim', PACKAGE = 'patternBreak', triangle, n_boot, config, type)
 }
 
-test <- function() {
-    .Call('_patternBreak_test', PACKAGE = 'patternBreak')
-}
-
-test2 <- function() {
-    .Call('_patternBreak_test2', PACKAGE = 'patternBreak')
-}
-

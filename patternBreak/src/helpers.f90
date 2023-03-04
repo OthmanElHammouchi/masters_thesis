@@ -9,13 +9,13 @@ module helpers
 
 contains
 
-   function single_outlier_mack(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist, lrng) result(triangle)
+   function single_outlier_mack(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist, rng, i_thread) result(triangle)
 
       integer, intent(in):: outlier_rowidx, outlier_colidx
       real(c_double), intent(in) :: init_col(:), dev_facs(:), sigmas(:)
       integer(c_int), intent(in) :: dist
-
-      type(c_ptr) :: lrng
+      integer(c_int), intent(in) :: i_thread
+      type(c_ptr), intent(in) :: rng
 
       real(c_double) :: factor
       real(c_double), allocatable:: triangle(:, :)
@@ -37,7 +37,7 @@ contains
                if (i == outlier_rowidx) cycle
                mean = dev_facs(j - 1) * triangle(i, j - 1)
                sd = sigmas(j - 1) * sqrt(triangle(i, j - 1))
-               triangle(i, j) = rnorm_par(lrng, mean, sd)
+               triangle(i, j) = rnorm_par(rng, i_thread, mean, sd)
             end do
          end do
 
@@ -45,19 +45,19 @@ contains
             do j = 2, outlier_colidx - 1
                mean = dev_facs(j - 1) * triangle(outlier_rowidx, j - 1)
                sd = sigmas(j - 1) * sqrt(triangle(outlier_rowidx, j - 1))
-               triangle(outlier_rowidx, j) = rnorm_par(lrng, mean, sd)
+               triangle(outlier_rowidx, j) = rnorm_par(rng, i_thread, mean, sd)
             end do
          end if
 
          mean = factor * dev_facs(outlier_colidx - 1) * triangle(outlier_rowidx, outlier_colidx - 1)
          sd = sigmas(outlier_colidx - 1) * sqrt(triangle(outlier_rowidx, outlier_colidx - 1))
-         triangle(outlier_rowidx, outlier_colidx) = rnorm_par(lrng, mean, sd)
+         triangle(outlier_rowidx, outlier_colidx) = rnorm_par(rng, i_thread, mean, sd)
 
          if (outlier_colidx < n_dev) then
             do j = outlier_colidx + 1, n_dev + 1 - outlier_rowidx
                mean = dev_facs(j - 1) * triangle(outlier_rowidx, j - 1)
                sd = sigmas(j - 1) * sqrt(triangle(outlier_rowidx, j - 1))
-               triangle(outlier_rowidx, j) = rnorm_par(lrng, mean, sd)
+               triangle(outlier_rowidx, j) = rnorm_par(rng, i_thread, mean, sd)
             end do
          end if
 
@@ -68,7 +68,7 @@ contains
                if (i == outlier_rowidx) cycle
                shape = dev_facs(j - 1)**2 * triangle(i, j - 1) / sigmas(j - 1)**2
                scale = sigmas(j - 1)**2 / dev_facs(j - 1)
-               triangle(i, j) = rgamma_par(lrng, shape, scale)
+               triangle(i, j) = rgamma_par(rng, i_thread, shape, scale)
             end do
          end do
 
@@ -76,19 +76,19 @@ contains
             do j = 2, outlier_colidx - 1
                shape = dev_facs(j - 1)**2 * triangle(outlier_rowidx, j - 1) / sigmas(j - 1)**2
                scale = sigmas(j - 1)**2 / dev_facs(j - 1)
-               triangle(outlier_rowidx, j) = rgamma_par(lrng, shape, scale)
+               triangle(outlier_rowidx, j) = rgamma_par(rng, i_thread, shape, scale)
             end do
          end if
 
          shape = dev_facs(outlier_colidx - 1)**2 * triangle(outlier_rowidx, outlier_colidx - 1) / sigmas(outlier_colidx - 1)**2
          scale = sigmas(outlier_colidx - 1)**2 / dev_facs(outlier_colidx - 1)
-         triangle(outlier_rowidx, outlier_colidx) = rgamma_par(lrng, shape, scale)
+         triangle(outlier_rowidx, outlier_colidx) = rgamma_par(rng, i_thread, shape, scale)
 
          if (outlier_colidx < n_dev) then
             do j = outlier_colidx + 1, n_dev + 1 - outlier_rowidx
                shape = dev_facs(j - 1)**2 * triangle(outlier_rowidx, j - 1) / sigmas(j - 1)**2
                scale = sigmas(j - 1)**2 / dev_facs(j - 1)
-               triangle(outlier_rowidx, j) = rgamma_par(lrng, shape, scale)
+               triangle(outlier_rowidx, j) = rgamma_par(rng, i_thread, shape, scale)
             end do
          end if
 
@@ -96,14 +96,14 @@ contains
 
    end function single_outlier_mack
 
-   function calendar_outlier_mack(outlier_diagidx, factor, triangle, dev_facs, sigmas, dist, lrng) result(sim_triangle)
+   function calendar_outlier_mack(outlier_diagidx, factor, triangle, dev_facs, sigmas, dist, rng, i_thread) result(sim_triangle)
 
       integer, intent(in) :: outlier_diagidx
       real(c_double), intent(in):: factor
       real(c_double), intent(in) :: triangle(:, :), dev_facs(:), sigmas(:)
       integer(c_int), intent(in) :: dist
-
-      type(c_ptr) :: lrng
+      integer(c_int), intent(in) :: i_thread
+      type(c_ptr), intent(in) :: rng
 
       integer :: i, j, n_dev, n_cols
       real(c_double), allocatable :: sim_triangle(:, :)
@@ -131,13 +131,13 @@ contains
                mean = factor * dev_facs(n_cols - 1) * sim_triangle(i, n_cols - 1)
                sd = sigmas(n_cols - 1) * sqrt(sim_triangle(i, n_cols - 1))
 
-               sim_triangle(i, n_cols) = rnorm_par(lrng, mean, sd)
+               sim_triangle(i, n_cols) = rnorm_par(rng, i_thread, mean, sd)
 
                do j = n_cols + 1, n_dev + 1 - i
                   mean = dev_facs(j - 1) * sim_triangle(i, j - 1)
                   sd = sigmas(j - 1) * sqrt(sim_triangle(i, j - 1))
 
-                  sim_triangle(i, j) = rnorm_par(lrng, mean, sd)
+                  sim_triangle(i, j) = rnorm_par(rng, i_thread, mean, sd)
                end do
 
             else if (dist == GAMMA) then
@@ -145,14 +145,14 @@ contains
                shape = factor * dev_facs(n_cols - 1)**2 * sim_triangle(i, n_cols - 1) / sigmas(n_cols - 1)**2
                scale = sigmas(n_cols - 1)**2 / factor * dev_facs(n_cols - 1)
 
-               sim_triangle(i, n_cols) = rgamma_par(lrng, shape, scale)
+               sim_triangle(i, n_cols) = rgamma_par(rng, i_thread, shape, scale)
 
                do j = n_cols + 1, n_dev + 1 - i
 
                   shape = dev_facs(j - 1)**2 * sim_triangle(i, j - 1) / sigmas(j - 1)**2
                   scale = sigmas(j - 1)**2 / dev_facs(j - 1)
 
-                  sim_triangle(i, j) = rgamma_par(lrng, shape, scale)
+                  sim_triangle(i, j) = rgamma_par(rng, i_thread, shape, scale)
 
                end do
 
@@ -163,14 +163,14 @@ contains
 
    end function calendar_outlier_mack
 
-   function origin_outlier_mack(outlier_rowidx, factor, triangle, dev_facs, sigmas, dist, lrng) result(sim_triangle)
+   function origin_outlier_mack(outlier_rowidx, factor, triangle, dev_facs, sigmas, dist, rng, i_thread) result(sim_triangle)
 
       integer, intent(in):: outlier_rowidx
       real(c_double), intent(in) :: triangle(:, :), dev_facs(:), sigmas(:)
       integer(c_int), intent(in) :: dist
       real(c_double), intent(in) :: factor
-
-      type(c_ptr), intent(in) :: lrng
+      integer(c_int), intent(in) :: i_thread
+      type(c_ptr), intent(in) :: rng
 
       real(c_double) :: shape, scale
       real(c_double) :: mean, sd
@@ -187,30 +187,30 @@ contains
 
             mean = factor * dev_facs(j - 1) * sim_triangle(outlier_rowidx, j - 1)
             sd = sigmas(j - 1) * sqrt(sim_triangle(outlier_rowidx, j - 1))
-            sim_triangle(outlier_rowidx, j) = rnorm_par(lrng, mean, sd)
+            sim_triangle(outlier_rowidx, j) = rnorm_par(rng, i_thread, mean, sd)
 
          else if (dist == GAMMA) then
 
             shape = factor * dev_facs(j - 1)**2 * sim_triangle(outlier_rowidx, j - 1) / sigmas(j - 1)**2
             scale = sigmas(j - 1)**2 / factor * dev_facs(j - 1)
-            sim_triangle(outlier_rowidx, j) = rgamma_par(lrng, shape, scale)
+            sim_triangle(outlier_rowidx, j) = rgamma_par(rng, i_thread, shape, scale)
 
          end if
       end do
 
    end function origin_outlier_mack
 
-   subroutine single_outlier_glm(triangle, outlier_rowidx, outlier_colidx, factor, betas, lrng)
+   subroutine single_outlier_glm(triangle, outlier_rowidx, outlier_colidx, factor, betas, rng, i_thread)
       integer(c_int), intent(in) :: outlier_rowidx
       integer(c_int), intent(in) :: outlier_colidx
       real(c_double), intent(in) :: factor
       real(c_double), intent(in) :: betas(:)
       real(c_double), intent(inout) :: triangle(:, :)
+      integer(c_int), intent(in) :: i_thread
+      type(c_ptr), intent(in) :: rng
 
       integer(c_int) :: i, j
 
-      type(c_ptr), intent(in) :: lrng
-      
       real(c_double) :: lambda
 
       i = outlier_rowidx
@@ -226,17 +226,17 @@ contains
          lambda = factor * exp(betas(1) + betas(i - 1) + betas(j - 1))
       end if
 
-      triangle(i, j) = rpois_par(lrng, lambda)
-
+      triangle(i, j) = real(rpois_par(rng, i_thread, lambda), kind=c_double)
+   
    end subroutine single_outlier_glm
 
-   subroutine calendar_outlier_glm(triangle, outlier_diagidx, factor, betas, lrng)
+   subroutine calendar_outlier_glm(triangle, outlier_diagidx, factor, betas, rng, i_thread)
       integer(c_int), intent(in) :: outlier_diagidx
       real(c_double), intent(in) :: factor
       real(c_double), intent(in) :: betas(:)
       real(c_double), intent(inout) :: triangle(:, :)
-
-      type(c_ptr), intent(in) :: lrng
+      integer(c_int), intent(in) :: i_thread
+      type(c_ptr), intent(in) :: rng
       
       real(c_double) :: lambda
       integer(c_int) :: i, j, n_dev
@@ -257,18 +257,18 @@ contains
             lambda = factor * exp(betas(1) + betas(i - 1) + betas(j - 1))
          end if
 
-         triangle(i, j) = rpois_par(lrng, lambda)
+         triangle(i, j) = rpois_par(rng, i_thread, lambda)
       end do
 
    end subroutine calendar_outlier_glm
 
-   subroutine origin_outlier_glm(triangle, outlier_rowidx, factor, betas, lrng)
+   subroutine origin_outlier_glm(triangle, outlier_rowidx, factor, betas, rng, i_thread)
       integer(c_int), intent(in) :: outlier_rowidx
       real(c_double), intent(in) :: factor
       real(c_double), intent(in) :: betas(:)
       real(c_double), intent(inout) :: triangle(:, :)
-
-      type(c_ptr), intent(in) :: lrng
+      integer(c_int), intent(in) :: i_thread
+      type(c_ptr), intent(in) :: rng
       
       real(c_double) :: lambda
       integer(c_int) :: i, j, n_dev
@@ -289,14 +289,14 @@ contains
             lambda = factor * exp(betas(1) + betas(i - 1) + betas(j - 1))
          end if   
          
-         triangle(i, j) = rpois_par(lrng, lambda)
+         triangle(i, j) = rpois_par(rng, i_thread, lambda)
 
       end do
 
    end subroutine origin_outlier_glm
 
    function init_omp() result(n_threads)
-      integer(c_int) :: n_threads
+      integer(c_size_t) :: n_threads
       character(len=999, kind = c_char) :: OMP_NUM_THREADS
       integer(c_int) :: is_set
 

@@ -66,34 +66,12 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// test
-NumericVector test();
-RcppExport SEXP _patternBreak_test() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(test());
-    return rcpp_result_gen;
-END_RCPP
-}
-// test2
-NumericVector test2();
-RcppExport SEXP _patternBreak_test2() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(test2());
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_patternBreak_mack_boot", (DL_FUNC) &_patternBreak_mack_boot, 5},
     {"_patternBreak_glm_boot", (DL_FUNC) &_patternBreak_glm_boot, 2},
     {"_patternBreak_mack_sim", (DL_FUNC) &_patternBreak_mack_sim, 4},
     {"_patternBreak_glm_sim", (DL_FUNC) &_patternBreak_glm_sim, 4},
-    {"_patternBreak_test", (DL_FUNC) &_patternBreak_test, 0},
-    {"_patternBreak_test2", (DL_FUNC) &_patternBreak_test2, 0},
     {NULL, NULL, 0}
 };
 

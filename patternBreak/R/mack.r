@@ -75,6 +75,7 @@ mackSim <- function(triangle, nboot, config, type) {
             sapply(dist, function(dist) key[[dist]])
         )]
 
+    names.keep <- names(config)
     config <- as.matrix(config)
 
     if (any(is.na(triangle))) {
@@ -86,6 +87,9 @@ mackSim <- function(triangle, nboot, config, type) {
     if (!is.double(config)) storage.mode(config) <- "double"
     
     result <- .mackSim(triangle, nboot, config, type)
+
+    result <- as.data.table(result)
+    names(result) <- c(names.keep, "reserve")
 
     return(result)
 

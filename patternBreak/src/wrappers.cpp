@@ -1,15 +1,12 @@
 #include <math.h>
 #include <Rcpp.h>
 
-#include <trng/yarn2.hpp>
-#include <trng/normal_dist.hpp>
-#include <trng/gamma_dist.hpp>
-#include <trng/poisson_dist.hpp>
-#include <trng/uniform01_dist.hpp>
 #include <RcppThread.h>
+#include <dust/random/random.hpp>
+#include <trng/special_functions.hpp>
+#include <boost/math/special_functions/erf.hpp>
 
 using namespace Rcpp;
-using namespace trng;
 
 extern "C" {
 
@@ -21,45 +18,86 @@ extern "C" {
 
   void glm_sim_f(int n_dev, double* triangle, int n_config, int m_config, double* config, int type, int n_boot, double* results);
 
-  void* init_rng(int seed) {
-    void* rng = (void*) new yarn2((unsigned long) seed);
-    return(rng);
+  void* init_rng(int n_threads, int seed) {
+    using rng_state_type = dust::random::generator<double>;
+    void* rng_ptr = (void*) new dust::random::prng<rng_state_type>(n_threads, seed);
+    return(rng_ptr);
   }
 
-  void* lrng_create(void* rng, int n_threads, int i_thread) {
-    yarn2* ptr = static_cast<yarn2*>(rng);
-    yarn2* _lrng = new yarn2(*ptr);
-    (*_lrng).split((unsigned int) n_threads, (unsigned int) i_thread);
-    void* lrng = (void*) &_lrng;
-    return(lrng);
-  }
-
-  double rnorm_par(void* lrng, double mean, double sd) {
-    normal_dist<> dist(mean, sd);
-    yarn2* ptr = static_cast<yarn2*>(lrng);
-    double sample = dist(*ptr);
+  double rnorm_par(void* rng_ptr, int i_thread, double mean, double sd) {
+    using rng_state_type = dust::random::generator<double>;
+    using prng = dust::random::prng<rng_state_type>;
+    prng* rng_ptr_ = static_cast<prng*>(rng_ptr);
+    auto& state = rng_ptr_->state(0);
+    double sample = dust::random::normal<double>(state, mean, sd);
     return(sample);
 }
 
-  double rgamma_par(void* lrng, double shape, double scale) {
-    gamma_dist<> dist(shape, scale);
-    yarn2* ptr = static_cast<yarn2*>(lrng);
-    double sample = dist(*ptr);
+  double rgamma_par(void* rng_ptr, int i_thread, double shape, double scale) {
+    using rng_state_type = dust::random::generator<double>;
+    using prng = dust::random::prng<rng_state_type>;
+    prng* rng_ptr_ = static_cast<prng*>(rng_ptr);
+    auto& state = rng_ptr_->state(0);    
+    double sample = dust::random::gamma<double>(state, shape, scale);
     return(sample);
   }
 
-  int rpois_par(void* lrng, double mean) {
-    poisson_dist dist(mean);
-    yarn2* ptr = static_cast<yarn2*>(lrng);
-    int sample = dist(*ptr);
+  double runif_par(void* rng_ptr, int i_thread) {
+    using rng_state_type = dust::random::generator<double>;
+    using prng = dust::random::prng<rng_state_type>;
+    prng* rng_ptr_ = static_cast<prng*>(rng_ptr);
+    auto& state = rng_ptr_->state(0);    
+    double sample = dust::random::random_real<double>(state);
     return(sample);
   }
 
-  double runif_par(void* lrng) {
-    uniform01_dist<> dist;
-    yarn2* ptr = static_cast<yarn2*>(lrng);
-    double sample = dist(*ptr);
-    return(sample);
+  double pois_cdf(double x, double lambda) {
+    double p;
+    for (int i; i < x; i++) {
+      p += pow(lambda, i) * std::exp(-lambda) / std::tgamma(i + 1);
+    };
+    return(p);
+  }
+
+  long int rpois_large_mean(double u, double lambda) {
+    long double w = boost::math::erf_inv(u);
+    long double x, delta;
+    if (std::abs(w) < 3) {
+      long double Q1 = lambda + std::sqrt(lambda) * w + (1/3 + (1/6) * pow(w, 2));
+      x = Q1 + (1/std::sqrt(lambda)) * ((-1/36) * w - (1/72) * pow(w, 3));
+      delta = (1/40 + (1/80) * pow(w, 2) + (1/160) * pow(w, 4));
+    } else {
+      long double r = 1 + w / std::sqrt(lambda) + (1/6)*pow((w/std::sqrt(lambda)), 2) - (1/72) * pow(w / std::sqrt(lambda), 3);
+      long double c0 = 1/3 - (1/36) * (r - 1);
+      x = lambda * r + c0;
+      x -= (4.1/805)/(x + 0.025 * lambda);
+    }
+    long int n = std::floor(x + delta);
+    if (x > 10) {
+      if ((x - n) > delta) {
+        return(n);
+      } else if (pois_cdf(n, lambda) < u) {
+        return(n);
+      }
+      else {
+        return(n - 1);
+      }
+    }
+  }
+
+  long int rpois_par(void* rng_ptr, int i_thread, double mean) {
+    if (mean < 1e7) {
+      using rng_state_type = dust::random::generator<double>;
+      using prng = dust::random::prng<rng_state_type>;
+    prng* rng_ptr_ = static_cast<prng*>(rng_ptr);
+    auto& state = rng_ptr_->state(0);      
+    int sample = dust::random::poisson<double>(state, mean);
+      return(sample);
+    } else {
+      double u = runif_par(rng_ptr, i_thread);
+      long int sample = rpois_large_mean(u, mean);
+      return(sample);
+    };
   }
 
   void check_user_input(void) {
@@ -253,26 +291,4 @@ NumericMatrix glm_sim(NumericMatrix triangle, int n_boot, NumericMatrix config, 
   free(results_f);
 
   return(results);
-};
-
-// [[Rcpp::export]]
-NumericVector test() {
-  NumericVector result(1e5);
-  yarn2 rng(42);
-  for (int i; i < 1e5; i++) {
-    poisson_dist dist(i);
-    result(i) = dist(rng);
-  };
-  return(result);
-};
-
-// [[Rcpp::export]]
-NumericVector test2() {
-  NumericVector result(1e5);
-  yarn2 rng(42);
-  for (int i; i < 1e5; i++) {
-    normal_dist<> dist(i, i);
-    result(i) = dist(rng);
-  };
-  return(result);
 };

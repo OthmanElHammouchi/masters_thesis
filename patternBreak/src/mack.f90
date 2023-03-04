@@ -46,19 +46,14 @@ contains
       call mack_fit(triangle, dev_facs, sigmas)
 
       n_threads = init_omp()
-      rng = init_rng(42)
-      allocate(lrngs(n_threads))
 
-      do i = 1, n_threads
-         lrngs(i) = lrng_create(rng, n_threads, i - 1)
-      end do
+      rng = init_rng(n_threads, 42)
 
       pgbar = pgbar_create(n_config, 5)
 
       !$omp parallel do num_threads(n_threads) default(firstprivate) shared(config, results) schedule(dynamic, 25)
       do i_sim = 1, n_config
          i_thread = omp_get_thread_num()
-         lrng = lrngs(i_thread + 1)
 
          if (type == SINGLE) then
             resids_type = int(config(i_sim, 6))
@@ -74,9 +69,9 @@ contains
 
             allocate(reserve(n_boot))
             
-            triangle_sim = single_outlier_mack(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist, lrng)
+            triangle_sim = single_outlier_mack(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist, rng, i_thread)
             
-            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids, lrng)
+            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids, rng, i_thread)
 
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), 1:m_config) = transpose(spread(config(i_sim, :), 2, n_boot))
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve            
@@ -103,9 +98,9 @@ contains
                k = k + 1
             end do
 
-            triangle_sim = calendar_outlier_mack(outlier_diagidx, factor, triangle, dev_facs, sigmas, dist, lrng)
+            triangle_sim = calendar_outlier_mack(outlier_diagidx, factor, triangle, dev_facs, sigmas, dist, rng, i_thread)
 
-            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids, lrng)
+            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids, rng, i_thread)
 
             deallocate(excl_resids)
 
@@ -129,9 +124,9 @@ contains
                k = k + 1
             end do
 
-            triangle_sim = origin_outlier_mack(outlier_rowidx, factor, triangle, dev_facs, sigmas, dist, lrng)
+            triangle_sim = origin_outlier_mack(outlier_rowidx, factor, triangle, dev_facs, sigmas, dist, rng, i_thread)
 
-            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids, lrng)
+            call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids, rng, i_thread)
 
             deallocate(excl_resids)
 
@@ -147,13 +142,13 @@ contains
    end subroutine mack_sim_f
 
    ! Subroutine implementing bootstrap of Mack's model for claims reserving.
-   subroutine mack_boot(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve, excl_resids, lrng)
+   subroutine mack_boot(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve, excl_resids, rng, i_thread)
 
       integer(c_int), intent(in) :: n_boot, n_dev, dist, resids_type, boot_type
       real(c_double), intent(in) :: triangle(n_dev, n_dev)
       integer(c_int), intent(in), optional :: excl_resids(:, :) ! Long format list of points to exclude.
-
-      type(c_ptr), intent(in) :: lrng
+      type(c_ptr), intent(in) :: rng
+      integer(c_int), intent(in) :: i_thread
 
       integer(c_int) :: i, j, k, i_diag, i_boot, n_rows, n_resids, n_excl_resids ! Bookkeeping variables.
 
@@ -208,7 +203,7 @@ contains
             do i = 1, n_dev - 1
                do j = 1, n_dev - 1
                   do k = 1, n_dev - 1
-                     resids_boot(i, j, k) = flat_resids(1 + int(n_resids * runif_par(lrng)))
+                     resids_boot(i, j, k) = flat_resids(1 + int(n_resids * runif_par(rng, i_thread)))
                   end do
                end do
             end do
@@ -228,13 +223,13 @@ contains
                            mean = dev_facs(j - 1) * triangle(i, j - 1)
                            sd = sigmas(j - 1) * sqrt(triangle(i, j - 1))
 
-                           resampled_triangle(i, j, k) = rnorm_par(lrng, mean, sd)
+                           resampled_triangle(i, j, k) = rnorm_par(rng, i_thread, mean, sd)
 
                         else if (dist == GAMMA) then
                            shape = (dev_facs(j - 1)**2 * triangle(i, j - 1)) / sigmas(j - 1) **2
                            scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
 
-                           resampled_triangle(i, j, k) = rgamma_par(lrng, shape, scale)
+                           resampled_triangle(i, j, k) = rgamma_par(rng, i_thread, shape, scale)
                         end if
                      end do
                   end do
@@ -278,13 +273,13 @@ contains
                            mean = dev_facs(j - 1) * resampled_triangle(i, j - 1, k)
                            sd = sigmas(j - 1) * sqrt(resampled_triangle(i, j - 1, k))
 
-                           resampled_triangle(i, j, k) = rnorm_par(lrng, mean, sd)
+                           resampled_triangle(i, j, k) = rnorm_par(rng, i_thread, mean, sd)
 
                         else if (dist == GAMMA) then
                            shape = (dev_facs(j - 1)**2 * resampled_triangle(i, j - 1, k)) / sigmas(j - 1) **2
                            scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
 
-                           resampled_triangle(i, j, k) = rgamma_par(lrng, shape, scale)
+                           resampled_triangle(i, j, k) = rgamma_par(rng, i_thread, shape, scale)
                         end if
 
                      end do
@@ -339,7 +334,7 @@ contains
                   mean = dev_facs_boot(j - 1, i - 1) * triangle_boot(i, j - 1)
                   sd = sigmas_boot(j - 1, i - 1) * sqrt(triangle_boot(i, j - 1))
 
-                  triangle_boot(i, j) = rnorm_par(lrng, mean, sd)
+                  triangle_boot(i, j) = rnorm_par(rng, i_thread, mean, sd)
 
                   if (triangle_boot(i, j) <= 0) then
                      cycle main_loop
@@ -365,7 +360,7 @@ contains
 
                   if (shape <= tiny(1.0) .or. isnan(shape)) cycle main_loop
 
-                  triangle_boot(i, j) = rgamma_par(lrng, shape, scale)
+                  triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
 
                end do
             end do
@@ -453,9 +448,9 @@ contains
 
       type(c_ptr) :: rng
 
-      rng = init_rng(42)
+      rng = init_rng(1, 42)
 
-      call mack_boot(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve, lrng=rng)
+      call mack_boot(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve, rng=rng, i_thread=1)
 
    end subroutine mack_boot_f
 
