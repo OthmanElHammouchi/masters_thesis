@@ -13,7 +13,7 @@ if (require("RUnit", quietly = TRUE)) {
         rngKind = "Mersenne-Twister",
         rngNormalKind = "Inversion")
 
-    testResult <- runTestSuite(testsuite, verbos = 0)
+    testResult <- runTestSuite(testsuite, verbose = 1)
     printTextProtocol(testResult)
 
 }

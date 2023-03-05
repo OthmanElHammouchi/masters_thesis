@@ -1,5 +1,5 @@
-FC = @FC@
-CC = @CC@
+FC = x86_64-conda-linux-gnu-gfortran
+CC = x86_64-conda-linux-gnu-cc
 
 PKG_FFLAGS=-cpp -ffree-line-length-512 $(SHLIB_OPENMP_FFLAGS)
 

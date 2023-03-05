@@ -44,7 +44,7 @@ mackConfig <- function(ndev,
             ))
 
 
-        config <- do.call(cbind.data.frame, 
+        config <- do.call(cbind.data.frame,
             list(
                 outlier.points[indices[, 1], ],
                 factors[indices[, 2]],
@@ -57,6 +57,10 @@ mackConfig <- function(ndev,
         config <- data.table::as.data.table(config)
 
         names(config) <- c("outlier.rowidx", "outlier.colidx", "factor", "excl.rowidx", "excl.colidx", "resids.type", "boot.type", "dist")
+
+        # For the parametric bootstrap, we cannot allow the upper right corner to be excluded because this leads to 0/0.
+        config <- config[!(resids.type == "parametric" & outlier.colidx == 7 & outlier.rowidx == 1)]
+        config <- config[!(resids.type == "parametric" & excl.colidx == 7 & excl.rowidx == 1)]
 
         return(config)
 

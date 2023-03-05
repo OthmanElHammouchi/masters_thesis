@@ -10,5 +10,7 @@ module constants
     integer, parameter :: SINGLE = 1
     integer, parameter :: CALENDAR = 2
     integer, parameter :: ORIGIN = 3
+    integer, parameter :: SUCCESS = 0
+    integer, parameter :: FAILURE = 1
 
 end module constants

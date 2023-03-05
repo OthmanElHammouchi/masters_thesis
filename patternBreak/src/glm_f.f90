@@ -36,6 +36,7 @@ contains
 
       integer(c_int) :: i, j, k, i_boot, info
       integer(c_int) :: n_excl_resids, n_resids
+      integer(c_int) :: status
 
       n_pts = (n_dev**2 + n_dev) / 2
       n_covs = 2*n_dev - 1
@@ -67,7 +68,7 @@ contains
          end do
       end if
 
-      call poisson_fit(triangle, betas, resids=resids, triangle_fit=triangle_fit)
+      call poisson_fit(triangle, betas, resids=resids, triangle_fit=triangle_fit, status=status)
 
       flat_resids = pack(resids, resids_mask)
 
@@ -84,7 +85,9 @@ contains
             end do
          end do
 
-         call poisson_fit(triangle_boot, betas_boot)
+         call poisson_fit(triangle_boot, betas_boot, status=status)
+
+         if (status == 1) cycle main_loop
 
          X_pred = 0.0
          X_pred(:, 1) = 1.0
@@ -129,7 +132,7 @@ contains
       real(c_double) :: indiv_dev_facs(n_dev - 1, n_dev - 1)
       real(c_double) :: dev_facs(n_dev - 1)
       real(c_double) :: sigmas(n_dev - 1)
-      real(c_double) :: reserve(n_boot)
+      real(c_double), allocatable :: reserve(:)
       real(c_double) :: init_col(n_dev)
       real(c_double) :: triangle_sim(n_dev, n_dev)
       real(c_double) :: factor
@@ -140,21 +143,31 @@ contains
       integer(c_int) :: i_thread
       integer(c_int) :: n_threads
 
+      integer(c_int) :: status
+
       type(c_ptr) :: rng
       type(c_ptr) ::pgbar
 
       n_covs = 2*n_dev - 1
 
       allocate(betas(n_covs))
-      call poisson_fit(triangle, betas)
+      call poisson_fit(triangle, betas, status=status)
 
       n_threads = init_omp()
       rng = init_rng(n_threads, 42)
 
-      pgbar = pgbar_create(n_config, 5)
+      pgbar = pgbar_create(n_config, 1)
 
-      !$omp parallel do num_threads(n_threads) default(firstprivate) shared(config, results) schedule(dynamic, 25)
+      results = 0
+
+      !$omp parallel num_threads(n_threads) shared(config, results) private(reserve, outlier_rowidx, outlier_colidx, excl_resids, factor, triangle_sim, i_thread, i_sim) firstprivate(n_boot, betas, rng, n_config, m_config, triangle)
+      allocate(reserve(n_boot))
+      reserve = 0
+      !$omp do schedule(dynamic, 25)
       do i_sim = 1, n_config
+         call pgbar_incr(pgbar)
+         call check_user_input()
+         
          i_thread = omp_get_thread_num()
 
          if (type == SINGLE) then
@@ -179,7 +192,8 @@ contains
             excl_diagidx = int(config(i_sim, 3))
             factor = config(i_sim, 2)
 
-            allocate(excl_resids(n_dev - excl_diagidx, 2), source=0)
+            allocate(excl_resids(n_dev - excl_diagidx, 2))
+            excl_resids = 0
 
             k = 1
             do j = 2, n_dev
@@ -205,7 +219,8 @@ contains
             excl_rowidx = int(config(i_sim, 3))
             factor = config(i_sim, 2)
 
-            allocate(excl_resids(n_dev - excl_rowidx, 2), source=0)
+            allocate(excl_resids(n_dev - excl_rowidx, 2))
+            excl_resids = 0
 
             k = 1
             do j = 2, n_dev + 1 - excl_rowidx
@@ -225,16 +240,17 @@ contains
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
          end if
 
-         call pgbar_incr(pgbar)
-         call check_user_input()
       end do
-      !$omp end parallel do
+      !$omp end do
+      deallocate(reserve)
+      !$omp end parallel      
 
    end subroutine glm_sim_f
 
-   subroutine poisson_fit(triangle, betas, resids, triangle_fit)
+   subroutine poisson_fit(triangle, betas, resids, triangle_fit, status)
       real(c_double), intent(in) :: triangle(:, :)
       real(c_double), intent(out) :: betas(:)
+      integer(c_int), intent(out) :: status
       real(c_double), intent(inout), optional :: resids(:, :)
       real(c_double), intent(inout), optional :: triangle_fit(:, :)
 
@@ -252,6 +268,9 @@ contains
       integer(c_int) :: info
 
       real(c_double), allocatable :: y_fit(:)
+
+      integer(c_int), parameter :: max_iter = 1e3
+      integer(c_int) :: n_iter
 
       n_dev = size(triangle, dim=1)
 
@@ -295,14 +314,16 @@ contains
       betas(1) = log(sum(y) / n_pts)
 
       ! Fit Poisson GLM using IRWLS.
+      IPIV = 0
+      info = 0
       diff = 1E6
       eps = 1E-3
-      do while (diff > eps)
+      n_iter = 0
+      do while (diff > eps .and. n_iter < max_iter)
 
          eta = matmul(X, betas)
 
          W = 0
-
          do i = 1, n_pts
             W(i, i) = exp(eta(i))
          end do
@@ -318,7 +339,16 @@ contains
 
          betas = rhs
 
+         n_iter = n_iter + 1
+
       end do
+
+      if (n_iter == max_iter) then
+         status = 1
+         return
+      else
+         status = 0
+      end if
 
       y_fit = exp(matmul(X, betas))
 
@@ -349,7 +379,7 @@ contains
    subroutine glm_boot_f(n_dev, triangle, n_boot, reserve) bind(C)
 
       real(c_double), intent(in) :: triangle(n_dev, n_dev)
-      real(c_double), intent(inout) :: reserve(n_boot)
+      real(c_double), intent(out) :: reserve(n_boot)
 
       integer(c_int), intent(in), value :: n_dev, n_boot
       
@@ -357,7 +387,7 @@ contains
 
       rng = init_rng(1, 42)
 
-      call glm_boot(n_dev, triangle, reserve, n_boot, rng=rng, i_thread=1)
+      call glm_boot(n_dev, triangle, reserve, n_boot, rng=rng, i_thread=0)
 
    end subroutine glm_boot_f
 

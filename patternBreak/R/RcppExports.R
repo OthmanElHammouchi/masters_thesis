@@ -9,8 +9,8 @@
 #'
 #' @param x An integer vector
 #' @export
-mackBoot <- function(triangle, n_boot, resids_type, boot_type, dist) {
-    .Call('_patternBreak_mack_boot', PACKAGE = 'patternBreak', triangle, n_boot, resids_type, boot_type, dist)
+.glmBoot <- function(triangle, n_boot) {
+    .Call('_patternBreak_glm_boot', PACKAGE = 'patternBreak', triangle, n_boot)
 }
 
 #' Leading NA
@@ -21,8 +21,20 @@ mackBoot <- function(triangle, n_boot, resids_type, boot_type, dist) {
 #'
 #' @param x An integer vector
 #' @export
-glmBoot <- function(triangle, n_boot) {
-    .Call('_patternBreak_glm_boot', PACKAGE = 'patternBreak', triangle, n_boot)
+.glmSim <- function(triangle, n_boot, config, type) {
+    .Call('_patternBreak_glm_sim', PACKAGE = 'patternBreak', triangle, n_boot, config, type)
+}
+
+#' Leading NA
+#' 
+#' This function returns a logical vector identifying if 
+#' there are leading NA, marking the leadings NA as TRUE and
+#' everything else as FALSE.
+#'
+#' @param x An integer vector
+#' @export
+.mackBoot <- function(triangle, n_boot, resids_type, boot_type, dist) {
+    .Call('_patternBreak_mack_boot', PACKAGE = 'patternBreak', triangle, n_boot, resids_type, boot_type, dist)
 }
 
 #' Leading NA
@@ -37,15 +49,7 @@ glmBoot <- function(triangle, n_boot) {
     .Call('_patternBreak_mack_sim', PACKAGE = 'patternBreak', triangle, n_boot, config, type)
 }
 
-#' Leading NA
-#' 
-#' This function returns a logical vector identifying if 
-#' there are leading NA, marking the leadings NA as TRUE and
-#' everything else as FALSE.
-#'
-#' @param x An integer vector
-#' @export
-.glmSim <- function(triangle, n_boot, config, type) {
-    .Call('_patternBreak_glm_sim', PACKAGE = 'patternBreak', triangle, n_boot, config, type)
+validate_rng <- function(n_samples) {
+    .Call('_patternBreak_validate_rng', PACKAGE = 'patternBreak', n_samples)
 }
 

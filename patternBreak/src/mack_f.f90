@@ -28,7 +28,7 @@ contains
       real(c_double) :: indiv_dev_facs(n_dev - 1, n_dev - 1)
       real(c_double) :: dev_facs(n_dev - 1)
       real(c_double) :: sigmas(n_dev - 1)
-      real(c_double), allocatable :: reserve(:) 
+      real(c_double), allocatable :: reserve(:)
       real(c_double) :: init_col(n_dev)
       real(c_double) :: triangle_sim(n_dev, n_dev)
       real(c_double) :: factor
@@ -41,18 +41,26 @@ contains
       type(c_ptr) :: rng, lrng
       type(c_ptr) ::pgbar
 
+      integer(c_int) :: n_failures
+
       init_col = triangle(:, 1)
 
       call mack_fit(triangle, dev_facs, sigmas)
 
       n_threads = init_omp()
-
       rng = init_rng(n_threads, 42)
+      pgbar = pgbar_create(n_config, 1)
 
-      pgbar = pgbar_create(n_config, 5)
+      results = 0
 
-      !$omp parallel do num_threads(n_threads) default(firstprivate) shared(config, results) schedule(dynamic, 25)
+      !$omp parallel num_threads(n_threads) private(reserve, i_thread, i_sim, resids_type, boot_type, dist, outlier_rowidx, outlier_colidx, excl_resids, triangle_sim) firstprivate(m_config, n_config, n_boot, n_dev, init_col, sigmas, dev_facs, rng) shared(config, results, pgbar) 
+      allocate(reserve(n_boot))
+      reserve = 0
+      !$omp do schedule(dynamic, 25)
       do i_sim = 1, n_config
+         call pgbar_incr(pgbar)
+         call check_user_input()
+
          i_thread = omp_get_thread_num()
 
          if (type == SINGLE) then
@@ -67,17 +75,14 @@ contains
             outlier_colidx = int(config(i_sim, 2))
             factor = config(i_sim, 3)
 
-            allocate(reserve(n_boot))
-            
             triangle_sim = single_outlier_mack(outlier_rowidx, outlier_colidx, factor, init_col, dev_facs, sigmas, dist, rng, i_thread)
-            
+
             call mack_boot(n_dev, triangle_sim, resids_type, boot_type, dist, n_boot, reserve, excl_resids, rng, i_thread)
 
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), 1:m_config) = transpose(spread(config(i_sim, :), 2, n_boot))
-            results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve            
+            results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
 
             deallocate(excl_resids)
-            deallocate(reserve)
 
          else if (type == CALENDAR) then
             resids_type = int(config(i_sim, 4))
@@ -88,8 +93,8 @@ contains
             excl_diagidx = int(config(i_sim, 3))
             factor = config(i_sim, 2)
 
-            allocate(excl_resids(n_dev - excl_diagidx, 2), source=0)
-
+            allocate(excl_resids(n_dev - excl_diagidx, 2))
+            excl_resids = 0
             k = 1
             do j = 2, n_dev
                i = n_dev + 2 - excl_diagidx - j
@@ -133,11 +138,22 @@ contains
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), 1:m_config) = transpose(spread(config(i_sim, :), 2, n_boot))
             results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
          end if
-
-         call pgbar_incr(pgbar)
-         call check_user_input()
       end do
-      !$omp end parallel do
+      !$omp end do
+      deallocate(reserve)
+      !$omp end parallel
+
+      ! n_failures = 0
+      ! do i = 1, n_config
+      !    do j = i + 1, n_config
+      !       if (results(i, 9) == results(j, 9)) then
+      !          n_failures = n_failures + 1
+      !          print *, results(i, 9)
+      !       end if
+      !    end do
+      ! end do
+
+      ! print *, "Total duplicates: ", n_failures
 
    end subroutine mack_sim_f
 
@@ -146,6 +162,7 @@ contains
 
       integer(c_int), intent(in) :: n_boot, n_dev, dist, resids_type, boot_type
       real(c_double), intent(in) :: triangle(n_dev, n_dev)
+      real(c_double), intent(out) :: reserve(n_boot)
       integer(c_int), intent(in), optional :: excl_resids(:, :) ! Long format list of points to exclude.
       type(c_ptr), intent(in) :: rng
       integer(c_int), intent(in) :: i_thread
@@ -169,7 +186,6 @@ contains
       logical(c_bool) :: triangle_mask(n_dev, n_dev)
       logical(c_bool) :: resids_mask(n_dev - 1, n_dev - 1)
 
-      real(c_double) :: reserve(n_boot)
       real(c_double), allocatable :: flat_resids(:)
 
       real(c_double) :: mean, sd ! Normal distribution parameters.
@@ -178,7 +194,7 @@ contains
       triangle_mask = .true.
       resids_mask = .true.
 
-      n_resids = ((n_dev - 1)**2 + (n_dev - 1))/2 - 1    ! Discard residual from upper right corner.
+      n_resids = ((n_dev - 1)**2 + (n_dev - 1))/2 - 1  ! Discard residual from upper right corner.
 
       if (present(excl_resids)) then
          n_excl_resids = size(excl_resids, dim=1)
@@ -224,6 +240,7 @@ contains
                            sd = sigmas(j - 1) * sqrt(triangle(i, j - 1))
 
                            resampled_triangle(i, j, k) = rnorm_par(rng, i_thread, mean, sd)
+                           if (resampled_triangle(i, j, k) < 0) cycle main_loop
 
                         else if (dist == GAMMA) then
                            shape = (dev_facs(j - 1)**2 * triangle(i, j - 1)) / sigmas(j - 1) **2
@@ -237,7 +254,7 @@ contains
                   call mack_fit(resampled_triangle(:, :, k), dev_facs_boot(:, k), sigmas_boot(:, k))
                end do
 
-            else
+            else if (resids_type == RAW .or. resids_type == SCALED) then
                do k = 1, n_dev - 1
                   do j = 1, n_dev - 1
                      n_rows = n_dev - j
@@ -247,16 +264,13 @@ contains
                      dev_facs_boot(j, k) = sum(triangle(1:n_rows, j) * indiv_dev_facs_boot(1:n_rows, j, k)) / sum(triangle(1:n_rows, j))
 
                      if (j < n_dev - 1) then
-                        sigmas_boot(j, k) = sqrt(sum(triangle(1:n_rows, j) * &
-                           (indiv_dev_facs_boot(1:n_rows, j, k) - dev_facs_boot(j, k)) ** 2) / (n_rows - 1))
+                        sigmas_boot(j, k) = sqrt(sum(triangle(1:n_rows, j) * (indiv_dev_facs_boot(1:n_rows, j, k) - dev_facs_boot(j, k)) ** 2) / (n_rows - 1))
                      else
                         sigmas_boot(j, k) = sqrt(min(sigmas_boot(j - 1, k) ** 2, &
                            sigmas_boot(j - 2, k) ** 2, &
                            sigmas_boot(j - 1, k) ** 4 / sigmas_boot(j - 2, k) ** 2))
                      end if
                   end do
-
-                  if (any(sigmas_boot < 0) .or. any(isnan(sigmas_boot))) cycle main_loop
                end do
             end if
 
@@ -274,50 +288,42 @@ contains
                            sd = sigmas(j - 1) * sqrt(resampled_triangle(i, j - 1, k))
 
                            resampled_triangle(i, j, k) = rnorm_par(rng, i_thread, mean, sd)
+                           if (resampled_triangle(i, j, k) < 0 .or. isnan(resampled_triangle(i, j, k))) cycle main_loop
 
                         else if (dist == GAMMA) then
                            shape = (dev_facs(j - 1)**2 * resampled_triangle(i, j - 1, k)) / sigmas(j - 1) **2
                            scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
 
                            resampled_triangle(i, j, k) = rgamma_par(rng, i_thread, shape, scale)
+                           if (resampled_triangle(i, j, k) < 0 .or. isnan(resampled_triangle(i, j, k))) print *, raise(2)
                         end if
-
                      end do
                   end do
 
                   call mack_fit(resampled_triangle(:, :, k), dev_facs_boot(:, k), sigmas_boot(:, k))
-
                end do
-            else
-
+            
+            else if (resids_type == RAW .or. resids_type == SCALED) then
                do k = 1, n_dev - 1
                   resampled_triangle(:, 1, k) = triangle(:, 1)
 
                   do j = 1, n_dev - 1
                      n_rows = n_dev - j
 
-                     resampled_triangle(1:n_rows, j + 1, k) = dev_facs(j) * resampled_triangle(1:n_rows, j, k) + &
-                        sigmas(j) * sqrt(resampled_triangle(1:n_rows, j, k)) * resids_boot(1:n_rows, j, k)
+                     resampled_triangle(1:n_rows, j + 1, k) = dev_facs(j) * resampled_triangle(1:n_rows, j, k) + sigmas(j) * sqrt(resampled_triangle(1:n_rows, j, k)) * resids_boot(1:n_rows, j, k)
 
                      if (any(resampled_triangle(1:n_rows, j + 1, k) < 0)) cycle main_loop
 
-                     indiv_dev_facs_boot(1:n_rows, j, k) = dev_facs(j) + resids_boot(1:n_rows, j, k) * &
-                        sigmas(j) / sqrt(resampled_triangle(1:n_rows, j, k))
+                     indiv_dev_facs_boot(1:n_rows, j, k) = dev_facs(j) + resids_boot(1:n_rows, j, k) * sigmas(j) / sqrt(resampled_triangle(1:n_rows, j, k))
 
-                     dev_facs_boot(j, k) = sum(resampled_triangle(1:n_rows, j, k) * &
-                        indiv_dev_facs_boot(1:n_rows, j, k)) / sum(resampled_triangle(1:n_rows, j, k))
+                     dev_facs_boot(j, k) = sum(resampled_triangle(1:n_rows, j, k) * indiv_dev_facs_boot(1:n_rows, j, k)) / sum(resampled_triangle(1:n_rows, j, k))
 
                      if (j < n_dev - 1) then
-                        sigmas_boot(j, k) = sqrt(sum(resampled_triangle(1:n_rows, j, k) * &
-                           (indiv_dev_facs_boot(1:n_rows, j, k) - dev_facs_boot(j, k)) ** 2) / (n_rows - 1))
+                        sigmas_boot(j, k) = sqrt(sum(resampled_triangle(1:n_rows, j, k) * (indiv_dev_facs_boot(1:n_rows, j, k) - dev_facs_boot(j, k)) ** 2) / (n_rows - 1))
                      else
-                        sigmas_boot(j, k) = sqrt(min(sigmas_boot(j - 1, k) ** 2, &
-                           sigmas_boot(j - 2, k) ** 2, &
-                           sigmas_boot(j - 1, k) ** 4 / sigmas_boot(j - 2, k) ** 2))
+                        sigmas_boot(j, k) = sqrt(min(sigmas_boot(j - 1, k) ** 2, sigmas_boot(j - 2, k) ** 2, sigmas_boot(j - 1, k) ** 4 / sigmas_boot(j - 2, k) ** 2))
                      end if
                   end do
-
-                  if (any(sigmas_boot < 0) .or. any(isnan(sigmas_boot))) cycle main_loop
                end do
             end if
          end if
@@ -328,7 +334,6 @@ contains
          if (dist == NORMAL) then
             do i_diag = 1, n_dev - 1
                do i = i_diag + 1, n_dev
-
                   j = n_dev + i_diag + 1 - i
 
                   mean = dev_facs_boot(j - 1, i - 1) * triangle_boot(i, j - 1)
@@ -336,10 +341,7 @@ contains
 
                   triangle_boot(i, j) = rnorm_par(rng, i_thread, mean, sd)
 
-                  if (triangle_boot(i, j) <= 0) then
-                     cycle main_loop
-                  end if
-
+                  if (triangle_boot(i, j) <= 0) cycle main_loop
                end do
             end do
 
@@ -349,19 +351,19 @@ contains
 
             reserve(i_boot) = sum(triangle_boot(:, n_dev)) - sum(latest)
 
+            if (isnan(reserve(i_boot))) print *, raise(2)
+            if (reserve(i_boot) == 0) print *, raise(2)
+
          else if (dist == GAMMA) then
             do i_diag = 1, n_dev - 1
                do i = i_diag + 1, n_dev
-
                   j = n_dev + i_diag + 1 - i
 
                   shape = (dev_facs_boot(j - 1, i - 1)**2 * triangle_boot(i, j - 1)) / sigmas_boot(j - 1, i - 1) **2
                   scale = sigmas_boot(j - 1, i - 1) ** 2 / dev_facs_boot(j - 1, i - 1)
 
-                  if (shape <= tiny(1.0) .or. isnan(shape)) cycle main_loop
-
                   triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
-
+                  if (triangle_boot(i, j) < 0 .or. isnan(triangle_boot(i, j))) print *, raise(2)
                end do
             end do
 
@@ -370,8 +372,10 @@ contains
             end do
 
             reserve(i_boot) = sum(triangle_boot(:, n_dev)) - sum(latest)
-         end if
 
+            if (isnan(reserve(i_boot))) print *, raise(2)
+            if (reserve(i_boot) == 0) print *, raise(2)         
+         end if
       end do main_loop
 
    end subroutine mack_boot
@@ -386,14 +390,19 @@ contains
       logical(c_bool), optional, intent(in) :: triangle_mask(:, :)
 
       integer(c_int) :: i, j, n_rows, n_dev
-      logical(c_bool), allocatable :: triangle_mask_(:, :)
       real(c_double), allocatable :: indiv_dev_facs(:, :)
       real(c_double), allocatable :: scale_facs(:, :)
 
-      n_dev = size(triangle, 1)
+      logical(c_bool), allocatable :: triangle_mask_(:, :)
+      real(c_double) :: denom, num
 
-      allocate(indiv_dev_facs(n_dev, n_dev), source=0._c_double)
-      allocate(scale_facs(n_dev, n_dev), source=0._c_double)
+      real(c_double), allocatable :: prev_col(:), next_col(:)
+      logical(c_bool), allocatable :: col_mask(:)
+      integer(c_int) :: n_pts
+
+      real(c_double) :: sigma_vec(3)
+
+      n_dev = size(triangle, 1)
 
       if (present(triangle_mask)) then
          triangle_mask_ = triangle_mask
@@ -402,40 +411,54 @@ contains
          triangle_mask_ = .true.
       end if
 
+      ! Compute individual development factors.
+      allocate(indiv_dev_facs(n_dev - 1, n_dev - 1))
+      indiv_dev_facs = 0
+      do i = 1, n_dev - 1
+         do j = 1, n_dev - 1
+               indiv_dev_facs(i, j) = triangle(i, j + 1) / triangle(i, j)
+         end do
+      end do
+
+      ! Compute development factors and sigmas.
+      dev_facs = 0
+      sigmas = 0
       do j = 1, n_dev - 1
-
          n_rows = n_dev - j
-
-         indiv_dev_facs(1:n_rows, j) = triangle(1:n_rows, j + 1) / triangle(1:n_rows, j)
-
-         dev_facs(j) = sum(pack(triangle(1:n_rows, j + 1), triangle_mask_(1:n_rows, j + 1))) / sum(pack(triangle(1:n_rows, j), triangle_mask_(1:n_rows, j)))
-
-         if (j < n_dev - 1) then
-            sigmas(j) = sqrt(sum(pack(triangle(1:n_rows, j), triangle_mask_(1:n_rows, j)) * (pack(indiv_dev_facs(1:n_rows, j), triangle_mask_(1:n_rows, j)) - dev_facs(j)) ** 2) / (count(triangle_mask_(1:n_rows, j)) - 1))
+         col_mask = triangle_mask_(1:n_rows, j + 1)
+         n_pts = count(col_mask)
+         prev_col = triangle(1:n_rows, j) * merge(1, 0, col_mask)
+         next_col = triangle(1:n_rows, j + 1) * merge(1, 0, col_mask)
+         dev_facs(j) = sum(next_col) / sum(prev_col)
+         if (j < n_dev - 2) then
+            sigmas(j) = sqrt(sum(prev_col * (indiv_dev_facs(1:n_rows, j) - dev_facs(j)) ** 2) / n_pts)
+         else if (j == n_dev - 2) then
+            sigmas(j) = sqrt(sum(prev_col * (indiv_dev_facs(1:n_rows, j) - dev_facs(j)) ** 2) / n_pts)
+            if (sigmas(j) == 0) sigmas(j) = sigmas(j - 1)
          else
-            sigmas(j) = sqrt(min(sigmas(j - 1) ** 2, sigmas(j - 2) ** 2, sigmas(j - 1) ** 4 / sigmas(j - 2) ** 2))
+            sigma_vec = [ sigmas(j - 1) ** 2, sigmas(j - 2) ** 2, sigmas(j - 1) ** 4 / sigmas(j - 2) ** 2]
+            sigmas(j) = sqrt(minval(sigma_vec, mask = sigma_vec > 0))
          end if
+      end do
 
-         if (present(resids) .and. present(resids_type)) then
-
+      if (present(resids) .and. present(resids_type)) then
+         allocate(scale_facs(n_dev, n_dev))
+         scale_facs = 0
+         resids = 0
+         do j = 1, n_dev - 1
+            n_rows = n_dev - j
             if (resids_type == RAW) then
-
                resids(1:n_rows, j) = (indiv_dev_facs(1:n_rows, j) - dev_facs(j)) * sqrt(triangle(1:n_rows, j)) / sigmas(j)
-
             else if (resids_type == SCALED) then
-
                if (j < n_dev - 1) then
                   scale_facs(1:n_rows, j) = sqrt(1 - triangle(1:n_rows, j) / sum(triangle(1:n_rows, j)))
                else
                   scale_facs(1:n_rows, j) = 1
                end if
-
-               resids(1:n_rows, j) = (indiv_dev_facs(1:n_rows, j) - dev_facs(j)) * &
-                  sqrt(triangle(1:n_rows, j)) / (sigmas(j) * scale_facs(1:n_rows, j))
-
+               resids(1:n_rows, j) = (indiv_dev_facs(1:n_rows, j) - dev_facs(j)) * sqrt(triangle(1:n_rows, j)) / (sigmas(j) * scale_facs(1:n_rows, j))
             end if
-         end if
-      end do
+         end do
+      end if
 
    end subroutine mack_fit
 
@@ -450,7 +473,7 @@ contains
 
       rng = init_rng(1, 42)
 
-      call mack_boot(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve, rng=rng, i_thread=1)
+      call mack_boot(n_dev, triangle, resids_type, boot_type, dist, n_boot, reserve, rng=rng, i_thread=0)
 
    end subroutine mack_boot_f
 

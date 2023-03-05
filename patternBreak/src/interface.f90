@@ -61,6 +61,12 @@ module interface
       subroutine check_user_input() bind(c)
       end subroutine check_user_input
 
+      function raise(sig) bind(C, name="raise")
+        use iso_c_binding, only: c_int
+        integer(c_int) :: raise
+        integer(c_int), value :: sig
+      end function
+      
    end interface
 
 end module interface
