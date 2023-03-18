@@ -7,6 +7,8 @@ module glm
 
   implicit none
 
+  type(c_ptr) :: rng
+
 contains
 
   subroutine glm_boot(n_dev, triangle, reserve, n_boot, excl_resids)
