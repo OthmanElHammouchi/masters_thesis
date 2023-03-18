@@ -21,6 +21,8 @@ extern "C" {
 
   void pgbar_incr(void* progress_bar);
 
+  void rprint_par(char* str);
+
   void check_user_input(void);
 }
 
@@ -74,12 +76,13 @@ long int rpois_large_mean(double u, double lambda) {
   if (std::abs(w) < 3) {
     long double Q1 = lambda + std::sqrt(lambda) * w + (1/3 + (1/6) * pow(w, 2));
     x = Q1 + (1/std::sqrt(lambda)) * ((-1/36) * w - (1/72) * pow(w, 3));
-    delta = (1/40 + (1/80) * pow(w, 2) + (1/160) * pow(w, 4));
+    delta = (1/40 + (1/80) * pow(w, 2) + (1/160) * pow(w, 4)) / lambda;
   } else {
     long double r = 1 + w / std::sqrt(lambda) + (1/6)*pow((w/std::sqrt(lambda)), 2) - (1/72) * pow(w / std::sqrt(lambda), 3);
     long double c0 = 1/3 - (1/36) * (r - 1);
     x = lambda * r + c0;
-    x -= (4.1/805)/(x + 0.025 * lambda);
+    x -= (4.1/805) / (x + 0.025 * lambda);
+    delta = 0.01 / lambda;
   }
   long int n = std::floor(x + delta);
   if (x > 10) {
@@ -92,6 +95,7 @@ long int rpois_large_mean(double u, double lambda) {
       return(n - 1);
     }
   }
+  return(n);
 }
 
 long int rpois_par(void* rng_ptr, int i_thread, double mean) {
@@ -110,6 +114,17 @@ long int rpois_par(void* rng_ptr, int i_thread, double mean) {
   };
 }
 
+// [[Rcpp::export]]
+Rcpp::NumericVector test_pois(int n, double lambda) {
+  using rng_state_type = dust::random::generator<double>;
+  void* rng_ptr = (void*) new dust::random::prng<rng_state_type>(2, 42);
+  Rcpp::NumericVector res(n);
+  for (int i = 0; i < n; i++) {
+    res(i) = rpois_par(rng_ptr, 1, lambda);
+  }
+  return(res);
+}
+
 void check_user_input(void) {
   RcppThread::checkUserInterrupt();
 }
@@ -121,4 +136,8 @@ void* pgbar_create(int total, int freq) {
 
 void pgbar_incr(void* progress_bar) {
   (*static_cast<RcppThread::ProgressBar*>(progress_bar))++;
+}
+
+void rprint_par(char* str) {
+  RcppThread::Rcout << str;
 }

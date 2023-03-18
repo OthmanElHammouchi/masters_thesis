@@ -29,7 +29,8 @@ clean:
 	$(RM) patternBreak_1.0.tar.gz
 	$(RM) src/*.o
 	$(RM) src/*.so
-	$(RM) src/*.mod
+	$(RM) src/*.
+	$(RM) src/Makevars
 
 .PHONY: check
 check:

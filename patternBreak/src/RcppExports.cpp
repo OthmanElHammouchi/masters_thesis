@@ -77,6 +77,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// test_pois
+Rcpp::NumericVector test_pois(int n, double lambda);
+RcppExport SEXP _patternBreak_test_pois(SEXP nSEXP, SEXP lambdaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_pois(n, lambda));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_patternBreak_glm_boot", (DL_FUNC) &_patternBreak_glm_boot, 2},
@@ -84,6 +96,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_patternBreak_mack_boot", (DL_FUNC) &_patternBreak_mack_boot, 5},
     {"_patternBreak_mack_sim", (DL_FUNC) &_patternBreak_mack_sim, 4},
     {"_patternBreak_validate_rng", (DL_FUNC) &_patternBreak_validate_rng, 1},
+    {"_patternBreak_test_pois", (DL_FUNC) &_patternBreak_test_pois, 2},
     {NULL, NULL, 0}
 };
 

@@ -53,3 +53,7 @@ validate_rng <- function(n_samples) {
     .Call('_patternBreak_validate_rng', PACKAGE = 'patternBreak', n_samples)
 }
 
+test_pois <- function(n, lambda) {
+    .Call('_patternBreak_test_pois', PACKAGE = 'patternBreak', n, lambda)
+}
+

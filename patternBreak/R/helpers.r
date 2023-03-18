@@ -14,7 +14,7 @@
 #' # ADD_EXAMPLES_HERE
 mackConfig <- function(ndev,
     factors,
-    resids.type = c("raw", "scaled", "parametric"),
+    resids.type = c("standardised", "modified", "parametric", "studentised"),
     boot.type = c("conditional", "unconditional"),
     dist = c("normal", "gamma"),
     type = "single") {

@@ -1,11 +1,17 @@
+\providecommand \autonum@processReference [2]{}
 \contentsline {chapter}{Abstract}{iii}{}%
 \contentsline {chapter}{\numberline {1}Introduction}{1}{}%
 \contentsline {chapter}{\numberline {2}Pattern break detection}{3}{}%
 \contentsline {section}{\numberline {2.1}Introduction}{3}{}%
-\contentsline {section}{\numberline {2.2}The bootstrap method}{3}{}%
-\contentsline {section}{\numberline {2.3}Mack's model}{4}{}%
-\contentsline {subsection}{\numberline {2.3.1}Choosing residuals}{6}{}%
-\contentsline {subsection}{\numberline {2.3.2}Bootstrapping the parameter error}{7}{}%
-\contentsline {subsection}{\numberline {2.3.3}Bootstrapping the process error}{9}{}%
-\contentsline {subsection}{\numberline {2.3.4}Implementation and numerical results}{10}{}%
-\contentsline {chapter}{Conclusion}{11}{}%
+\contentsline {section}{\numberline {2.2}The bootstrap method}{4}{}%
+\contentsline {subsection}{\numberline {2.2.1}Bootstrapping a classical estimator}{4}{}%
+\contentsline {subsection}{\numberline {2.2.2}Bootstrapping a regression model}{5}{}%
+\contentsline {section}{\numberline {2.3}Mack's model}{6}{}%
+\contentsline {subsection}{\numberline {2.3.1}A challenging simulation}{8}{}%
+\contentsline {subsection}{\numberline {2.3.2}Parameter error}{8}{}%
+\contentsline {subsection}{\numberline {2.3.3}Process error}{11}{}%
+\contentsline {subsection}{\numberline {2.3.4}Numerical implementation and results}{14}{}%
+\contentsline {section}{\numberline {2.4}Poisson GLM}{14}{}%
+\contentsline {subsection}{\numberline {2.4.1}Bootstrap methodology}{14}{}%
+\contentsline {subsection}{\numberline {2.4.2}Numerical implementation and results}{14}{}%
+\contentsline {chapter}{Conclusion}{15}{}%

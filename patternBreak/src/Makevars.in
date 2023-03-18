@@ -1,7 +1,7 @@
 FC = @FC@
 CC = @CC@
 
-PKG_FFLAGS=-cpp -ffree-line-length-512 $(SHLIB_OPENMP_FFLAGS)
+PKG_FFLAGS=-fPIC $(SHLIB_OPENMP_FFLAGS) 
 
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
 
@@ -11,6 +11,6 @@ CXX_STD = CXX11
 
 all: $(SHLIB)
 
-helpers.o: constants.o interface.o
+helpers.o: global.o interface.o
 mack.o: helpers.o interface.o
 glm.o: helpers.o interface.o
