@@ -1,83 +1,100 @@
 #include <Rcpp.h>
 #include "helpers.h"
 #include "interface.h"
+#include "constants.h"
 
-//' Leading NA
-//' 
-//' This function returns a logical vector identifying if 
-//' there are leading NA, marking the leadings NA as TRUE and
-//' everything else as FALSE.
+//' Simulate Mack CL reserve.
 //'
-//' @param x An integer vector
+//' @param triangle Cumulative claims triangle
 //' @export
-// [[Rcpp::export(name = ".mackBoot")]]
-Rcpp::NumericVector mack_boot(Rcpp::NumericMatrix triangle, int n_boot, int resids_type, int boot_type, int dist) {
-    int n_dev = triangle.rows();
-    double** triangle_f = array_create(n_dev, n_dev);
+// [[Rcpp::export]]
+Rcpp::NumericVector mackBoot(
+  Rcpp::NumericMatrix triangle,
+  int n_boot, 
+  Rcpp::String boot_type, 
+  Rcpp::String process_dist, 
+  bool conditional, 
+  Rcpp::String resids_type) {
+  int n_dev = triangle.rows();
+  double ** triangle__ = array_from_rcpp(triangle);
+  double** triangle_ = array_transpose(n_dev, n_dev, triangle__);
 
-    for (int i = 0; i < n_dev; i++) {
-      for (int j = 0; j < n_dev; j++) {
-        triangle_f[j][i] = triangle(i, j);
-      }
-    }
+  double* reserve_ = (double*) malloc(sizeof(double) * n_boot); 
+  mack_boot_(n_dev, &triangle_[0][0], key[boot_type], key[process_dist], conditional, key[resids_type], n_boot, &reserve_[0]);
 
-    Rcpp::NumericVector reserve(n_boot);
-    mack_boot_f(n_dev, &triangle_f[0][0], resids_type, boot_type, dist, n_boot, reserve.begin());
-    free(triangle_f);
-    return(reserve);
+  Rcpp::NumericVector reserve(n_boot);
+  for (int i=0; i < n_boot; i++) {
+    reserve(i) = reserve_[i];
+  }
+
+  free(triangle_);
+  free(reserve_);
+
+  return(reserve);
 };
 
-//' Leading NA
-//' 
-//' This function returns a logical vector identifying if 
-//' there are leading NA, marking the leadings NA as TRUE and
-//' everything else as FALSE.
+//' Simulate Mack CL reserve for different perturbed and excluded points.
 //'
-//' @param x An integer vector
+//' @param triangle Cumulative claims triangle
+//' @param sim_type Simulation type: `"single"` (the default), `"calender"`, or `"origin"`
+//' @param n_boot Number of bootstrap simulations
+//' @param factors Vector of perturbation factors
+//' @param boot_type Type of bootstrap: `"parametric"`, `"non-parametric"`, or `"pairs"`
+//' @param process_dist Distribution of process error: `"normal"` or `"gamma"`
+//' @param conditional Specified whether the bootstrap should be conditional or unconditional. Default is `TRUE`.
 //' @export
-// [[Rcpp::export(name = ".mackSim")]]
-Rcpp::NumericMatrix mack_sim(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::NumericMatrix config, int type) {
-
+// [[Rcpp::export]]
+Rcpp::NumericMatrix mackSim(
+  Rcpp::NumericMatrix triangle, 
+  Rcpp::String sim_type,
+  int n_boot, 
+  Rcpp::NumericVector factors,
+  Rcpp::String boot_type,
+  Rcpp::String process_dist,
+  bool conditional = true,
+  Rcpp::String resids_type = "none",
+  bool show_progress = true
+  ) {
   int n_dev = triangle.rows();
+  double** triangle_ = array_transpose(n_dev, n_dev, array_from_rcpp(triangle));
 
-  int n_config = config.rows();
-  int m_config = config.cols();
+  int n_res, m_res;
+  if (key[sim_type] == SINGLE) {
+    int n_outliers = (pow(n_dev, 2) - n_dev) / 2 - 1;
+    int n_excl = n_outliers;
+    int n_factors = factors.length();
+    n_res = n_boot * n_outliers * n_excl * n_factors;
+    m_res = 6;
+  } else if (key[sim_type] == CALENDAR) {
+    int n_outliers = n_dev - 1;
+    int n_excl = n_outliers;
+    int n_factors = factors.length();
+    n_res = n_boot * n_outliers * n_excl * n_factors;
+    m_res = 4;
+  } else if (key[sim_type] == ORIGIN) {
+    int n_outliers = n_dev;
+    int n_excl = n_outliers;
+    int n_factors = factors.length();
+    n_res = n_boot * n_outliers * n_excl * n_factors;
+    m_res = 4;
+  }
 
-  double** triangle_f = array_create(n_dev, n_dev);
+  double** sim__ = array_create(m_res, n_res);
+  mack_sim_(n_dev, &triangle_[0][0], key[sim_type], n_boot, factors.length(), factors.begin(), key[boot_type], key[process_dist], conditional, key[resids_type], show_progress, n_res, m_res, &sim__[0][0]);
 
-  for (int i = 0; i < n_dev; i++) {
-    for (int j = 0; j < n_dev; j++) {
-      triangle_f[j][i] = triangle(i, j);
+  double** sim_ = array_transpose(m_res, n_res, sim__);
+
+  Rcpp::NumericMatrix sim(n_res, m_res);
+
+  for (int i=0; i < n_res; i++) {
+    for (int j=0; j < m_res; j++) {
+      sim(i, j) = sim_[i][j];
     }
   }
 
-  double** config_f = array_create(m_config, n_config);
+  free(triangle_);
+  free(sim_);
+  free(sim__);
 
-  for (int i=0; i < n_config; i++) {
-    for (int j=0; j < m_config; j++) {
-      config_f[j][i] = config(i, j);
-    }
-  }
-
-  int n_results = n_boot * n_config;
-  int m_results = m_config + 1;
-
-  double** results_f = array_create(m_results, n_results);
-
-  mack_sim_f(n_dev, &triangle_f[0][0], n_config, m_config, &config_f[0][0], type, n_boot, &results_f[0][0]);
-
-  Rcpp::NumericMatrix results(n_results, m_results);
-
-    for (int i=0; i < n_results; i++) {
-      for (int j=0; j < m_results; j++) {
-        results(i, j) = results_f[j][i];
-      }
-    }
-
-
-  free(triangle_f);
-  free(config_f);
-  free(results_f);
-
-  return(results);
+  return(sim);
 };

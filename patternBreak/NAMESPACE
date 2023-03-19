@@ -2,8 +2,6 @@
 
 export(.glmBoot)
 export(.glmSim)
-export(.mackBoot)
-export(.mackSim)
 export(cum2incr)
 export(glmBoot)
 export(glmSim)

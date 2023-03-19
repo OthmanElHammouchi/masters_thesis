@@ -25,28 +25,26 @@
     .Call('_patternBreak_glm_sim', PACKAGE = 'patternBreak', triangle, n_boot, config, type)
 }
 
-#' Leading NA
-#' 
-#' This function returns a logical vector identifying if 
-#' there are leading NA, marking the leadings NA as TRUE and
-#' everything else as FALSE.
+#' Simulate Mack CL reserve.
 #'
-#' @param x An integer vector
+#' @param triangle Cumulative claims triangle
 #' @export
-.mackBoot <- function(triangle, n_boot, resids_type, boot_type, dist) {
-    .Call('_patternBreak_mack_boot', PACKAGE = 'patternBreak', triangle, n_boot, resids_type, boot_type, dist)
+mackBoot <- function(triangle, n_boot, boot_type, process_dist, conditional, resids_type) {
+    .Call('_patternBreak_mackBoot', PACKAGE = 'patternBreak', triangle, n_boot, boot_type, process_dist, conditional, resids_type)
 }
 
-#' Leading NA
-#' 
-#' This function returns a logical vector identifying if 
-#' there are leading NA, marking the leadings NA as TRUE and
-#' everything else as FALSE.
+#' Simulate Mack CL reserve for different perturbed and excluded points.
 #'
-#' @param x An integer vector
+#' @param triangle Cumulative claims triangle
+#' @param sim_type Simulation type: `"single"` (the default), `"calender"`, or `"origin"`
+#' @param n_boot Number of bootstrap simulations
+#' @param factors Vector of perturbation factors
+#' @param boot_type Type of bootstrap: `"parametric"`, `"non-parametric"`, or `"pairs"`
+#' @param process_dist Distribution of process error: `"normal"` or `"gamma"`
+#' @param conditional Specified whether the bootstrap should be conditional or unconditional. Default is `TRUE`.
 #' @export
-.mackSim <- function(triangle, n_boot, config, type) {
-    .Call('_patternBreak_mack_sim', PACKAGE = 'patternBreak', triangle, n_boot, config, type)
+mackSim <- function(triangle, sim_type, n_boot, factors, boot_type, process_dist, conditional = TRUE, resids_type = "none", show_progress = TRUE) {
+    .Call('_patternBreak_mackSim', PACKAGE = 'patternBreak', triangle, sim_type, n_boot, factors, boot_type, process_dist, conditional, resids_type, show_progress)
 }
 
 validate_rng <- function(n_samples) {

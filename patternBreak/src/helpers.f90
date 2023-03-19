@@ -105,7 +105,7 @@ contains
   end subroutine origin_outlier_glm
 
   function init_omp() result(n_threads)
-    integer(c_size_t) :: n_threads
+    integer(c_int) :: n_threads
     character(len=999, kind = c_char) :: OMP_NUM_THREADS
     integer(c_int) :: is_set
 
