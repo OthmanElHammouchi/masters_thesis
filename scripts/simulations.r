@@ -6,12 +6,9 @@ ndev <- nrow(triangle)
 nboot <- 1e3
 
 # Single outlier
-
 config <- patternBreak:::mackConfig(ndev, factors = seq(0.5, 1.5, by = 0.25), type = "single")
-
 results <- mackSim(triangle, nboot, config, "single")
-
-# saveRDS(results, "results/data_objects/single_outlier.RDS")
+saveRDS(results, "results/single_outlier.RDS")
 
 # # Calendar year outlier
 

@@ -7,8 +7,6 @@ module glm
 
   implicit none
 
-  type(c_ptr) :: rng
-
 contains
 
   subroutine glm_boot(n_dev, triangle, reserve, n_boot, excl_resids)
@@ -165,7 +163,7 @@ contains
 
     !$omp parallel num_threads(n_threads) shared(config, results) &
     !$omp& private(reserve, outlier_rowidx, outlier_colidx, excl_resids, factor, triangle_sim, i_thread, i_sim) &
-    !$omp& firstprivate(n_boot, betas, rng, n_config, m_config, triangle)
+    !$omp& firstprivate(n_boot, betas, n_config, m_config, triangle)
     allocate(reserve(n_boot))
     reserve = 0
     !$omp do schedule(dynamic, 25)

@@ -119,6 +119,30 @@ contains
     end if
   end function init_omp
 
+  function sample(array, mask) result(res)
+    real(c_double), intent(in) :: array(:, :)
+    logical(c_bool), intent(in) :: mask(:, :)
+
+    real(c_double), allocatable :: res(:, :)
+    real(c_double), allocatable :: flat(:)
+
+    integer(c_int) :: i, j, n, m, n_flat
+
+    n = size(array, 1)
+    m = size(array, 2)
+
+    flat = pack(array, mask)
+    n_flat = size(flat)
+
+    allocate(res, mold=array)
+
+    do j = 1, m
+      do i = 1, n
+        res(i, j) = flat(1 + int(n_flat * runif_par(rng, i_thread)))
+      end do
+    end do
+
+  end function sample
     ! subroutine progress_bar(counter, max, inc)
 
     !    integer(c_int), intent(in) :: counter
