@@ -1,9 +1,8 @@
-module helpers
-
-  use iso_c_binding
-  use global
-  use interface
-  use omp_lib
+module helpers_mod
+  use, intrinsic :: iso_c_binding
+  use, intrinsic :: omp_lib
+  use global_mod
+  use interface_mod
 
   implicit none
 
@@ -141,8 +140,15 @@ contains
         res(i, j) = flat(1 + int(n_flat * runif_par(rng, i_thread)))
       end do
     end do
-
   end function sample
+
+  pure real(c_double) function extrapolate_sigma(sigmas, col)
+    real(c_double), intent(in) :: sigmas(:)
+    integer(c_int), intent(in) :: col
+
+    extrapolate_sigma = sqrt(min(sigmas(col - 1) ** 2, sigmas(col - 2) ** 2, sigmas(col - 1) ** 4 / sigmas(col - 2) ** 2))
+  end function extrapolate_sigma
+
     ! subroutine progress_bar(counter, max, inc)
 
     !    integer(c_int), intent(in) :: counter
@@ -184,4 +190,4 @@ contains
 
     ! end subroutine progress_bar
 
-  end module helpers
+  end module helpers_mod

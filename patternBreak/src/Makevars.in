@@ -11,6 +11,8 @@ CXX_STD = CXX11
 
 all: $(SHLIB)
 
-helpers.o: global.o interface.o
-mack.o: helpers.o interface.o
-glm.o: helpers.o interface.o
+triangle_mod.o: global_mod.o
+sim_mod.o: global_mod.o
+helpers_mod.o: global_mod.o interface_mod.o
+mack_mod.o: helpers_mod.o interface_mod.o sim_mod.o triangle_mod.o
+glm_mod.o: helpers_mod.o interface_mod.o

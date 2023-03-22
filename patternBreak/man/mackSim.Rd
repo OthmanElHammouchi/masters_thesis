@@ -4,7 +4,7 @@
 \alias{mackSim}
 \title{Simulate Mack CL reserve for different perturbed and excluded points.}
 \usage{
-mackSim(triangle, sim_type, n_boot, factor, boot_type, proc_dists, conds,
+mackSim(triangle, sim_type, n_boot, factors, boot_types, proc_dists, conds,
   resids_type = NULL, show_progress = TRUE)
 }
 \arguments{

@@ -1,9 +1,8 @@
 module glm
-
   use, intrinsic :: iso_c_binding
-  use global
-  use helpers
-  use interface
+  use global_mod
+  use helpers_mod
+  use interface_mod
 
   implicit none
   

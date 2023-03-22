@@ -47,8 +47,8 @@ mackBoot <- function(triangle, n_boot, boot_type, process_dist, cond, resids_typ
 #' The simulation configuration inputs `sim_type`, `factor`, `boot_type`, `proc_dist` and `conditional` can be
 #' either strings or character vectors. In the latter case, the simulation is computed for all feasible combinations.
 #' @export
-mackSim <- function(triangle, sim_type, n_boot, factor, boot_type, proc_dists, conds, resids_type = NULL, show_progress = TRUE) {
-    .Call('_patternBreak_mackSim', PACKAGE = 'patternBreak', triangle, sim_type, n_boot, factor, boot_type, proc_dists, conds, resids_type, show_progress)
+mackSim <- function(triangle, sim_type, n_boot, factors, boot_types, proc_dists, conds, resids_type = NULL, show_progress = TRUE) {
+    .Call('_patternBreak_mackSim', PACKAGE = 'patternBreak', triangle, sim_type, n_boot, factors, boot_types, proc_dists, conds, resids_type, show_progress)
 }
 
 test_pois <- function(n, lambda) {

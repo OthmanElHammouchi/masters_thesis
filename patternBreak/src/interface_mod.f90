@@ -1,5 +1,4 @@
-module interface
-
+module interface_mod
   use, intrinsic :: iso_c_binding
 
   implicit none
@@ -74,4 +73,4 @@ module interface
 
   end interface
 
-end module interface
+end module interface_mod

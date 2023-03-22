@@ -8,9 +8,8 @@
 extern "C" {
   void mack_boot_(int n_dev, double* triangle, int boot_type, int process_dist, bool conditional, int resids_type, int n_boot, double* reserve);
 
-  void mack_sim_(int n_dev, double* triangle, int sim_type, int n_boot, int n_res, int m_res, double* results, bool show_progress);
-
-  void build_sim_table_(int sim_type, int n_dev, int n_boot, int n_factors, double* factors, int n_boot_types, int* boot_types, int n_proc_dists, int* proc_dists, int n_conds, bool* conds, int n_resids_types, int* resids_types, int* n_res, int* m_res);
+  void mack_sim_(int sim_type, int n_boot, int n_dev, double* triangle, double* factors, int* boot_types, int* proc_dists, bool* conds, int* resids_types, int n_res, int m_res, double* results, bool show_progress);
+  
 }
 
 //' Simulate Mack CL reserve.
@@ -56,14 +55,14 @@ Rcpp::NumericVector mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::Str
 //' either strings or character vectors. In the latter case, the simulation is computed for all feasible combinations.
 //' @export
 // [[Rcpp::export]]
-Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector factor, Rcpp::CharacterVector boot_type, Rcpp::CharacterVector proc_dists, Rcpp::LogicalVector conds, Rcpp::Nullable<Rcpp::CharacterVector> resids_type = R_NilValue, bool show_progress = true) {
+Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector factors, Rcpp::CharacterVector boot_types, Rcpp::CharacterVector proc_dists, Rcpp::LogicalVector conds, Rcpp::Nullable<Rcpp::CharacterVector> resids_type = R_NilValue, bool show_progress = true) {
 
   int n_dev = triangle.rows();
   triangle = na2zero(triangle);
 
   Rcpp::CharacterVector resids_types__;
   if (resids_type.isNotNull()) {
-    if (!contains_str(boot_type, "residuals")) {
+    if (!contains_str(boot_types, "residuals")) {
       Rcpp::stop("Argument 'resids_type' only valid for residuals bootstrap.");
     }
     resids_types__ = resids_type;
@@ -71,15 +70,15 @@ Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int
     resids_types__ = "none";
   }
 
-  if (boot_type.length() == 1 && boot_type(0) == "pairs") {
+  if (boot_types.length() == 1 && boot_types(0) == "pairs") {
     if (conds.length() == 1 && !conds(0)) {
       Rcpp::stop("Unconditional method invalid for pairs bootstrap.");
     }
   }
 
   // Prepare arguments to be passed to Fortran.
-  int n_factors = factor.length();
-  int n_boot_types = boot_type.length();
+  int n_factors = factors.length();
+  int n_boot_types = boot_types.length();
   int n_proc_dists = proc_dists.length();
   int n_conds = conds.length();
   int n_resids_types = resids_types__.length();
@@ -95,9 +94,9 @@ Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int
 
   int boot_types_[n_boot_types];
   for (int i = 0; i < n_boot_types; i++) {
-    if (boot_type(i) == "parametric") {
+    if (boot_types(i) == "parametric") {
       boot_types_[i] = PARAMETRIC;
-    } else if (boot_type(i) == "residuals") {
+    } else if (boot_types(i) == "residuals") {
       boot_types_[i] = RESID;
     } else {
       boot_types_[i] = PAIRS;
@@ -137,10 +136,17 @@ Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int
   
   // Call Fortran simulation routine.
   int n_res, m_res;
-  build_sim_table_(sim_type_, n_dev, n_boot, n_factors, factor.begin(), n_boot_types, boot_types_, n_proc_dists, proc_dists_, n_conds, conds_, n_resids_types, resids_types_, &n_res, &m_res);
+  double* results;
+
+  mack_sim_(sim_type_, n_boot, n_dev, triangle.begin(), factors.begin(), boot_types_, proc_dists_, conds_, resids_types_, n_res, m_res, results, show_progress);
 
   Rcpp::NumericMatrix res_(n_res, m_res);
-  mack_sim_(n_dev, triangle.begin(), sim_type_, n_boot, n_res, m_res, res_.begin(), show_progress);
+
+  for (int i = 0; i < n_res; i++) {
+    for (int j = 0; j < m_res; j++) {
+      res_(i, j) = results[j*n_res + i];
+    }
+  }
 
   // Convert result to dataframe with proper column names and descriptive elements.
   Rcpp::Function asDataFrame("as.data.frame");

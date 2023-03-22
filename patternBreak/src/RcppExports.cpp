@@ -54,21 +54,21 @@ BEGIN_RCPP
 END_RCPP
 }
 // mackSim
-Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector factor, Rcpp::CharacterVector boot_type, Rcpp::CharacterVector proc_dists, Rcpp::LogicalVector conds, Rcpp::Nullable<Rcpp::CharacterVector> resids_type, bool show_progress);
-RcppExport SEXP _patternBreak_mackSim(SEXP triangleSEXP, SEXP sim_typeSEXP, SEXP n_bootSEXP, SEXP factorSEXP, SEXP boot_typeSEXP, SEXP proc_distsSEXP, SEXP condsSEXP, SEXP resids_typeSEXP, SEXP show_progressSEXP) {
+Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector factors, Rcpp::CharacterVector boot_types, Rcpp::CharacterVector proc_dists, Rcpp::LogicalVector conds, Rcpp::Nullable<Rcpp::CharacterVector> resids_type, bool show_progress);
+RcppExport SEXP _patternBreak_mackSim(SEXP triangleSEXP, SEXP sim_typeSEXP, SEXP n_bootSEXP, SEXP factorsSEXP, SEXP boot_typesSEXP, SEXP proc_distsSEXP, SEXP condsSEXP, SEXP resids_typeSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type triangle(triangleSEXP);
     Rcpp::traits::input_parameter< Rcpp::String >::type sim_type(sim_typeSEXP);
     Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type factor(factorSEXP);
-    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type boot_type(boot_typeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type factors(factorsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type boot_types(boot_typesSEXP);
     Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type proc_dists(proc_distsSEXP);
     Rcpp::traits::input_parameter< Rcpp::LogicalVector >::type conds(condsSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::CharacterVector> >::type resids_type(resids_typeSEXP);
     Rcpp::traits::input_parameter< bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(mackSim(triangle, sim_type, n_boot, factor, boot_type, proc_dists, conds, resids_type, show_progress));
+    rcpp_result_gen = Rcpp::wrap(mackSim(triangle, sim_type, n_boot, factors, boot_types, proc_dists, conds, resids_type, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
