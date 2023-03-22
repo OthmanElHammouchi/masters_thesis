@@ -1,27 +1,24 @@
 library(patternBreak)
-load(file.path(system.file(package = "patternBreak"), "data", "test_triangle.RData"))
+suppressPackageStartupMessages(library(ChainLadder))
 
-triangle <- test.triangle
+triangle <- UKMotor
 ndev <- nrow(triangle)
 nboot <- 1e3
 
-# Single outlier
-config <- patternBreak:::mackConfig(ndev, factors = seq(0.5, 1.5, by = 0.25), type = "single")
-results <- mackSim(triangle, nboot, config, "single")
-saveRDS(results, "results/single_outlier.RDS")
+factors <- seq(0.5, 1.5, by = 0.25)
+boot_types <- c("parametric", "residuals", "pairs")
+proc_dists <- c("normal", "gamma")
+conds <- c(TRUE, FALSE)
+resids_types <- c("standardised", "modified", "studentised", "lognormal")
 
-# # Calendar year outlier
+# # Single outlier
+# single.res <- mackSim(triangle, "single", 1e3, factors, boot_types, proc_dists, conds, resids_types, show_progress = TRUE)
+# save(single.res, file = "results/single.rda")
 
-# config <- patternBreak:::mackConfig(ndev, factors = seq(0.5, 1.5, by = 0.25), type = "calendar")
-
-# results <- mackSim(triangle, nboot, config, "calendar")
-
-# # saveRDS(results, "results/data_objects/calendar_outlier.RDS")
+# Calendar year outlier
+calendar.res <- mackSim(triangle, "calendar", 1e3, factors, boot_types, proc_dists, conds, resids_types, show_progress = TRUE)
+save(calendar.res, file = "results/calendar.rda")
 
 # # Origin year outlier
-
-# config <- patternBreak:::mackConfig(ndev, factors = seq(0.5, 1.5, by = 0.25), type = "origin")
-
-# results <- mackSim(triangle, nboot, config, "origin")
-
-# # saveRDS(results, "results/data_objects/origin_outlier.RDS")
+# origin.res <- mackSim(triangle, "origin", 1e3, factors, boot_types, proc_dists, conds, resids_types, show_progress = TRUE)
+# save(origin.res, file = "results/origin.rda")

@@ -4,7 +4,8 @@
 \alias{mackBoot}
 \title{Simulate Mack CL reserve.}
 \usage{
-mackBoot(triangle, n_boot, boot_type, process_dist, conditional, resids_type)
+mackBoot(triangle, n_boot, boot_type, process_dist, cond,
+  resids_type_ = NULL)
 }
 \arguments{
 \item{triangle}{Cumulative claims triangle}

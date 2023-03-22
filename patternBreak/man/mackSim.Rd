@@ -4,17 +4,8 @@
 \alias{mackSim}
 \title{Simulate Mack CL reserve for different perturbed and excluded points.}
 \usage{
-mackSim(
-  triangle,
-  sim_type,
-  n_boot,
-  factors,
-  boot_type,
-  process_dist,
-  conditional = TRUE,
-  resids_type = "none",
-  show_progress = TRUE
-)
+mackSim(triangle, sim_type, n_boot, factor, boot_type, proc_dists, conds,
+  resids_type = NULL, show_progress = TRUE)
 }
 \arguments{
 \item{triangle}{Cumulative claims triangle}
@@ -23,14 +14,18 @@ mackSim(
 
 \item{n_boot}{Number of bootstrap simulations}
 
-\item{factors}{Vector of perturbation factors}
+\item{factor}{Perturbation factor}
 
-\item{boot_type}{Type of bootstrap: `"parametric"`, `"non-parametric"`, or `"pairs"`}
+\item{boot_type}{Type of bootstrap: `"parametric"`, `"residuals"`, or `"pairs"`}
 
-\item{process_dist}{Distribution of process error: `"normal"` or `"gamma"`}
+\item{proc_dist}{Distribution of process error: `"normal"` or `"gamma"`}
 
-\item{conditional}{Specified whether the bootstrap should be conditional or unconditional. Default is `TRUE`.}
+\item{cond}{Specified whether the bootstrap should be conditional or unconditional. Default is `TRUE`.}
 }
 \description{
 Simulate Mack CL reserve for different perturbed and excluded points.
+}
+\details{
+The simulation configuration inputs `sim_type`, `factor`, `boot_type`, `proc_dist` and `conditional` can be
+either strings or character vectors. In the latter case, the simulation is computed for all feasible combinations.
 }

@@ -10,7 +10,7 @@ const int NORMAL = 1;
 const int GAMMA = 2;
 
 const int PARAMETRIC = 1;
-const int NON_PARAMETRIC = 2;
+const int RESID = 2;
 const int PAIRS = 3;
 
 const int STANDARDISED = 1;
@@ -27,7 +27,7 @@ std::unordered_map<Rcpp::String, int> key = {
   {"normal", NORMAL},
   {"gamma", GAMMA},
   {"parametric", PARAMETRIC},
-  {"non-parametric", NON_PARAMETRIC},
+  {"non-parametric", RESID},
   {"pairs", PAIRS},
   {"standardised", STANDARDISED},
   {"modified", MODIFIED},

@@ -38,8 +38,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // mackBoot
-Rcpp::NumericVector mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::String boot_type, Rcpp::String process_dist, bool conditional, Rcpp::String resids_type);
-RcppExport SEXP _patternBreak_mackBoot(SEXP triangleSEXP, SEXP n_bootSEXP, SEXP boot_typeSEXP, SEXP process_distSEXP, SEXP conditionalSEXP, SEXP resids_typeSEXP) {
+Rcpp::NumericVector mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::String boot_type, Rcpp::String process_dist, bool cond, Rcpp::Nullable<Rcpp::String> resids_type_);
+RcppExport SEXP _patternBreak_mackBoot(SEXP triangleSEXP, SEXP n_bootSEXP, SEXP boot_typeSEXP, SEXP process_distSEXP, SEXP condSEXP, SEXP resids_type_SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -47,39 +47,28 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
     Rcpp::traits::input_parameter< Rcpp::String >::type boot_type(boot_typeSEXP);
     Rcpp::traits::input_parameter< Rcpp::String >::type process_dist(process_distSEXP);
-    Rcpp::traits::input_parameter< bool >::type conditional(conditionalSEXP);
-    Rcpp::traits::input_parameter< Rcpp::String >::type resids_type(resids_typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(mackBoot(triangle, n_boot, boot_type, process_dist, conditional, resids_type));
+    Rcpp::traits::input_parameter< bool >::type cond(condSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::String> >::type resids_type_(resids_type_SEXP);
+    rcpp_result_gen = Rcpp::wrap(mackBoot(triangle, n_boot, boot_type, process_dist, cond, resids_type_));
     return rcpp_result_gen;
 END_RCPP
 }
 // mackSim
-Rcpp::NumericMatrix mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector factors, Rcpp::String boot_type, Rcpp::String process_dist, bool conditional, Rcpp::String resids_type, bool show_progress);
-RcppExport SEXP _patternBreak_mackSim(SEXP triangleSEXP, SEXP sim_typeSEXP, SEXP n_bootSEXP, SEXP factorsSEXP, SEXP boot_typeSEXP, SEXP process_distSEXP, SEXP conditionalSEXP, SEXP resids_typeSEXP, SEXP show_progressSEXP) {
+Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector factor, Rcpp::CharacterVector boot_type, Rcpp::CharacterVector proc_dists, Rcpp::LogicalVector conds, Rcpp::Nullable<Rcpp::CharacterVector> resids_type, bool show_progress);
+RcppExport SEXP _patternBreak_mackSim(SEXP triangleSEXP, SEXP sim_typeSEXP, SEXP n_bootSEXP, SEXP factorSEXP, SEXP boot_typeSEXP, SEXP proc_distsSEXP, SEXP condsSEXP, SEXP resids_typeSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type triangle(triangleSEXP);
     Rcpp::traits::input_parameter< Rcpp::String >::type sim_type(sim_typeSEXP);
     Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type factors(factorsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::String >::type boot_type(boot_typeSEXP);
-    Rcpp::traits::input_parameter< Rcpp::String >::type process_dist(process_distSEXP);
-    Rcpp::traits::input_parameter< bool >::type conditional(conditionalSEXP);
-    Rcpp::traits::input_parameter< Rcpp::String >::type resids_type(resids_typeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type factor(factorSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type boot_type(boot_typeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type proc_dists(proc_distsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::LogicalVector >::type conds(condsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::CharacterVector> >::type resids_type(resids_typeSEXP);
     Rcpp::traits::input_parameter< bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(mackSim(triangle, sim_type, n_boot, factors, boot_type, process_dist, conditional, resids_type, show_progress));
-    return rcpp_result_gen;
-END_RCPP
-}
-// validate_rng
-String validate_rng(int n_samples);
-RcppExport SEXP _patternBreak_validate_rng(SEXP n_samplesSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type n_samples(n_samplesSEXP);
-    rcpp_result_gen = Rcpp::wrap(validate_rng(n_samples));
+    rcpp_result_gen = Rcpp::wrap(mackSim(triangle, sim_type, n_boot, factor, boot_type, proc_dists, conds, resids_type, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -101,7 +90,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_patternBreak_glm_sim", (DL_FUNC) &_patternBreak_glm_sim, 4},
     {"_patternBreak_mackBoot", (DL_FUNC) &_patternBreak_mackBoot, 6},
     {"_patternBreak_mackSim", (DL_FUNC) &_patternBreak_mackSim, 9},
-    {"_patternBreak_validate_rng", (DL_FUNC) &_patternBreak_validate_rng, 1},
     {"_patternBreak_test_pois", (DL_FUNC) &_patternBreak_test_pois, 2},
     {NULL, NULL, 0}
 };

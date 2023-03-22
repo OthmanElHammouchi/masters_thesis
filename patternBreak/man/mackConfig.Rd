@@ -4,14 +4,9 @@
 \alias{mackConfig}
 \title{Generate configuration for Mack bootstrap simulations.}
 \usage{
-mackConfig(
-  ndev,
-  factors,
-  resids.type = c("standardised", "modified", "parametric", "studentised"),
-  boot.type = c("conditional", "unconditional"),
-  dist = c("normal", "gamma"),
-  type = "single"
-)
+mackConfig(ndev, factors, resids.type = c("standardised", "modified",
+  "parametric", "studentised"), boot.type = c("conditional",
+  "unconditional"), dist = c("normal", "gamma"), type = "single")
 }
 \arguments{
 \item{ndev}{DESCRIPTION.}

@@ -1,37 +1,21 @@
 #ifndef HELPERS
 #define HELPERS
 
-#include <stdlib.h>
 #include <Rcpp.h>
+#include <stdlib.h>
 
-inline double** array_create(int n, int m) {
-    double* data = (double*)malloc(n * m * sizeof(double));
-    double** array = (double**)malloc(n*sizeof(double*));
-    for (int i=0; i<n; i++) {
-      array[i] = &(data[m * i]);
-    }
-    return(array);
-}
-
-inline double** array_from_rcpp(Rcpp::NumericMatrix array) {
-  int n = array.rows();
-  int m = array.cols();
-  double** res = array_create(n, m);
-  for (int i=0; i < n; i++) {
-    for (int j=0; j < m; j++) {
-      res[i][j] = array(i, j);
+inline Rcpp::NumericMatrix na2zero(Rcpp::NumericMatrix triangle) {
+  int n_dev = triangle.rows();
+  for (int i=0; i<n_dev; i++) {
+    for (int j=0; j<n_dev; j++) {
+      if (triangle(i, j) == Rcpp::NA) triangle(i, j) = 0;
     }
   }
-  return(res); 
+  return(triangle);
 }
 
-inline double** array_transpose(int n, int m, double** array) {
-  double** res = array_create(m, n);
-  for (int i=0; i < n; i++) {
-    for (int j=0; j < m; j++) {
-      res[j][i] = array[i][j];
-    }
-  }
+inline bool contains_str(Rcpp::CharacterVector vec, Rcpp::String elem) {
+  bool res = std::find(vec.begin(), vec.end(), elem) != vec.end();
   return(res);
 }
 

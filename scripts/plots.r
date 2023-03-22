@@ -1,23 +1,51 @@
 library(ggplot2)
+library(patternBreak)
 library(data.table)
-source("R/helpers.r")
+suppressPackageStartupMessages(library(ChainLadder))
 
-# single.outlier.results <- readRDS("results/data_objects/single_outlier.RDS")
-# calendar.year.results <- readRDS("results/data_objects/calendar_outlier.RDS")
-# origin.year.results <- readRDS("results/data_objects/origin_outlier.RDS")
+triangle <- UKMotor
+ndev <- nrow(triangle)
 
-ndev <- max(single.outlier.results$outlier.colidx)
+load("results/single.rda")
+load("results/calendar.rda")
+load("results/origin.rda")
+
+single.res <- as.data.table(single.res)
+calendar.res <- as.data.table(calendar.res)
+origin.res <- as.data.table(origin.res)
 
 factor <- seq(0.5, 1.5, by = 0.25)
-resids.type <- c("parametric", "raw", "scaled")
-boot.type <- c("conditional", "unconditional")
-dist <- c("normal", "gamma")
+boot.type <- c("parametric", "residuals", "pairs")
+proc.dist <- c("normal", "gamma")
+cond <- c(TRUE, FALSE)
+resids.type <- c("standardised", "modified", "studentised", "log-normal")
 
-plot.config <- genConfig(factor, resids.type, boot.type, dist)
-names(plot.config) <- c("factor", "resids.type", "boot.type", "dist")
-plot.config <- plot.config[!(resids.type == "parametric" & dist == "gamma")]
+contaminated  <- calendar.res[
+  outlier.diagidx == 1 &
+  factor == 1.5 &
+  excl.diagidx != outlier.diagidx &
+  boot.type == "residuals" &
+  proc.dist == "normal" &
+  cond == TRUE &
+  resids.type == "standardised"
+]
 
-nconfig <- nrow(plot.config)
+uncontaminated <- calendar.res[
+  outlier.diagidx == 1 &
+  factor == 1.5 &
+  excl.diagidx == outlier.diagidx &
+  boot.type == "residuals" &
+  proc.dist == "normal" &
+  cond == TRUE &
+  resids.type == "standardised"
+]
+
+ggplot() +
+  geom_density(mapping = aes(reserve, group = factor(excl.diagidx)), data = contaminated) +
+  geom_density(mapping = aes(reserve), data = uncontaminated, colour = "red")
+
+benchmark <- MackChainLadder(triangle)
+bench.smry <- summary(benchmark)
 
 # meanPlot <- function(contaminated, uncontaminated) {
 
@@ -114,14 +142,14 @@ for (rowidx in seq_len(nconfig)) {
     #     )
     # )
 
-    contaminated <- calendar.year.results[
+    contaminated <- calendar.res[
         resids.type == plot.config$resids.type[rowidx] &
         boot.type == plot.config$boot.type[rowidx] &
         dist == plot.config$dist[rowidx] &
         factor == plot.config$factor[rowidx] &
         outlier.diagidx != excl.diagidx]
 
-    uncontaminated <- calendar.year.results[
+    uncontaminated <- calendar.res[
         resids.type == plot.config$resids.type[rowidx] &
         boot.type == plot.config$boot.type[rowidx] &
         dist == plot.config$dist[rowidx] &

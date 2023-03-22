@@ -10,8 +10,8 @@
 \contentsline {subsection}{\numberline {2.3.1}A challenging simulation}{8}{}%
 \contentsline {subsection}{\numberline {2.3.2}Parameter error}{8}{}%
 \contentsline {subsection}{\numberline {2.3.3}Process error}{11}{}%
-\contentsline {subsection}{\numberline {2.3.4}Numerical implementation and results}{14}{}%
-\contentsline {section}{\numberline {2.4}Poisson GLM}{14}{}%
+\contentsline {subsection}{\numberline {2.3.4}Numerical implementation and results}{13}{}%
+\contentsline {section}{\numberline {2.4}Poisson GLM}{13}{}%
 \contentsline {subsection}{\numberline {2.4.1}Bootstrap methodology}{14}{}%
 \contentsline {subsection}{\numberline {2.4.2}Numerical implementation and results}{14}{}%
 \contentsline {chapter}{Conclusion}{15}{}%
