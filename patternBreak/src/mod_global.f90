@@ -1,4 +1,4 @@
-module global
+module mod_global
 
   use, intrinsic :: iso_c_binding
 
@@ -33,4 +33,4 @@ module global
   integer(c_int) :: i_thread
   !$omp threadprivate(rng, i_thread)
   
-end module global
+end module mod_global

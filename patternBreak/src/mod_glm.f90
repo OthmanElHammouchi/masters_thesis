@@ -1,15 +1,15 @@
-module glm
+module mod_glm
 
   use, intrinsic :: iso_c_binding
-  use global
-  use helpers
-  use interface
+  use mod_global
+  use mod_helpers
+  use mod_interface
 
   implicit none
   
 contains
 
-  subroutine glm_boot(n_dev, triangle, reserve, n_boot, excl_resids)
+  subroutine boot(n_dev, triangle, reserve, n_boot, excl_resids) bind(c, name="glm_boot_")
 
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     real(c_double), intent(inout) :: reserve(n_boot)
@@ -34,7 +34,7 @@ contains
     logical(c_bool), allocatable :: resids_mask(:, :)
     real(c_double), allocatable :: flat_resids(:)
 
-    integer(c_int) :: i, j, k, i_boot, info
+    integer(c_int) :: i, j, k, i_boot
     integer(c_int) :: n_excl_resids, n_resids
     integer(c_int) :: status
 
@@ -114,16 +114,16 @@ contains
       reserve(i_boot) = sum(y_pred)
     end do main_loop
 
-  end subroutine glm_boot
+  end subroutine boot
 
-  subroutine glm_sim_f(n_dev, triangle, n_config, m_config, config, type, n_boot, results) bind(c)
+  subroutine sim(n_dev, triangle, n_config, m_config, config, type, n_boot, results) bind(c, name="glm_sim_")
 
     integer(c_int), intent(in), value :: n_dev, n_boot, n_config, m_config, type
     real(c_double), intent(in) :: config(n_config, m_config)
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     real(c_double), intent(out) :: results(n_boot * n_config, m_config + 1)
 
-    integer(c_int) :: i, j, k, i_sim, counter, n_rows, inc
+    integer(c_int) :: i, j, k, i_sim
     integer(c_int) :: outlier_rowidx
     integer(c_int) :: outlier_colidx
     integer(c_int) :: outlier_diagidx
@@ -131,11 +131,7 @@ contains
     integer(c_int) :: excl_rowidx
 
     integer(c_int), allocatable :: excl_resids(:, :)
-    real(c_double) :: indiv_dev_facs(n_dev - 1, n_dev - 1)
-    real(c_double) :: dev_facs(n_dev - 1)
-    real(c_double) :: sigmas(n_dev - 1)
     real(c_double), allocatable :: reserve(:)
-    real(c_double) :: init_col(n_dev)
     real(c_double) :: triangle_sim(n_dev, n_dev)
     real(c_double) :: factor
 
@@ -181,9 +177,9 @@ contains
         factor = config(i_sim, 3)
 
         triangle_sim = triangle
-        call single_outlier_glm(triangle_sim, outlier_rowidx, outlier_colidx, factor, betas, rng, i_thread)
+        call single_outlier(triangle_sim, outlier_rowidx, outlier_colidx, factor, betas, rng, i_thread)
 
-        call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids)
+        call boot(n_dev, triangle_sim, reserve, n_boot, excl_resids)
 
         results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), 1:m_config) = transpose(spread(config(i_sim, :), 2, n_boot))
         results(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_config + 1) = reserve
@@ -208,9 +204,9 @@ contains
 
         triangle_sim = triangle
 
-        call calendar_outlier_glm(triangle_sim, outlier_diagidx, factor, betas, rng, i_thread)
+        call calendar_outlier(triangle_sim, outlier_diagidx, factor, betas, rng, i_thread)
 
-        call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids)
+        call boot(n_dev, triangle_sim, reserve, n_boot, excl_resids)
 
         deallocate(excl_resids)
 
@@ -233,9 +229,9 @@ contains
 
         triangle_sim = triangle
 
-        call origin_outlier_glm(triangle_sim, outlier_rowidx, factor, betas, rng, i_thread)
+        call origin_outlier(triangle_sim, outlier_rowidx, factor, betas, rng, i_thread)
 
-        call glm_boot(n_dev, triangle_sim, reserve, n_boot, excl_resids)
+        call boot(n_dev, triangle_sim, reserve, n_boot, excl_resids)
 
         deallocate(excl_resids)
 
@@ -248,7 +244,7 @@ contains
     deallocate(reserve)
     !$omp end parallel
 
-  end subroutine glm_sim_f
+  end subroutine sim
 
   subroutine poisson_fit(triangle, betas, resids, triangle_fit, status)
     real(c_double), intent(in) :: triangle(:, :)
@@ -392,4 +388,99 @@ contains
 
   end subroutine glm_boot_f
 
-end module glm
+  subroutine single_outlier(triangle, outlier_rowidx, outlier_colidx, factor, betas, rng, i_thread)
+    integer(c_int), intent(in) :: outlier_rowidx
+    integer(c_int), intent(in) :: outlier_colidx
+    real(c_double), intent(in) :: factor
+    real(c_double), intent(in) :: betas(:)
+    real(c_double), intent(inout) :: triangle(:, :)
+    integer(c_int), intent(in) :: i_thread
+    type(c_ptr), intent(in) :: rng
+
+    integer(c_int) :: i, j
+
+    real(c_double) :: lambda
+
+    i = outlier_rowidx
+    j = outlier_colidx
+
+    if (j == 1 .and. i == 1) then
+      lambda = factor * exp(betas(1))
+    else if (j == 1) then
+      lambda = factor * exp(betas(1) + betas(i - 1))
+    else if (i == 1) then
+      lambda = factor * exp(betas(1) + betas(j - 1))
+    else
+      lambda = factor * exp(betas(1) + betas(i - 1) + betas(j - 1))
+    end if
+
+    triangle(i, j) = real(rpois_par(rng, i_thread, lambda), kind=c_double)
+
+  end subroutine single_outlier
+
+  subroutine calendar_outlier(triangle, outlier_diagidx, factor, betas, rng, i_thread)
+    integer(c_int), intent(in) :: outlier_diagidx
+    real(c_double), intent(in) :: factor
+    real(c_double), intent(in) :: betas(:)
+    real(c_double), intent(inout) :: triangle(:, :)
+    integer(c_int), intent(in) :: i_thread
+    type(c_ptr), intent(in) :: rng
+
+    real(c_double) :: lambda
+    integer(c_int) :: i, j, n_dev
+
+    n_dev = size(triangle, dim=1)
+
+    do i = 1, n_dev
+      j = n_dev + 2 - outlier_diagidx - i
+      if (j < 1) cycle
+
+      if (j == 1 .and. i == 1) then
+        lambda = factor * exp(betas(1))
+      else if (j == 1) then
+        lambda = factor * exp(betas(1) + betas(i - 1))
+      else if (i == 1) then
+        lambda = factor * exp(betas(1) + betas(j - 1))
+      else
+        lambda = factor * exp(betas(1) + betas(i - 1) + betas(j - 1))
+      end if
+
+      triangle(i, j) = rpois_par(rng, i_thread, lambda)
+    end do
+
+  end subroutine calendar_outlier
+
+  subroutine origin_outlier(triangle, outlier_rowidx, factor, betas, rng, i_thread)
+    integer(c_int), intent(in) :: outlier_rowidx
+    real(c_double), intent(in) :: factor
+    real(c_double), intent(in) :: betas(:)
+    real(c_double), intent(inout) :: triangle(:, :)
+    integer(c_int), intent(in) :: i_thread
+    type(c_ptr), intent(in) :: rng
+
+    real(c_double) :: lambda
+    integer(c_int) :: i, j, n_dev
+
+    n_dev = size(triangle, dim=1)
+
+    i = outlier_rowidx
+
+    do j = 1, n_dev + 1 - i
+
+      if (j == 1 .and. i == 1) then
+        lambda = factor * exp(betas(1))
+      else if (j == 1) then
+        lambda = factor * exp(betas(1) + betas(i - 1))
+      else if (i == 1) then
+        lambda = factor * exp(betas(1) + betas(j - 1))
+      else
+        lambda = factor * exp(betas(1) + betas(i - 1) + betas(j - 1))
+      end if
+
+      triangle(i, j) = rpois_par(rng, i_thread, lambda)
+
+    end do
+
+  end subroutine origin_outlier
+
+end module mod_glm

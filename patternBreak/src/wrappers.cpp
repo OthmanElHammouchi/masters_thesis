@@ -24,6 +24,8 @@ extern "C" {
   void rprint_par(char* str);
 
   void check_user_input(void);
+
+  void r_flush_console(void);
 }
 
 void* init_rng(int n_threads, int seed) {
@@ -140,4 +142,8 @@ void pgbar_incr(void* progress_bar) {
 
 void rprint_par(char* str) {
   RcppThread::Rcout << str;
+}
+
+void r_flush_console(void) {
+  R_FlushConsole();
 }

@@ -1,4 +1,4 @@
-module interface
+module mod_interface
 
   use, intrinsic :: iso_c_binding
 
@@ -66,6 +66,9 @@ module interface
       character(kind=c_char), intent(in) :: str(*)
     end subroutine rprint_par
 
+    subroutine r_flush_console() bind(c)
+    end subroutine
+
     function raise(sig) bind(C, name="raise")
       use iso_c_binding, only: c_int
       integer(c_int) :: raise
@@ -74,4 +77,4 @@ module interface
 
   end interface
 
-end module interface
+end module mod_interface

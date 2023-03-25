@@ -16,7 +16,7 @@ resids_types <- c("standardised", "modified", "studentised", "lognormal")
 # save(single.res, file = "results/single.rda")
 
 # Calendar year outlier
-calendar.res <- mackSim(triangle, "calendar", 1e3, factors, boot_types, proc_dists, conds, resids_types, show_progress = TRUE)
+calendar.res <- mackSim(triangle, "calendar", 1e3, factors, boot_types, proc_dists, conds, resids_types, show_progress = FALSE)
 save(calendar.res, file = "results/calendar.rda")
 
 # # Origin year outlier

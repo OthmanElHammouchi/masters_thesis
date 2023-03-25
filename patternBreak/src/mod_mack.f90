@@ -1,10 +1,10 @@
-module mack
+module mod_mack
 
   use, intrinsic :: iso_c_binding
-  use omp_lib
-  use global
-  use helpers
-  use interface
+  use, intrinsic :: omp_lib
+  use mod_global
+  use mod_helpers
+  use mod_interface
 
   implicit none
 
@@ -45,6 +45,8 @@ contains
     type(c_ptr) :: pgbar
 
     logical :: test
+    integer(c_int) :: status
+    logical(c_bool) :: resids_mask(n_dev - 1, n_dev - 1)
 
     call fit(triangle, dev_facs_original, sigmas_original, use_mask=.false., compute_resids=.false.)
 
@@ -55,7 +57,7 @@ contains
 
     !$omp parallel num_threads(n_threads) &
     !$omp& copyin(rng, boot_type, proc_dist, cond, resids_type, sim_table) &
-    !$omp& private(reserve, i_sim, outlier_rowidx, outlier_colidx, test, &
+    !$omp& private(reserve, i_sim, outlier_rowidx, outlier_colidx, test, status, resids_mask, &
     !$omp& outlier_diagidx, excl_rowidx, excl_diagidx, factor, triangle_sim) &
     !$omp& firstprivate(n_boot, n_dev, dev_facs_original, sigmas_original, &
     !$omp& m_res, n_sim) &
@@ -141,9 +143,22 @@ contains
         end do
         if (boot_type == PARAMETRIC) mask(1, n_dev) = .true.
 
-        ! test = (outlier_diagidx == excl_diagidx) .and. (outlier_diagidx == 1)
-
         triangle_sim = calendar_outlier(triangle, dev_facs_original, sigmas_original, outlier_diagidx, factor)
+
+        ! test = outlier_diagidx == excl_diagidx .and. outlier_diagidx == 1 .and. factor == 1.5 .and. boot_type == 3
+
+        ! if (test) then
+        !   print *, raise(2)
+        !   call fit(triangle_sim, dev_facs, sigmas, use_mask = .false., compute_resids = .true.)
+        !   call print_vector(dev_facs)
+        !   call print_vector(sigmas)
+        !   resids_mask = mask(1:(n_dev - 1), 2:n_dev)
+        !   resampled_resids = sample(resids, resids_mask)
+        !   call resample(triangle_sim, dev_facs, sigmas, status)
+        !   call print_vector(dev_facs)
+        !   call print_vector(sigmas)
+        ! end if
+
         call boot(n_dev, triangle_sim, n_boot, reserve, mask)
 
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_res) = spread(sim_table(i_sim, 1:(m_res - 1)), 1, n_boot)
@@ -945,4 +960,4 @@ contains
     end do
   end function origin_outlier
 
-end module mack
+end module mod_mack
