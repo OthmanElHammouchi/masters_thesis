@@ -6,3 +6,6 @@ plots:
 
 shiny:
 	R -e 'shiny::runApp("scripts/shiny.r")'
+
+test:
+	R -e 'source("patternBreak/tests/run_tests.r")'

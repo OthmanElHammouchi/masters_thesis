@@ -6,12 +6,13 @@
 \usepackage[nottoc,numbib]{tocbibind}
 \usepackage{etoolbox}
 \cslet{blx@noerroretextools}\empty
-\usepackage[backend=bibtex, citestyle=numeric]{biblatex} 
+\usepackage[backend=bibtex, citestyle=numeric, style=ieee]{biblatex} 
 \usepackage{derivative}
 \usepackage{esint}
 \usepackage{xparse}
 \usepackage{braket}
 \usepackage{setspace}
+\usepackage{float}
 
 \usepackage{enumerate}
 \usepackage[mathscr]{euscript}
@@ -20,12 +21,14 @@
 \usepackage{bm}
 \usepackage{caption}
 \usepackage{algorithm, algpseudocode}
-% \epstopdfsetup{outdir=/home/othman/gdrive/Master's Thesis/Thesis text}
 
 \usepackage{vub}
-
+\usepackage{sepfootnotes}
 \usepackage{cleveref}
 \usepackage{autonum}
+\usepackage[intoc]{nomencl}
+
+\crefname{equation}{}{}
 
 \makeatletter
 \autonum@generatePatchedReferenceCSL{Cref}
@@ -70,6 +73,9 @@
 \DeclarePairedDelimiterXPP\expectx[2]{{\ifblank{#1}{\mathbb{E}}{\mathbb{E}_{#1}}}}{\lbrack}{\rbrack}{}{#2}
 \newcommand\expect[2][]{\expectx*{#1}{#2}}
 
+\DeclarePairedDelimiter\varx{(}{)}
+\newcommand{\var}{\mathrm{Var}\varx*}
+
 \newcommand\notation{\mathrel{\overset{\makebox[0pt]{\mbox{\normalfont\tiny\sffamily not.}}}{=}}}
 
 \algrenewcommand\algorithmicrequire{\textbf{Input:}}
@@ -82,6 +88,8 @@
   }{\end{algorithm}}
 \makeatother
 
+\newcommand{\horz}{\rotatebox[origin=c]{90}{$\vert$}}
+
 \title{Exploration of various machine learning techniques in the context of non-life insurance}
 \pretitle{\flushleft{Graduation thesis submitted in partial fulfilment of the requirements for the degree of Master of Science in Mathematics}}
 \author{Othman El Hammouchi}
@@ -89,10 +97,16 @@
 \promotors{Promotors: prof.\ dr.\ Robin Van Oirbeek \and prof.\ dr.\ Tim Verdonck}
 \faculty{Sciences and Bioengineering Sciences}
 
+\makenomenclature
+
+\renewcommand{\nomname}{List of Symbols}
+\renewcommand{\nompreamble}{The next list describes several symbols that will be later used within the body of the document}
+
 \begin{document}
+
 \frontmatter
 \maketitle%
-
+\input{footnotes.tex}%
 
 \title{Verkenning van verschillende machine learning-technieken in de context van non-life insurance}
 \pretitle{\flushleft{Proefschrift ingediend met het oog op het behalen van de graad van Master of Science in de Wiskunde}}%
@@ -107,15 +121,19 @@ Your abstract would go here.
 
 \tableofcontents%
 
+\input{nomenclature.tex}
+
+\printnomenclature%
+
 \mainmatter%
 
 \chapter{Introduction}
 
 \chapter{Pattern break detection}%
 
-\section{Introduction}
+\section{Introduction} \label{sec:intro}
 
-The most defining characteristic of the insurance industry is the inverted nature of its production cycle. In manufacturing, commerce, transport, etc., payment is usually only received upon delivery of goods or services. By contrast, insurance products are usually purchased long before the adverse events which they protect against have occured, if they ever do. Insurers therefore face the challenge of forecasting the amount and variability of funds needed to settle outstanding contracts, a process known as \emph{claims reserving}. In this the reserving actuary relies historical data which is most often presented in the form of a \emph{loss} or \emph{run-off triangle} $\mathcal{D}_I$, which consists either of cumulative or incremental amounts of some actuarial variable (payments, number of claims, etc.), respectively denoted by $C_{ij}$ and $X_{ij}$. Here $1 \leq i \leq I$ denotes the \emph{cohort}, \emph{origin year} or \emph {accident year} and $1 \leq j \leq J$ the \emph{development year}, so that
+The most defining characteristic of the insurance industry is the inverted nature of its production cycle. In manufacturing, commerce, transport, etc., payment is usually received only upon delivery of goods or services. By contrast, insurance products are purchased long before the adverse events which they protect against have occured, if they ever do. Insurers therefore face the challenge of forecasting the amount and variability of funds needed to settle outstanding contracts, a process known as \emph{claims reserving}. In this the reserving actuary relies historical data which is most often presented in the form of a \emph{loss} or \emph{run-off triangle} $\mathcal{D}_I$, which consists either of cumulative or incremental amounts of some actuarial variable (payments, number of claims, etc.), respectively denoted by $C_{ij}$ and $X_{ij}$. Here $1 \leq i \leq I$ denotes the \emph{cohort}, \emph{origin year} or \emph {accident year} and $1 \leq j \leq J$ the \emph{development year}, so that
 \begin{equation}
     \mathcal{D}_I = \left  \{ C_{ij} \mid 1 \leq j \leq J, i + j \leq I + 1 \right \} 
     %
@@ -123,259 +141,150 @@ The most defining characteristic of the insurance industry is the inverted natur
     %
     \mathcal{D}_I = \left  \{ X_{ij} \mid 1 \leq j \leq J, i + j \leq I + 1 \right \} \,.
 \end{equation}
-To simplify the formulas, we assume throughout this exposition that $I = J$. Embedding $\mathcal{D}_I$ into a matrix on and above the anti-diagonal, the actuary then seeks to estimate the \emph{total outstanding loss liabilities}
+To simplify the formulas, we assume throughout this exposition that $I = J$. Embedding $\mathcal{D}_I$ into a matrix on and above the anti-diagonal, the actuary then seeks to predict the \emph{total outstanding loss liabilities}
 \begin{equation}
     R = \sum_{i = 2}^I (C_{i, I} - C_{i, I + 1- i})
 \end{equation}
 by forecasting the values in the lower triangle $\mathcal{D}^{\mathsf{c}}_I$. A special difficulty arising in the actuarial context is the relatively small number of observations which is usually available.
 
-One of the most frequently used loss reserving techniques in practice is the \emph{chain ladder}, a recursive method which estimates cumulative claim in development year $j$ by multiplying the previous year's claim by a so-called \emph{age-to-age factor} or \emph{link ratio}
-\begin{equation}
-    f_j \coloneqq \frac{\sum_{i=1}^{I - j} C_{i, j + 1}}{\sum_{i=1}^{I - j} C_{i, j}} \,.
-\end{equation}
-It was originally conceived as a purely computational algorithm, but there have since been various attempts to frame it in terms of a stochastic model. The central assumption it makes is that the pattern observed in earlier cohorts is applicable to later ones. In one sense, this is of course perfectly reasonable: all models ultimately use the past as a guide to the future. The dearth of data typically available to the actuary makes it challenging to verify its validity, as it limits the efficacy of classical statistical techniques. In particular, this makes it difficult to detect structural breaks in the claims development pattern.
+One of the most frequently used loss reserving techniques in practice is the so-called \emph{chain ladder} (CL), which predicts the cumulative claim in development year $j$ by multiplying the previous year's amount by a so-called \emph{age-to-age factor}, \emph{link ratio} or \emph{development factor}. It was originally conceived as a purely computational algorithm, but there have since been various attempts to frame it in terms of a stochastic model. The central assumption it makes is that the pattern observed in earlier cohorts is applicable to later ones. In one sense, this is of course perfectly reasonable: all models ultimately use the past as a guide to the future. The dearth of data typically available to the actuary makes it challenging to verify its validity, as it limits the efficacy of classical statistical techniques. In particular, this makes it difficult to detect structural breaks in the claims development pattern.
 
 Our aim in this chapter is to investigate whether it is possible to use bootstrap simulations to remedy this problem.  Specifically, we start from two widely-used chain ladder models (Mack's model and the Poisson GLM) and simulate run-off triangles which perfectly follow their assumptions. We then perturb the triangles in a myriad of ways and calculate a bootstrap reserve for the resulting data, allowing us to investigate how the simulated reserve is impacted by deviations from the model assumptions.
 
-The chapter is divided as follows. The next section introduces the bootstrap method by means of a simple example from classical statistics, and explains how it can be applied to regression models, which will
+The chapter is divided as follows. The next section introduces the bootstrap method and explains how it can be applied to regression models, which will
 
 \section{The bootstrap method} \label{sec:boot}
 
-When using a statistical model to describe a dataset in terms of a reduced number of parameters, we are not only interested in producing \emph{estimates} of these parameters, but also in quantifying their \emph{uncertainty}. In the classical theory, the usual approach to achieve this is to start from the model assumptions and derive from them analytically the sampling distribution of the estimators. In most cases (the Gaussian model being a notable exception) this leads to intractible calculations, so that one is either forced to rely on approximations and asymptotic results, or make unrealistic simplifying assumptions. Moreover, estimates obtained in this way often heavily depend on their underlying assumptions, which can potentially lead to gross errors if these are violated.
+When using a statistical model to describe a dataset in terms of a reduced number of parameters, we are not only interested in producing point estimates of these parameters, but also in quantifying their \emph{uncertainty}. In classical statistics, the usual approach to achieve this is to start from the model assumptions and derive from them analytically the sampling distribution of the estimators. In most cases (the Gaussian distribution being a notable exception) this leads to intractible calculations, so that one is either forced to rely on approximations and asymptotic results, or make unrealistic simplifying assumptions. Moreover, estimates obtained in this way often heavily depend on their underlying assumptions, which can potentially lead to gross errors if these are violated.
 
-The bootstrap method aims to remedy this problem by using numerical simulations to compute estimates of model uncertainty. At its core, it is premised on the idea that the empirical distribution of the sample forms a good proxy for that the population distribution. Consequently, we can approximate sampling from the population by \emph{resampling our data}, which, to the uncareful observer, can give the impression that we're 'magically' producing new information, using our single sample to 'pull ourselves up by our own bootstraps', which is where the procedure derives its name from. The next section shows how this can be applied concretely for a very simple estimation problem. After that, we discuss the special case which will be of primary interest to us, namely bootstrapping regression models.
+The bootstrap method aims to remedy this problem by using numerical simulations to compute estimates of model uncertainty. At its core, it is premised on the idea that the empirical distribution of the sample forms a good proxy for that the population distribution. Consequently, we can approximate sampling from the population by \emph{resampling our data}, which, to the uncareful observer, can give the impression that we're 'magically' producing new information, using our single sample to 'pull ourselves up by our own bootstraps', which is where the procedure derives its name from. Let's see how this can be done concretely for a simple estimation problem.
 
-\subsection{Bootstrapping a classical estimator}
+\subsection{Bootstrapping an estimator}
 
-Let $X_1, \dots, X_n$ be an i.i.d. sample drawn from some distribution $F$. Suppose we have estimated the quantity $h(F)$ with $\widehat{h(F)} = g(X_1, \dots, X_n)$ and want to bootstrap an estimate of the uncertainty of our result, e.g. the variance of $\widehat{h(F)}$. We can distinguish between different kinds of bootstrap depending on which assumptions they make.
+Let $X_1, \dots, X_n$ be an i.i.d. sample drawn from a distribution $F$, and consider an estimator $\widehat{h(F)} = g(X_1, \dots, X_n)$ of some quantity $h(F)$ whose uncertainty we wish to estimate, using e.g.\ the variance of the sampling distribution. Depending on the assumptions we are willing to make, we can choose between two broad approaches: \emph{parameteric} methods and \emph{nonparametric} ones.
 
-In the \emph{non-parametric} bootstrap, we use the data directly, drawing with replacement from $X_1, \dots X_n$ to simulate new samples $X^{(b)}_1, \dots, X^{(b)}_n$. This can be viewed equivalently as approximating $F$ with the \emph{empirical cumulative distribution function}
+In the nonparametric bootstrap, we use the data directly, drawing with replacement to simulate new samples $X^{(b)}_1, \dots, X^{(b)}_n$. In other words, we approximate $F$ using the \emph{empirical cumulative distribution function}
 \begin{equation}
-    \hat{F}_n(x) \coloneqq \sum_{k=1}^n I_{\{ X_k \leq x \}} \,.
+    \widehat{F}_n(x) \coloneqq \sum_{k=1}^n I_{\{ X_k \leq x \}} \,,
 \end{equation}
-In our example, we would then compute $g^{(b)} = g(X^{(b)}_1, \dots, X^{(b)}_n)$ for every bootstrap sample, yielding an approximate sample from the sampling distribution of $\widehat{h(F)}$, provided $F \approx \hat{F}_n$ with sufficient accuracy. Denoting the total number of bootstrap samples by $B$, we can esimate the variance of $\widehat{h(F)}$ by
+which we use to generate new data. We then compute the statistic of interest on these pseudo-samples, yielding pseudo-observations $g^{(b)} = g(X^{(b)}_1, \dots, X^{(b)}_n)$ which approximate the sampling distribution of $\widehat{h(F)}$. Writing $B$ for the total number of bootstrap samples, we can esimate the variance of $\widehat{h(F)}$ by
 \begin{equation}
     \frac{1}{B-1}\sum_{b=1}^B(g^{(b)} - \bar{g})^2 \,,
 \end{equation}
-with $\bar{g} = \frac{1}{B} \sum_{b=1}^B g^{(b)}$.
+with $\bar{g} = \frac{1}{B} \sum_{b=1}^B g^{(b)}$. Provided $F \approx \widehat{F}_n$ holds with sufficient accuracy, this will yield a reasonable approximation to $\mathrm{Var}(\widehat{h(F)})$.
 
-The \emph{parametric} bootstrap, by contrast, first uses the data to fit a model, from which it then produces simulated samples with the help of a random number generator. In our example, this means that we would have to assume that $F$ belongs to some parametric family $\left \{ F_{\bm{\theta}} \mid  \bm{\theta} \in \Theta \right \}$. The sample $X_1, \dots, X_n$ is then used to produce an estimate $\bm{\hat{\theta}}$, and plugging this in gives us $F_{\bm{\hat{\theta}}}$ which we can use to simulate $X^{(b)}_1, \dots , X^{(b)}_n$ and $g^{(b)}$ as before. 
+By contrast, in the parametric bootstrap, we first fit a model using the data, and then simulate samples from this with the help of a random number generator. As usual, the parametric approach offers the advantage of efficiency if its assumptions are met, at the risk of increased error when they are violated. If we assume that $F$ belongs to some family $\left \{ F_{\bm{\theta}} \mid  \bm{\theta} \in \Theta \right \}$, then we can use the sample $X_1, \dots, X_n$ to produce an estimate $\bm{\widehat{\theta}}$ of the parameter. Plugging this in then gives us $F_{\bm{\widehat{\theta}}}$, from which we can simulate $X^{(b)}_1, \dots , X^{(b)}_n$ and $g^{(b)}$ as before. An estimate of the sampling variance is likewise obtained the same manner.
 
-As always, the parametric approach has the advantage of being more powerful when its assumptions are met, at the cost of making gross errors if they are violated. It is also instructive to observe that, although our example used the bootstrap to calculate a single statistic, its application naturally yields a whole \emph{simulated distribution}, which can be used for any kind of inference. This shows the tremendous potential of bootstrap as a tool for statistical analysis, if properly applied and interpreted.
+Even though the previous example involves the calculation a single statistic, it is clear that the bootstrap produces a complete \emph{simulated distribution} of the estimator, which can be used for any arbitrary form of inference. This shows the tremendous potential of bootstrap as a tool for statistical analysis, which explains its rise in popularity with the advent of powerful personal computers capable of carrying out the requisite calculations.
 
 \subsection{Bootstrapping a regression model} \label{subsec:boot-reg}
 
-We now turn our attention towards bootstrap methods for regression models, as these will be our primary focus in the next sections. Let $X_1, \dots, X_p$ and $Y$ be a set of random variables whose relationship is modelled by means of a parametrised mapping $f(X_1, \dots, X_p; \bm{\beta})$. Given a sample $(X_1, Y_1), \dots, (X_n, Y_n)$, we can apply a fitting procedure to obtain an estimate $\hat{\bm{\beta}}$ of $\bm{\beta}$. For new values $x_1^+, \dots, x_n^+$ of the regressors, we can then predict the response $y^+$ by $f(x_1^+, \dots, x_n^+; \hat{\beta})$. It is important to understand that these are two distinct problems, which lead to different bootstrap procedures (see \cite[Secttions 6.3.3 and 7.2.4]{davison}). 
+Altough we have introduced the bootstrap in the context of a classical one-sample estimation problem, the same principles can be applied to data structures of arbitrary complexity, so long as we have a model for the probabilistic mechanism generating the observations (see \cite[Chapter 8]{efron:intro} for a general exposition of this methodology). In particular, bootstrap methods for regression models are well-established in the literature. We now turn our attention to these, as they will form the foundation for developing bootstrap methods for claims triangles.
 
-In \emph{estimation}, we seek to identify the value of a fixed but unknown quantity. With \emph{prediction}, our aim is to forecast the value of a random quantity, usually by means of some measure of location. If we're using the least squares criterion, for example, then we known that the optimal predictor of $Y$ is the conditional expectation $\condexp{Y}{X = x}$; this is an ordinary function which returns a fixed number for every value of $x$, and which can therefore be estimated. We do this by assuming that it can be approximated by some well-known class of functions which depend on some parameters $\bm{\beta}$. We
+Consider a set of covariates $X_1, \dots, X_p$ and a response variable $Y$ whose relationship we model by a parametrised mapping $f(X_1, \dots, X_p; \bm{\beta})$. Given a sample of pairs $(\bm{\mathrm{x}_1}, Y_1), \dots, (\bm{\mathrm{x}_n}, Y_N)$ and a choice of loss function, we can fit this model to obtain an estimate $\widehat{\bm{\beta}}$ of $\bm{\beta}$. For new values $x_1^+, \dots, x_N^+$ of the regressors, we can then predict the response $Y^+$ as $f(x_1^+, \dots, x_N^+; \widehat{\bm{\beta}})$. It is worth emphasising these as two distinct operations, which correspond to different bootstrap procedures (see \cite[Sections 6.3.3 and 7.2.4]{davison}). \emph{Estimation} seeks to \emph{identify} the value of a quantity which is \emph{fixed but unknown}; \emph{prediction} aims to \emph{forecast} the value of a \emph{random variable}. 
 
-we additionally have to incorporate the intrinsic randomness of the response variable.
+Under the least squares criterion, for example, we know that the optimal predictor for $Y$ is the conditional expectation $\condexp{Y}{X = x}$. This is an ordinary function which returns a real number for any $x \in \mathbb{R}^p$, and which can therefore be estimated from a sample. Such an estimate will contain some error, which we have to take into account when doing inference. If we additionally want to measure the error we make when predicting $Y$ using $\condexp{Y}{X = x}$, we also have to incorporate the intrinsic randomness of the response variable. Prediction is therefore a two-phase procedure involving an intermediate estimation step.
 
-To illustrate this more clearly, we consider the classic example of the normal linear model
-\begin{equation}
-    Y = \sum_{k=1}^p \beta_k X_k + \varepsilon\,, \qquad \varepsilon \sim \mathcal{N}(0, 1) \,.
+Let's illustrate this in the case of the all-familiar linear regression model, which is given by
+\begin{equation} \label{eq:linear-model}
+    Y_i = \bm{\mathrm{x}_i}^T \bm{\beta} + \varepsilon_i \,, \qquad i \in {1, \dots, n}
 \end{equation}
-Reasoning as in the previous section, we need to identify a fundamental unit of the resampling, taking care to ensure that this yields quantities which are i.i.d. Considering the non-parametric case first, one option would be to resample the pairs $(X_i, Y_i)$ (see \cite[Algorithm 6.2]{davison}); this is particularly appropriate when the regressors are stochastic (i.e. nondegenerate), as is the case for socio-economic data, for instance. 
-
-An alternative is to first fit the model and use it to compute some kind of standardised residuals $r_i$, which are then resampled by the bootstrap procedure (see \cite[Algorithm 6.1]{davison}). This approach is sometimes called \emph{semiparametric}, as it makes use of parameter estimates to produce the residuals, but makes no assumptions regarding their distribution (aside from them having common one). Choosing the (externally) studentised residuals
+with $\expect{\varepsilon_i} = 0$, $\operatorname{Var}(\varepsilon_i) = \sigma$ and $\expect{\varepsilon_i \varepsilon_j} = 0$ for $i \neq j$. Considering the nonparametric bootstrap first, we need to identify a fundamental unit of resampling such that the resulting variables are interchangeable. One option would be to fit the model and use it to compute some kind of suitably scaled residuals, which we will then resample (see \cite[Algorithm 6.1]{davison}). This approach is sometimes referred to as \emph{semiparametric}, because it only uses the specification of certain aspects of the data distribution in terms of some parameters, but does not assume a specific form for it. If we then choose the standardised residuals
 \begin{equation}
-    r^S_i = \frac{Y_i - X^T_i \hat{\beta}}{\hat{\sigma}_{(i)} \sqrt{1 - h_{ii}}} \,,
+    r_i = \frac{Y_i - \bm{\mathrm{x}}^T_i \widehat{\bm{\beta}}}{\widehat{\sigma} \sqrt{1 - h_{ii}}} \,,
 \end{equation}
-for example, we can resample these to obtain bootstrap samples $r^{S, (b)}_1, \dots, r^{S, (b)}_n$. These will then yield bootstrap responses
+for example, we obtain from these the bootstrap samples $r^{(b)}_1, \dots, r^{(b)}_n$, which in turn yield bootstrap responses
 \begin{equation}
-    Y^{(b)} \coloneqq \sum_{k=1}^p \beta_k X_k + \hat{\sigma} r^{S, (b)}_k \,,
+    Y_i^{(b)} \coloneqq \mathbf{x}^T \widehat{\bm{\beta}} + \widehat{\sigma} \sqrt{1 - h_{ii}} r^{(b)}_i \,.
 \end{equation}
-which in turn can be used to obtain bootstrap samples $\hat{\beta}^{(b)}$ by fitting the model to the new data. Note that only the responses are randomised in this procedure; it would therefore be ill-suited when the independent variables are not fixed quantities. 
+By refitting the model to this new data, we finally obtain simulated regression parameters $\widehat{\bm{\beta}}^{(b)}$. If we also want to bring in the variability of the response, we can resample the residuals a second time and the result to the regression line in order to simulate the fluctuations around it.
 
-If we are mainly concerned with estimation, then our task is done at this point, as we have obtained an approximation for the sampling distribution of $\hat{\beta}$. If, on the other hand, our aim is prediction, then we still need to bring in the variability inherent in the response. For a new point $x^+ = (x^+_1, \dots, x^+_n)$, this can be done by resampling the residuals a second time to produce bootstrap responses
-\begin{equation}
-    Y_*^{(b)} \coloneqq \sum_{k=1}^p \beta_k x^+_k + \hat{\sigma} r_*^{(S, (b))} \,,
-\end{equation}
-which gives us an approximation to the distribution of $Y_{x^+}$.
+% For a value $\bm{x}_+$ of the predictors, this can be done by resampling the residuals \emph{a second time} to produce bootstrap responses
+% \begin{equation}
+%     Y_+^{(b)} \coloneqq \mathbf{x}_+^T \widehat{\bm{\beta}} + \widehat{\sigma} \sqrt{1 - h_{ii}} r_+^{ (b)} \,,
+% \end{equation}
+% which gives us an approximation to the distribution of $Y_+$.
 
-The development of the parametric case follows the same logic, the only difference being that we generate bootstrap residuals directly from some distribution derived from the model with the help of a random number generator. Our example exhibits the most favourable circumstances for this approach, as in this case we have theoretical results stating that they follow a $t$-distribution with $n - p - 1$ degrees of freedom. In most other circumstances, notably with generalised linear models, we will not be so lucky.
+An alternative approach, which is fully nonparametric, is to resample the pairs $(\bm{\mathrm{x}_i}, Y_i)$ themselves (see \cites[Section 9.5]{efron:intro}[Algorithm 6.2]{davison}), which corresponds to approximating the multivariate distribution of $(X_1, \dots, X_n, Y)$ by the empirical distribution of our data. This has the significant benefit of parsimony, making no other assumption beside the i.i.d.-ness of the sample. The model is then fitted to the bootstrap samples $(\bm{\mathrm{x}_1}^{(b)}, Y^{(b)}_1), \dots, (\bm{\mathrm{x}_n}^{(b)}, Y^{(b)}_n)$ to produce pseudo-realisations $\widehat{\bm{\beta}}^{(b)}$ of the regression parameter estimator. One drawback of this approach is that it does not have a good mechanism for simulating the process error, so that we need to borrow this part either from one of the other methods.
 
-Having introduced the bootstrap method, we can now begin our discussion of the first model.
+For the parametric case, we have to make an additional assumption about the distribution of $\epsilon$, the classical choice being the normal distribution. We then begin to fit \cref{eq:linear-model}, which gives us estimates $\widehat{\beta}$ for the regression parameters. With the help of a random number generator, we then produce bootstrap responses $Y^{(b)}_1, \dots, Y^{(b)}_n$ by drawing from the estimated distribution $\mathcal{N}(\bm{\mathrm{x}}^T \widehat{\bm{\beta}}, \widehat{\sigma}^2)$, and fit the model to this new data to obtain bootstrap samples $\widehat{\bm{\beta}}^{(b)}$ of the regression parameters.
 
-\section{Mack's model}
+With this introduction complete, we now move on to discussing our first model.
 
-Mack's model (originally proposed in \cite{mack:chain-ladder}) is a distribution-free model applying to the cumulative claims triangle $\mathcal{D}_I = \{ C_{ij} \mid 1 \leq i \leq I, i + j \leq I + 1 \}$. It makes the following assumptions:
+\section{Mack's model} \label{subsec:mack-intro}
+
+In his seminal paper \cite{mack:chain-ladder}, Mack proposed the following model for cumulative claims triangles, which remains among the most influencial in actuarial reserving.
 \begin{model}[Mack Chain Ladder] \label{model:mack} \leavevmode
     \begin{enumerate}[(i)]
-        \item \label{mack1} There exist development factors $f_1, \dots, f_{I - 1}$ such that
-        \begin{equation}
+        \item There exist development factors $f_1, \dots, f_{I - 1}$ such that
+        \begin{equation} \label{eq:mack-expectation}
             \mathbb{E}[C_{ij} \ \Vert \ C_{i, j - 1}, \dots, C_{i1}] = \mathbb{E}[C_{ij} \ \Vert \ C_{i, j - 1}] = f_{j - 1} C_{i, j - 1}\,
         \end{equation}
         for $1 \leq i \leq I$.
-        \item \label{mack2} There exist parameters $\sigma_1, \dots, \sigma_{I - 1}$ such that
-        \begin{equation}
+        \item There exist parameters $\sigma_1, \dots, \sigma_{I - 1}$ such that
+        \begin{equation} \label{eq:mack-variance}
             \mathrm{Var}[C_{ij} \ \Vert \ C_{i, j - 1}, \dots, C_{i1}] = \mathrm{Var}[C_{ij} \ \Vert \ C_{i, j - 1}] = \sigma_{j - 1}^2 C_{i, j - 1}\,,
         \end{equation}
         for $1 \leq i \leq I$.
-        \item \label{mack3} Cumulative claims processes $(C_{ij})_j, (C_{i'j})_j$ are independent for $i \neq i'$.
+        \item Cumulative claims processes $(C_{ij})_j, (C_{i'j})_j$ are independent for $i \neq i'$.
     \end{enumerate}
 \end{model}
-Assumption (\ref{mack1}) states that the conditional expectation of the cumulative claim amount in any period depends only on that of the previous period, and that this dependence is moreover linear. Assumption (\ref{mack2}) makes a similar assertion about the conditional variance, and assumption (\ref{mack3}) states that the rows of the data triangle represent randomly drawn sample paths.
+The development factors are estimated by
+\begin{equation} \label{eq:devfac-estimator}
+    \widehat{f}_j(\mathcal{D}_I) = \widehat{f}_j(C_{1j}, \dots, C_{I - j, j}, \dots, C_{1, j + 1}, \dots, C_{I - j, j + 1}) \coloneqq \frac{\sum_{i = 1}^{I - j} C_{i, j + 1}}{\sum_{i = 1}^{I - j} C_{i, j}} \,.
+\end{equation}
+If we define the \emph{single} or \emph{individual} development factors as
+\begin{equation}
+    F_{i, j + 1} \coloneqq \frac{C_{i, j + 1}}{C_{ij}} \,,
+\end{equation}
+then $\widehat{f}_j$ can be obtained as the weighted average
+\begin{equation}
+  \widehat{f}_j = \frac{\sum_{i = 1}^{I - j} C_{ij} F_{i, j}}{\sum_{i = 1}^{I - j} C_{ij}} \,.
+\end{equation}
+The $\sigma_j$ are estimated by
+\begin{equation}
+    \widehat{\sigma}_j \coloneqq \frac{1}{I-j}\sum_{i = 1}^{I-j} C_{ij}\left( F_{i, j + 1} - \widehat{f}_j \right)^2
+\end{equation}
+for $j < I - 1$. This formula does not work for $j = I - 1$, as we only have a single pair of observations in the last two columns of the triangle. To remedy this, Mack proposed a simple extrapolation from the previous development years, leading to the estimate
+\begin{equation}
+  \widehat{\sigma}^2_{I - 1} = \min{ \left \{ \frac{\widehat{\sigma}^4_{I - 2}}{\widehat{\sigma}^2_{I - 3}}, \widehat{\sigma}^2_{I - 2}, \widehat{\sigma}^2_{I - 3} \right \} }
+\end{equation}
+and this appears to be the most widely adopted solution in the literature.
 
-The chain ladder link ratios are now viewed as estimators of the development factors:
-\begin{equation} \label{eq:cl-estimator}
-    \hat{f}_j(\mathcal{D}_I) = \hat{f}_j(C_{1j}, \dots, C_{I - j, j}, \dots, C_{1, j + 1}, \dots, C_{I - j, j + 1}) \coloneqq \frac{\sum_{i=1}^{I - j} C_{i, j + 1}}{\sum_{i=1}^{I - j} C_{i, j}} \,.
-\end{equation}
-As for the $\sigma_j$'s, if we define the individual development factors as
+Under the assumptions of \Cref{model:mack}, it can be shown (see \cite[17 \psqq]{wuthrich:stochastic-reserving}) that $\widehat{f}_j$ and $\widehat{\sigma}_j$ are (conditionally) unbiased, and moreover that the $\widehat{f}_j$ are uncorrelated. Predicted ultimate claim amounts $C_{iI}$ are obtained by substituting the estimates for the unknown development factors $f_j$ in the conditional expectation. In other words, we predict the ultimate loss using the conditional mean $\condexpp{C_{iI}}{C_{i, I + 1 - i}}$, and estimate the latter by plugging in $\widehat{f}_j$, yielding
 \begin{equation}
-    F_{i, j + 1} \coloneqq \frac{C_{i, j + 1}}{C_{ij}} \,
+    \widehat{C}_{iI} \coloneqq \widehat{\mathbb{E}}[C_{i, I} \ \Vert \ C_{i, I - i}] = C_{i, I + 1 - i} \prod_{j = I - i}^{I-1} \widehat{f}_j \,.
 \end{equation}
-then these are estimated by
-\begin{equation}
-    \hat{\sigma}_j \coloneqq \frac{1}{I-j}\sum_{i=1}^{I-j} C_{ij}\left( F_{i, j + 1} - \hat{f}_j \right)^2 \,.
-\end{equation}
-Under the assumptions of \Cref{model:mack}, $\hat{f}_j$ and $\hat{\sigma}_j$ are (conditionally) unbiased, and the $\hat{f}_j$'s are moreover uncorrelated (the proofs can be found in \cite[17 \psqq]{wuthrich:stochastic-reserving}). Estimates for the ultimate claim amounts $C_{iI}$ are obtained by substituting the chain ladder estimates for the unknown development factors $f_j$ in the expression for the conditional expectation, yielding
-\begin{equation}
-    \hat{C}_{i, I} \coloneqq \hat{\mathbb{E}}[C_{i, I} \ \Vert \ C_{i, I-i}] = C_{i, I + 1 - i} \prod_{j=I-i}^{I-1} \hat{f}_j  \,,
-\end{equation}
-from which we obtain the reserve estimate
+From this, we then finally obtain the reserve predictor
 \begin{equation} \label{eq:reserve-predictor}
-    \hat{R} = g(\mathcal{D}_I) \coloneqq \sum_{i = 2}^I (\hat{C}_{i, I} - C_{i, I + 1- i}) \,. 
+    \widehat{R} = g(\mathcal{D}_I) \coloneqq \sum_{i = 2}^I (\widehat{C}_{i, I} - C_{i, I + 1- i}) \,. 
 \end{equation}
 
-Strictly speaking, $\hat{R}$ should more properly be referred to as a predictor, as the total outstanding loss is a random variable, being a function of $(C_{iI})_{2 \leq i \leq I}$. While it is typically harmless to use the terms interchangeably, the distinction between them becomes important in the context of the bootstrap, as we saw in \Cref{sec:boot}, and we therefore emphasize it here. We predict the ultimate loss using the conditional mean, and we estimate the conditional mean by plugging in the $\hat{f}_j$'s; these steps respresent the two sources of variability in our model. The total uncertainty can be quantified using the (conditional) \emph{mean square error of prediction}
+\Cref{model:mack} is often referred to as "distribution-free" because it only makes assumptions about the first two moments of the claims triangle variables. Indeed, we will show that the Mack CL can be viewed as a series of linear regressions through the origin (i.e.\ without intercept term), hence these are same assumptions as for the Gauss-Markov theorem, i.e. the minimal ones\sepfootnote{fn:gauss-markov} required to guarantee optimality. Introduce, for any development year $j \in \{ 1, \dots, {I - 1} \}$, the notation
 \begin{equation}
-    \underset{R \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\hat{R}) \coloneqq \condexpp*{(\hat{R} - R)^2}{\mathcal{D}_I} \,,
+  \bm{\mathrm{c}_j} \coloneqq
+  \begin{bmatrix}
+    C_{1, j} \\
+    \vdots \\
+    C_{I - j, j}
+  \end{bmatrix} \,,
 \end{equation}
-and this admits a corresponding decomposition into \emph{parameter} or \emph{estimation error} and a \emph{process error}:
-\begin{align}
-    \begin{split}
-        \condexpp*{(\hat{R} - R)^2}{\mathcal{D}_I} &= \condexpp*{(R - \condexpp*{R}{\mathcal{D}_I})^2}{\mathcal{D}_I} + \condexpp*{(\condexpp*{R}{\mathcal{D}_I} - \hat{R})^2}{\mathcal{D}_I} \\ &\phantom{{}=1} -2\condexpp*{(R - \condexpp*{R}{\mathcal{D}_I})(\condexpp*{R}{\mathcal{D}_I} - \hat{R})}{\mathcal{D}_I}
-    \end{split} \\
-    \begin{split}
-    &= \mathrm{Var}(R \, \Vert \, \mathcal{D}_I) + (\condexpp*{R}{\mathcal{D}_I} - \hat{R})^2 \\
-    &\phantom{{}=1} -2(\condexpp*{R}{\mathcal{D}_I} - \hat{R})(\condexpp*{R - \condexpp*{R}{\mathcal{D}_I}}{\mathcal{D}_I})
-    \end{split} \\
-    &= \underbrace{\mathrm{Var}(R \, \Vert \, \mathcal{D}_I)}_\text{process error} + \underbrace{(\condexpp*{R}{\mathcal{D}_I} - \hat{R})^2}_\text{estimation error} \,.
-\end{align}
-It is not difficult to see the analogy between this expression and the familiar bias-variance decomposition from classical statistics. It will prove to be immensely valuable for our development of a bootstrap procedure in the sequel.
-
-\subsection{A challenging simulation}
-
-The nonparametric and recursive nature of Mack's model makes applying the theory from \Cref{subsec:boot-reg} a non-trivial task. A first difficulty is how we should choose the residuals. Our definition has to ensure that they are identically distributed, but it is impossible to guarantee when our assumptions only deal with the first two moments.Even if we find it reasonable to extrapolate from second order statements to homogeneity of the distributions, it still remains unclear how we can obtain a resampled loss triangle from $\hat{f}_j$, $\hat{\sigma}_j$ and $r_{ij}$. 
-
-Although the literature does not address this problem directly, discussions of resampling methods have come up in the context of deriving a closed-form expression for the MSEP (see \cites{wuthrich:chain-ladder-msep}{mack:msep}{gisler:msep}{venter:msep}). To understand this connection, it's instructive to reflect upon the relationship which exists between certain resampling schemes and analytical probability statements. For example, taking the conditional expectation $\condexpp*{X}{Y}$ would correspond to sampling a large number of observations from $X$ while keeping $Y$ fixed and computing their average. We will use this point of view in the sequel to derive a bootstrap method for Mack's model. Our exposition follows the one in \cite[45\psqq]{wuthrich:stochastic-reserving}, albeit with a focus on simulation.
-
-For any $i \in \{ 1, \dots, I \}$, consider the decomposition of the MSEP for the ultimate claim amount $C_{iI}$ into parameter and process error:
-\begin{equation} \label{eq:msep}
-    \underset{C_{iI} \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\hat{C}_{iI}) = (\condexpp*{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})^2 + \mathrm{Var}(C_{iI})
-\end{equation}
-This gives us the two components of the model uncertainty for accident year $i$ which our bootstrap method will have to account for. We will consider each of them in turn.
-
-\subsection{Parameter error}
-
-Starting with the parameter error, we can use the definitions from the previous section to rewrite this as
-\begin{align} \label{eq:param-err}
-  (\condexpp*{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})^2 &= C^2_{i, I+1-i} \left( \prod_{j=I+1-i}^{I-1}f_j - \prod_{j=I+1-i}^{I-1}\hat{f}_j \right)^2 \\
-  &= C^2_{i, I+1-i} \left( \prod_{j=I+1-i}^{I-1}f^2_j + \prod_{j=I+1-i}^{I-1}\hat{f}^2_j - 2 \prod_{j=I+1-i}^{I-1}f_j \hat{f}_j \right) \,.
-\end{align}
-Notice that this expression depends on the unknown development factors $f_j$ and so cannot be computed directly. If we subtituted $\hat{f}_j$ in place of these, however, the result would be a constant $0$, which is clearly not an accurate estimate. This problem was recognised by Mack himself in \cite[Appendix D]{mack:chain-ladder-variability}. It is caused by the fact that, conditional on $\mathcal{D}_I$, the development factors $\hat{f}_j$ are scalars. We must therefore find a way to allow $\hat{f}_{I + 1 - i}, \dots, \hat{f}_{I - 1}$ to vary around $f_{I + 1 - i}, \dots, f_{I - 1}$, which means reducing the set we condition on. Depending on our choice, this will yield different estimates of \cref{eq:param-err} with corresponding resampling schemes. We will discuss two in particular here.
-
-It will be useful to introduce the notation
+then the first two assumptions of \Cref{model:mack} can be equivalently stated as
 \begin{equation}
-    \mathcal{B}_k \coloneqq \left \{ C_{ij} \in \mathcal{D}_I \mid j \leq k \right \}
+  \bm{\mathrm{c}_{j + 1}} = f_j \bm{\mathrm{c}_j} + \bm{\varepsilon} \,,
 \end{equation}
-for the subset of observation up to and including development year $k$, and
+with $\bm{\varepsilon}$ a random vector satisfying
 \begin{equation}
-    \mathcal{D}^O_{I, k} \coloneqq \left \{ C_{ij} \in \mathcal{D}_I \mid j > I + 1 - k \right \}
+  \condexpp{\bm{\varepsilon}}{C_{1, j}, \dots, C_{i, I - j}} = \bm{0}
+  \qquad%
+  \condvarr{\bm{\varepsilon}}{C_{1, j}, \dots, C_{i, I - j}} = \sigma^2_j
+  \begin{bmatrix}
+    C_{1j} & & \\
+    & \ddots & \\
+    & & C_{I - j, j}
+  \end{bmatrix} \,.
 \end{equation}
-for its complement in $\mathcal{D}_I$.
-
-One possible approach would be to condition on $\mathcal{B}_{I+1-i}$, leading to the estimate
-\begin{align} \label{eq:uncond-param-err}
-    \condexpp{(\condexpp{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})^2}{\mathcal{B}_{I+1-i}} &= C^2_{i, I+1-i} \condexpp*{\left( \prod_{j=I+1-i}^{I-1}f_j - \prod_{j=I+1-i}^{I-1}\hat{f}_j \right)^2}{\mathcal{B}_{I+1-i}} \\
-    &= C^2_{i, I+1-i} \left( \condexpp*{\prod_{j=I+1-i}^{I-1}\hat{f}^2_j}{\mathcal{B}_{I+1-i}} - \prod_{j=I+1-i}^{I-1}f^2_j \right)\,,
-\end{align}
-for the parameter error, where we used the fact that the $\hat{f}_j$'s are uncorrelated. This corresponds to averaging over the distribution of $\mathcal{D}^O_{I, k}$. Expressed in terms of resampling, it means that we generate new observations in the entire upper right triangle in order to produce new samples $\hat{f}_{I + 1 - i}, 
-\dots, \hat{f}_{I - 1}$. Borrowing the nomenclature from \cite{wuthrich:chain-ladder-msep}, we call this the \emph{unconditional approach} to resampling.
-
-An alternative is to average each $\hat{f}_j$ only over the observations after $j$, which is equivalent to averaging over $C_{1, j + 1}, \dots, C_{I - j, j + 1}$, since these are the only relevant such points for the chain ladder estimator, and keeping the denominator $\sum_{i = 1}^{I - j} C_{ij}$. Formally, this means that we estimate \cref{eq:param-err} by taking the expectation with respect to the probability measure $\mathbb{P}^{(i)}_{\mathcal{D}_I}$ on $\mathcal{D}^O_{I, i}$ by
-\begin{equation}
-  \mathbb{P}^{(i)}_{\mathcal{D}_I}(dx_{i, I + 1 - j}, \dots, dx_{i, I - 1}) \coloneqq \prod_{j = 1} \mathbb{P}_{C_{i, j + 1}}(dx_{i, j + 1} \mid C_{ij} = c_{ij}) \,,
-\end{equation}
-where $c_{ij}$ denotes the observed value of $C_{ij}$, yielding
-\begin{align}
-    \expect[\mathbb{P}^{(i)}_{\mathcal{D}_I}]{(\condexpp{C_{iI}}{\mathcal{D}_I} - \hat{C}_{iI})^2}&= C^2_{iI} \, \expect[\mathbb{P}^{(i)}_{\mathcal{D}_I}]{\left( \prod_{j=I+1-i}^{I-1}f_j - \prod_{j=I+1-i}^{I-1}\hat{f}_j \right)^2} \\ 
-    &= C^2_{i, I+1-i} \left( \expect[\mathbb{P}^{(i)}_{\mathcal{D}_I}]{\prod_{j=I+1-i}^{I-1}\hat{f}^2_j} - \prod_{j=I+1-i}^{I-1}f^2_j \right) \\
-    &= C^2_{i, I+1-i} \left( \prod_{j=I+1-i}^{I-1} \condexpp*{\hat{f}^2_j}{\mathcal{B}_j} - \prod_{j=I+1-i}^{I-1}f^2_j \right) \,.
-\end{align}
-We refer to this as the \emph{conditional approach}. It corresponds to a resampling scheme in which, at every step $j$, only the observations from the next period are resampled in order to produce a new realisation of $\hat{f}_j$.
-
-Note that our statements about resampling have so far been with respect to theoretical distributions; we have not yet specified the mechanism by which to implement this in the bootstrap. This will require us to define suitable residuals, i.e. ones which are identically distributed; however, as noted previously, \Cref{model:mack} provides no way to do this. Starting from the observation that the \emph{raw residuals}
-\begin{equation}
-  e_i \coloneqq C_{i, j + 1} - \hat{C}_{i, j + 1} = C_{i, j + 1} - \hat{f}_j C_{ij}
-\end{equation}
-suffer from heteroscedasticity,
-\begin{equation}
-  \condvarr{e_i}{C_{ij}} = \sigma^2_j \left( C_{ij} - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}} \right) \,,
-\end{equation}
-an intuitive idea would be to consider
-\begin{equation} \label{eq:alt-resids}
-  r_{ij} \coloneqq \frac{e_i}{\sqrt{C_{ij} - \frac{C^2_{ij}}{\sum_{i=1}^{I - j} C_{ij}}}} = \frac{(F_{i, j + 1} - \hat{f}_j)\sqrt{C_{i, j}}}{\sqrt{1 - \frac{C_{ij}}{\sum_{i=1}^{I - j} C_{ij}}}} \,,
-\end{equation}
-which satisfy
-\begin{equation}
-  \condexpp*{r_{ij}}{C_{i, j - 1}} = 0, 
-  \qquad 
-  \condvarr*{r_{ij}}{C_{i, j - 1}} = \sigma^2_j \,.
-\end{equation}
-The problem is that our model don't allow us to say anything more than this, because it only makes second-order statements. Of course, we could choose to extrapolate from this to say that the $r_{ij}$'s are identically distributed, but this is an additional assumption which should not be made lightly; see \cite{efron} for an example where the percentiles of error distribution depend on the regressor.
-
-Alternatively, we could deliberately choose to augment our assumptions so that we can make more precise statements. In particular, we will consider the autoregressive Gaussian time series model:
-\begin{equation} \label{eq:time-series-model}
-    C_{i, j + 1} = f_j C_{ij} + \sigma_j \, \sqrt{C_{ij}} \, \varepsilon_{i, j}, \qquad \varepsilon \sim \mathcal{N}(0, 1) \,,
-\end{equation}
-which can easily be seen to be compatible with \Cref{model:mack}. This will allow us to choose residuals whose distribution can be derived analytically. To see how, observe that the chain ladder can be viewed as a collection of weighted linear regressions through the origin (i.e. without intercept term). Indeed, for any development year $j \in \{ 1, \dots, I-1 \}$, the assumptions of \Cref{model:mack} can be equivalently stated as
-\begin{equation}
-  \begin{cases}
-    \begin{aligned}
-      \condexpp{
-        \begin{bmatrix}
-          C_{1, j + 1} \\
-          \vdots \\
-          C_{I - j, j + 1}
-        \end{bmatrix}
-      }{    
-        \begin{bmatrix}
-          C_{1, j} \\
-          \vdots \\
-          C_{I - j, j}
-        \end{bmatrix}
-    } &= f_j
-      \begin{bmatrix}
-      C_{1, j + 1} \\
-      \vdots \\
-      C_{I - j, j + 1}
-      \end{bmatrix}
-      \\[10pt]
-      \condvarr{
-        \begin{bmatrix}
-          C_{1, j + 1} \\
-          \vdots \\
-          C_{I - j, j + 1}
-        \end{bmatrix}
-      }{
-        \begin{bmatrix}
-          C_{1, j} \\
-          \vdots \\
-          C_{I - j, j}
-        \end{bmatrix}
-      }
-      &= \sigma^2_j
-      \begin{bmatrix}
-        C_{1j} & & \\
-        & \ddots & \\
-        & & C_{I - j, j}
-      \end{bmatrix} \,,
-    \end{aligned}
-  \end{cases}
-\end{equation}
-to which the weighted least squares method with weights matrix
+Consequently, it follows (see \cite[Proposition 1.7]{hayashi}) that the weighted least squares method with weights matrix
 \begin{equation}
   \mathbf{W} = \frac{1}{\sigma^2_j}
   \begin{bmatrix}
@@ -384,22 +293,133 @@ to which the weighted least squares method with weights matrix
     & & 1 / C_{I - j, j}
   \end{bmatrix} \,,
 \end{equation}
-can be applied. Writing
+leads to an estimator for $f_j$ which has minimal variance in the class of linear unbiased estimators. This estimator is given by
 \begin{equation}
-  \mathbf{c_j} \notation
-  \begin{bmatrix}
-    C_{1, j} \\
-    \vdots \\
-    C_{I - j, j}
-  \end{bmatrix} \,,
+  \widehat{f}^{\mathrm{WLS}}_j = (\bm{\mathrm{c}_j}^T \mathbf{W} \bm{\mathrm{c}_j})^{-1} \bm{\mathrm{c}_j}^T \mathbf{W} = \frac{\sum_{i = 1}^{I - j} C_{i, j + 1}}{\sum_{i = 1}^{I - j} C_{i, j}} \,,
 \end{equation}
-we then estimate the development factor $f_j$ using
+which is the same expression as \cref{eq:devfac-estimator}.
+
+\subsection{A challenging simulation}
+
+Owing to its recursive nature, Mack's model does not readily lend itself to application of the theory from \Cref{sec:boot}. The actuarial literature on bootstrap methods is not very helpful in this regard either, as it has mostly tended to focus on generalised linear models---even papers like \cite{england:dist} which address the Mack CL do so by reframing it in this way. As will become clear shortly, this passes over some subtleties related to the particular structure of Mack's model, and we will therefore take a different approach. In particular, our starting point will be the problem of deriving a closed-form estimate of the so-called conditional \emph{mean square error of prediction} (MSEP) for the Mack predictor. While this might appear at first glance to be unrelated to the bootstrap, we will see that it furnishes us with the necessary theoretical framework to understand the special issues involved in resampling a recursive model.
+
+The MSEP is a measure for the total uncertainty associated with a given predictive model. It is defined as the Euclidean distance between the predictor and the response in the underlying filtered probability space, i.e.\
 \begin{equation}
-  \hat{f}^{\mathrm{WLS}}_j = (\mathbf{c_j}^T \mathbf{W} \mathbf{c_j})^{-1} \mathbf{c_j}^T \mathbf{W} = \frac{\sum_{i=1}^{I - j} C_{i, j + 1}}{\sum_{i=1}^{I - j} C_{i, j}} \,,
+    \underset{R \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\widehat{R}) \coloneqq \condexpp*{(\widehat{R} - R)^2}{\mathcal{D}_I}
 \end{equation}
-which is precisely the chain ladder estimator. The corresponding hat matrix is given by
+for our special case of predicting the reserve. The MSEP admits a decomposition, similar to the familiar bias-variance decomposition from classical statistics into so-called \emph{parameter} or \emph{estimation error} and \emph{process error}:
 \begin{align}
-  \mathbf{H} &= \mathbf{c_j} (\mathbf{c_j}^T \mathbf{W} \mathbf{c_j})^{-1} \mathbf{c_j}^T \mathbf{W} \\[4pt]
+    \begin{split}
+        \condexpp*{(\widehat{R} - R)^2}{\mathcal{D}_I} &= \condexpp*{(R - \condexpp*{R}{\mathcal{D}_I})^2}{\mathcal{D}_I} + \condexpp*{(\condexpp*{R}{\mathcal{D}_I} - \widehat{R})^2}{\mathcal{D}_I} \\ &\phantom{{}=1} -2\condexpp*{(R - \condexpp*{R}{\mathcal{D}_I})(\condexpp*{R}{\mathcal{D}_I} - \widehat{R})}{\mathcal{D}_I}
+    \end{split} \\
+    \begin{split}
+    &= \mathrm{Var}(R \, \Vert \, \mathcal{D}_I) + (\condexpp*{R}{\mathcal{D}_I} - \widehat{R})^2 \\
+    &\phantom{{}=1} -2(\condexpp*{R}{\mathcal{D}_I} - \widehat{R})(\condexpp*{R - \condexpp*{R}{\mathcal{D}_I}}{\mathcal{D}_I})
+    \end{split} \\
+    &= \underbrace{\mathrm{Var}(R \, \Vert \, \mathcal{D}_I)}_\text{process error} + \underbrace{(\condexpp*{R}{\mathcal{D}_I} - \widehat{R})^2}_\text{estimation error} \,,
+\end{align}
+corresponding to the two stages of bootstrapping a predictor which we discussed in \Cref{subsec:boot-reg}. Consider now, for any accident year $i \in \{ 1, \dots, I \}$, the MSEP for the associated ultimate
+\begin{equation} \label{eq:msep}
+    \underset{C_{iI} \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\widehat{C}_{iI}) = (\condexpp*{C_{iI}}{\mathcal{D}_I} - \widehat{C}_{iI})^2 + \condvarr{C_{iI}}{\mathcal{D}_I} \,,
+\end{equation}
+and suppose we are interested in obtaining a closed-form estimator for it. Such an expression can be derived relatively straightforwardly for the process error from the assumptions of \Cref{model:mack} in the following way. We begin by applying the law of total variance in conjunction with \cref{eq:mack-expectation,eq:mack-expectation} to obtain
+\begin{align}
+  \condvarr{C_{iI}}{\mathcal{D}_I} &= \condvarr{C_{iI}}{C_{i, I + 1 - i}} \\
+  &= \condexpp{\condvarr{C_{iI}}{C_{i, I - 1}}}{C_{i, I + 1 - i}} + \condvarr{\condexpp{C_{iI}}{C_{i, I - 1}}}{C_{i, I + 1 - i}} \\
+  &= \sigma^2_{I - 1} \condexpp{C_{i, I - 1}}{C_{i, I + 1 - i}} + f^2_{I - 1} \condvarr{C_{i, I - 1}}{C_{i, I + 1 - i}} \\
+  &= \sigma^2_{I - 1} C_{i, I + 1 - i} \prod_{j = I + 1 - i}^{I - 2} f_j + f^2_{I - 1} \condvarr{C_{i, I - 1}}{C_{i, I + 1 - i}} \,,
+\end{align}
+which is a linear recurrence equation of the form
+\begin{equation}
+  x_n = a_{n - 1} x_{n - 1} + g_{n - 1}
+\end{equation}
+with $x_n = \condvarr{C_{in}}{C_{i, I + 1 - i}}$ and
+\begin{equation}
+  g_{n - 1} = \sigma^2_{n - 1} C_{i, I + 1 - i} \prod_{j = I + 1 - i}^{n - 1} f_j \,, \qquad a_{n - 1} = f^2_{n - 1} \,. 
+\end{equation}
+The general solution is given by
+\begin{equation}
+  x_n = \left( \prod_{j = n_0}^{n - 1} a_j \right) \left( x_{n_0} + \sum_{k = n_0}^{n - 1} \frac{g_k}{\prod_{l = n_0}^k a_l} \right)
+\end{equation}
+where $n_0$ denotes the first index of the sequence $x_n$, in our case $I + 1 - i$. Using the initial condition $x_{I + 1 - i} = \condvarr{C_{i, I + 1 - i}}{C_{i, I + 1 - i}} = 0$, we finally obtain
+\begin{align}
+  \condvarr{C_{iI}}{\mathcal{D}_I} 
+  &= \left( \prod_{j = I + 1 - i}^{I - 1} f^2_j \right) \left( \sum_{k = I + 1 - i}^{I - 1} \frac{\sigma^2_k C_{i, I + 1 - i} \prod_{j = I + 1 - i}^{k - 1} f_j}{\prod_{j = I + 1 - i}^k f^2_j} \right) \\
+  &= \left( \prod_{j = I + 1 - i}^{I - 1} f^2_j \right) C^2_{i, I + 1 - i} \left( \sum_{k = I + 1 - i}^{I - 1} \frac{\sigma^2_k / f^2_k}{\prod_{j = I + 1 - i}^{k - 1} f_j C_{i, I + 1 - i}} \right) \\
+  &= \condexpp{C_{iI}}{C_{I + 1 - i}}^2 \sum_{k = I + 1 - i}^{I - 1} \frac{\sigma^2_k / f^2_k}{\condexpp{C_{ik}}{C_{i, I + 1 - i}}} \,,
+\end{align}
+which we can estimate by plugging in $\widehat{f}_j$ and $\widehat{\sigma}_j$ for $f_j$ and $\sigma_j$, respectively. 
+
+For the parameter error, if we use the definitions from the previous section to rewrite it as
+\begin{align} \label{eq:param-err}
+  (\condexpp*{C_{iI}}{\mathcal{D}_I} - \widehat{C}_{iI})^2 &= C^2_{i, I+1-i} \left( \prod_{j=I+1-i}^{I-1}f_j - \prod_{j=I+1-i}^{I-1}\widehat{f}_j \right)^2 \\
+  &= C^2_{i, I+1-i} \left( \prod_{j=I+1-i}^{I-1}f^2_j + \prod_{j=I+1-i}^{I-1}\widehat{f}^2_j - 2 \prod_{j=I+1-i}^{I-1}f_j \widehat{f}_j \right) \,,
+\end{align}
+it becomes clear that things are more complicated than with process error. Indeed, we cannot simply subtitute the $\widehat{f}_j$ for the unknown parameters in this expression as that would cause it to vanish, yielding an estimate which will generally not be accurate. This problem was recognised by Mack himself in \cite{mack:chain-ladder-variability}, and is caused by the fact that the claims triangle observations are used for both estimation and forecasting (see \cite[Section 2]{lindholm:msep} for a more general discussion). His suggested solution was to apply some kind of conditional averaging to the $\widehat{f}_j$. Ideally, one would like to condition on all available observations in $\mathcal{D}_I$, but the $\mathcal{D}_I$-measurability of the $\widehat{f}_j$ would then bring us right back where we started. We must therefore use a smaller set in order to allow $\widehat{f}_{I + 1 - i}, \dots, \widehat{f}_{I - 1}$ to fluctuate around $f_{I + 1 - i}, \dots, f_{I - 1}$. This corresponds to asking which other values $\widehat{f}_j$ could have taken, given that we fix a certain subset of the data---in other words, it's a resampling scheme on the parameter estimates. Thus, one can obtain an estimate of the parameter error by specifying a mechanism for generating new realisations of $\widehat{f}_j$ (see \cites{wuthrich:chain-ladder-msep}[44 \psqq]{wuthrich:stochastic-reserving}), with different mechanisms yielding different estimates. While the literature uses this mostly as a theoretical device to facilitate analytical calculations, there is no reason why it could not be employed as a basis for bootstrapping. In the remainder of this section, we outline two approaches for estimating \cref{eq:param-err} and indicate the corresponding bootstrap methods.
+
+Denote the subset of observations in $\mathcal{D}_I$ up to and including development year $k$ by
+\begin{equation}
+    \mathcal{B}_k \coloneqq \left \{ C_{ij} \in \mathcal{D}_I \mid j \leq k \right \} \,,
+\end{equation}
+and write
+\begin{equation}
+    \mathcal{D}^O_{I, k} \coloneqq \left \{ C_{ij} \in \mathcal{D}_I \mid j > I + 1 - k \right \}
+\end{equation}
+for its complement. One option would then be to take the conditional expectation of $\widehat{f}_j$ with respect to $\mathcal{B}_{I+1-i}$, leading to the estimate
+\begin{align} \label{eq:uncond-param-err}
+    \condexpp{(\condexpp{C_{iI}}{\mathcal{D}_I} - \widehat{C}_{iI})^2}{\mathcal{B}_{I+1-i}} &= C^2_{i, I+1-i} \condexpp*{\left( \prod_{j=I+1-i}^{I-1}f_j - \prod_{j=I+1-i}^{I-1}\widehat{f}_j \right)^2}{\mathcal{B}_{I+1-i}} \\
+    &= C^2_{i, I+1-i} \left( \condexpp*{\prod_{j=I+1-i}^{I-1}\widehat{f}^2_j}{\mathcal{B}_{I+1-i}} - \prod_{j=I+1-i}^{I-1}f^2_j \right)\,,
+\end{align}
+where we used the fact that the $\widehat{f}_j$ are uncorrelated. This corresponds to averaging over the distribution of $\mathcal{D}^O_{I, k}$, or, expressed in terms of resampling, to generating new observations in the upper right triangle. Borrowing the nomenclature from \cite{wuthrich:chain-ladder-msep}, we call this the \emph{unconditional approach}. Alternatively, we could average each $\widehat{f}_j$ only over the observations after $j$. This is equivalent to fixing the denominator $\sum_{i = 1}^{I - j} C_{ij}$ in the development factor estimator \cref{eq:devfac-estimator} and allowing the numerator $\sum_{i = 1}^{I - j} C_{i, j + 1}$ to vary. Formally, it corresponds to taking the expectation with respect to the probability measure defined on $\mathcal{D}^O_{I, i}$ by
+\begin{equation}
+  \mathbb{P}^*_{\mathcal{D}_I}(\{ dz_{ij} \}_{i + j \leq I + 1}) \coloneqq \prod_{j = 1}^{I - 1} \prod_{i = 1}^{I - j}  \mathbb{P}_{C_{i, j + 1}}(dz_{i, j + 1} \mid C_{ij} = c_{ij}) \,,
+\end{equation}
+yielding the estimate
+\begin{align}
+    \expect[\mathbb{P}^*_{\mathcal{D}_I}]{(\condexpp{C_{iI}}{\mathcal{D}_I} - \widehat{C}_{iI})^2}&= C^2_{iI} \, \expect[\mathbb{P}^*_{\mathcal{D}_I}]{\left( \prod_{j=I+1-i}^{I-1}f_j - \prod_{j=I+1-i}^{I-1}\widehat{f}_j \right)^2} \\ 
+    &= C^2_{i, I+1-i} \left( \expect[\mathbb{P}^*_{\mathcal{D}_I}]{\prod_{j=I+1-i}^{I-1}\widehat{f}^2_j} - \prod_{j=I+1-i}^{I-1}f^2_j \right) \\
+    &= C^2_{i, I+1-i} \left( \prod_{j=I+1-i}^{I-1} \condexpp*{\widehat{f}^2_j}{\mathcal{B}_j} - \prod_{j=I+1-i}^{I-1}f^2_j \right) \,.
+\end{align}
+We refer to this as the \emph{conditional approach}, and it corresponds to a scheme in which only the observations from the next period are resampled to produce a new realisation of the parameter estimate for the current period.
+
+There has been some controversy about which of these approaches should be preferred, leading to the vigorous discussion found in \cite{wuthrich:chain-ladder-msep, mack:msep, gisler:msep, venter:msep}. As we will see in \Cref{sec:mack-results}, difference between the results which they produce is negligeable, and so the question is mainly of theoretical interest. Nevertheless, based on the previous exposition, it seems reasonable to prefer whichever method produces resampled parameter estimates approximating the original $\widehat{f}_j$ most closely. In particular, we note that these posses the following property, the proof of which can be found in \cite{mack:msep}.
+
+\begin{theorem}
+  The squares of two successive development factor estimates in the Mack chain ladder are negatively correlated:
+  \begin{equation}
+    \mathrm{Cov}(\widehat{f}_j, \widehat{f}_{j - 1}) < 0 \,.
+  \end{equation}
+\end{theorem}
+
+In the conditional approach, the resampled parameter estimates are independent by construction, and so they cannot incorporate this covariance structure. In light of this, it would appear that the unconditional scheme has slightly better theoretical properties. As the empirical difference between the two is minimal, however, the conditional version is a reasonable approximation to fall back on if necessary. In the next section, we will see how both approaches give rise to a variety of different bootstrap methods.
+
+\subsection{Bootstrap methodology}
+
+Using the taxonomy from \Cref{subsec:boot-reg}, we now consider in turn the application of the semiparameteric, nonparametric and parametric type to \Cref{model:mack}. For the semiparametric bootstrap, the crucial step is to find a suitable definition for the residuals which ensures that they are interchangeable. Here the view we outlined in \Cref{subsec:mack-intro} of the Mack CL as a series of weighted linear regressions will be useful, because it gives us access to the results of classical regression theory. The distribution-free nature of the model does lead to one additional complication, however: it means that we cannot make precise statements about the distribution of the errors. This can be resolved in one of two ways. A first option would be to extrapolate from homogeneity of the first two moments to homogeneity of the distributions. In that case, the \emph{raw residuals}
+\begin{equation}
+  e_i \coloneqq C_{i, j + 1} - \widehat{C}_{i, j + 1} = C_{i, j + 1} - \widehat{f}_j C_{ij}
+\end{equation}
+are not an option, as these suffer from heteroscedasticity,
+\begin{equation}
+  \condvarr{e_i}{C_{ij}} = \sigma^2_j \left( C_{ij} - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}} \right) \,.
+\end{equation}
+Hence we could address this by dividing out this variance, i.e. we consider the errors
+\begin{equation}
+  \varepsilon_{i, j + 1} \coloneqq \frac{(F_{i, j + 1} - f_j)\sqrt{C_{i, j}}}{\sigma_j \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,,
+\end{equation}
+which satisfy $\expect{\varepsilon_{i, j + 1}} = 0$ and $\var{\varepsilon_{i, j + 1}} = 1$. Provided the sampling variability of $\widehat{f}_j$ and $\widehat{\sigma}_j$ is not too bad (which is not obvious given the small sample sizes we're usually dealing with), the same should hold approximately for the corresponding residuals
+\begin{equation}
+  r_{i, j + 1} \coloneqq \frac{(F_{i, j + 1} - \widehat{f}_j)\sqrt{C_{i, j}}}{\widehat{\sigma}_j \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,,
+\end{equation}
+obtained by substituting these estimators. We emphasize that such additional assumptions should not be made lightly: it is perfectly possible for the error distribution to exhibit heterogeneity in other ways than through its mean and variance (see \cite[114]{efron:intro} for an example where the \emph{percentiles} vary with the value of the regressor).
+
+Alternatively, we could choose to augment our model with some distributional assumptions, allowing us to make more precise statements about errors and residuals. In particular, we will consider the autoregressive Gaussian time series model
+\begin{equation} \label{eq:time-series-model}
+    C_{i, j + 1} = f_j C_{ij} + \sigma_j \, \sqrt{C_{ij}} \, \varepsilon_{i, j}, \qquad \varepsilon \sim \mathcal{N}(0, 1) \,,
+\end{equation}
+which can easily be seen to be compatible with \Cref{model:mack}. Recallling that the hat matrix corresponding to the regression of column $j + 1$ on column $j$ is given by
+\begin{align}
+  \mathbf{H} &= \bm{\mathrm{c}_j} (\bm{\mathrm{c}_j}^T \mathbf{W} \bm{\mathrm{c}_j})^{-1} \bm{\mathrm{c}_j}^T \mathbf{W} \\[4pt]
   &= \frac{1}{\sum_{i = 1}^{I - j} C_{ij}}
   \begin{bmatrix}
     C_{1j} & \dots & C_{1j} \\
@@ -407,86 +427,91 @@ which is precisely the chain ladder estimator. The corresponding hat matrix is g
     C_{I - j, j} & \dots & C_{I - j, j}
   \end{bmatrix} \,,
 \end{align}
-which yields the \emph{modified residuals}
+we know, for example, that the \emph{externally studentised residuals}
 \begin{equation}
-  r_{i, j + 1} \coloneqq \frac{e_i}{\sqrt{1 - \mathbf{H_{ii}}}} \sqrt{\mathbf{W_{ii}}} = \frac{(F_{i, j + 1} - \hat{f}_j)\sqrt{C_{i, j}}}{\sqrt{1 - \frac{C_{ij}}{\sum_{i=1}^{I - j} C_{ij}}}}
+  r_{i, j + 1} \coloneqq \frac{e_i}{\widehat{\sigma}_{j (i)} \sqrt{1 - \mathbf{H}_{ii}}} \sqrt{\mathbf{W}_{ii}} = \frac{(F_{i, j + 1} - \widehat{f}_j)\sqrt{C_{i, j}}}{\widehat{\sigma}_{j (i)} \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,,
 \end{equation}
-which is the same expression we obtained earlier in \cref{eq:alt-resids}. The advantage of this new point of view is that it gives us access to the classical regression theory; in particular, we know (see \cite[267 \psqq]{seber}) that the \emph{externally studentised residuals}
+with $\widehat{\sigma}_{j (i)}$ denoting the leave-$i$-out estimator of $\sigma_j$, follow a $t_{I - j - 1}$ distribution. Another option are the \emph{standardised} or \emph{internally studentised} residuals
 \begin{equation}
-  r_{i, j + 1} \coloneqq \frac{e_i}{\hat{\sigma}_{j (i)} \sqrt{1 - \mathbf{H_{ii}}}} \sqrt{\mathbf{W_{ii}}} = \frac{(F_{i, j + 1} - \hat{f}_j)\sqrt{C_{i, j}}}{\hat{\sigma}_{j (i)} \sqrt{1 - \frac{C_{ij}}{\sum_{i=1}^{I - j} C_{ij}}}} \,,
+  r_{i, j + 1} \coloneqq \frac{(F_{i, j + 1} - \widehat{f}_j)\sqrt{C_{i, j}}}{\widehat{\sigma}_j \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,
 \end{equation}
-where $\hat{\sigma}_{j (i)}$ is the leave-$i$-out estimator for $\sigma_j$, follow a $t$ distribution with $I - j - 1$ degrees of freedom.
+which also share the same distribution, albeit a more complicated one (see \cite[267 \psqq]{seber}). Note that all residuals can be written in the form $\delta(C_{ij}, \hat{C}_{ij})$ for an appropriate $\delta$.
 
-Writing $\delta(C_{ij}, \hat{C}_{ij})$ for any one of these choices (with $\hat{C}_{ij}$ denoting the fitted value at position $(i, j)$), we outline both resampling procedures in \Cref{alg:resampling}.
+For any particular choice of residuals, the algorithm then proceeds in the following way. First, we resample the residuals to obtain pseudo-realisations $r^{(b)}_{ij}$. Under the conditional approach, bootstrapped claims triangle variables are then obtained by inverting the appropriate formula, which can be stated in general as solving
+\begin{equation}
+  \delta
+\end{equation}
 
-\begin{algorithm}
-  \caption{Two resampling methods} \label{alg:resampling}
+\begin{algorithm}[H]
+  \caption{Semiparametric resampling for Mack CL}
   \begin{algorithmic}
-      \Procedure{UnconditionalResample}{$C, r, \hat{f}$}
-          \vspace{2pt}
-              \For{$i \in \{1, \dots, I \}$}
-                  \vspace{2pt}
-                  \State $C^*[i, 1] \gets C[i, 1]$
-                  \vspace{2pt}
-              \EndFor
-              \For{$j \in \{ 2, \dots, I \}$}
-                  \For{$i \in \{ 1, \dots, I + 1 - j\}$}
-                      \vspace{2pt}
-                      \State $\hat{C}[i, j] \gets \hat{f}[j - 1] \cdot C^*[i, j - 1]$
-                      \vspace{2pt}
-                      \State Solve $\delta(y, \hat{C}[i, j]) = r^*[i, j]$ for $y$.
-                      \vspace{2pt}
-                      \State $C^*[i, j] \gets y$
-                      \vspace{2pt}
-                  \EndFor
-              \EndFor
-          \State \Return{$C^*$}
-      \EndProcedure
-      \State
-      \Procedure{ConditionalResample}{$C, r, \hat{f}$}
-      \vspace{2pt}
-          \For{$i \in \{1, \dots, I \}$}
-              \vspace{2pt}
-              \State $C^*[i, 1] \gets C[i, 1]$
-              \vspace{2pt}
-          \EndFor
-          \For{$j \in \{ 2, \dots, I \}$}
-              \For{$i \in \{ 1, \dots, I + 1 - j\}$}
-                  \vspace{2pt}
-                  \State $\hat{C}[i, j] \gets \hat{f}[j - 1] \cdot C[i, j - 1]$
-                  \vspace{2pt}
-                  \State Solve $\delta(y, \hat{C}[i, j]) = r^*[i, j]$ for $y$.
-                  \vspace{2pt}
-                  \State $C^*[i, j] \gets y$
-                  \vspace{2pt}
-              \EndFor
-          \EndFor
-      \State \Return{$C^*$}
-  \EndProcedure
+    \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$, parameter \textsc{conditional} specifying the resampling approach}
+    \For{$b \gets 1, B$}
+      \For{$j \gets 1, I - 1$}
+        \vspace{5pt}
+        \State $r_{i, j + 1} \gets \delta(C_{i, j + 1}, \hat{C}_{i, j + 1})$
+        \vspace{5pt}
+        \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
+        \vspace{5pt}
+        \For{$i \gets 1, I - j$}
+          \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
+          \vspace{5pt}
+        \EndFor
+        \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I-j}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
+      \EndFor
+    \EndFor
+    \State \Return $\{ (\widehat{f}^{(b)}_j, \widehat{\sigma}^{(b)}_j) \mid b = 1, \dots, B \}$
   \end{algorithmic}
 \end{algorithm}
 
-\subsection{Process error}
+The fully nonparametric bootstrap requires us to resample the pairs $(C_{ij}, C_{i, j + 1})$ in the regression of the. We then refit the model to obtain bootstrapped development factor and dispersion parameter estimates. 
 
-Finally, we deal with the remaining component of \cref{eq:msep}, i.e. the process error.
+The only additional remark we must make here, is that it is not possible to apply the unconditional approach to this type of bootstrap => YES WE CAN!!!!
+
+\begin{algorithm}[H]
+  \caption{Pairs resampling for Mack CL (conditional)}
+  \begin{algorithmic}
+    \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$}
+    \For{$b \gets 1, B$}
+      \For{$j \gets 1, I - 1$}
+        \vspace{5pt}
+        \State $\{ (C^{(b)}_{i, j}, C^{(b)}_{i, j + 1}) \mid i = 1, \dots, I - j \} \gets$ \Call{resample}{$\{ (C_{i, j}, C_{i, j + 1}) \mid i = 1, \dots, I - j \}$}
+        \vspace{5pt}
+        \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
+        \vspace{5pt}
+        \For{$i \gets 1, I - j$}
+          \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
+          \vspace{5pt}
+        \EndFor
+        \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I-j}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
+      \EndFor
+    \EndFor
+    \State \Return $\{ (\widehat{f}^{(b)}_j, \widehat{\sigma}^{(b)}_j) \mid b = 1, \dots, B \}$
+  \end{algorithmic}
+\end{algorithm}
+
+
+
+Finally, we discuss how to incorporate the process error in our bootstrap, which will be done in the same way for all the different types.
 
 \begin{equation}
-    \hat{\sigma}^*_j = \frac{1}{I-j}\sum_{i=1}^{I-j} C^*_{ij}\left( F^*_{ij} - \hat{f}^*_j \right)^2
+    \widehat{\sigma}^{(b)}_j = \frac{1}{I-j}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{ij} - \widehat{f}^{(b)}_j \right)^2
 \end{equation}
 
-We then use these to simulate lower pseudo-triangles $(\mathcal{D}^{\mathsf{c}}_I)^* = (C^*_{ij})$, which in turn yield simulated reserve samples
+We then use these to simulate lower pseudo-triangles $(\mathcal{D}^{\mathsf{c}}_I)^{(b)} = (C^{(b)}_{ij})$, which in turn yield simulated reserve samples
 \begin{equation}
-    R^* \coloneqq \sum_{i = 2}^I (C^*_{iI} - C_{i, I + 1 - i}) \,.
+    R^{(b)} \coloneqq \sum_{i = 2}^I (C^{(b)}_{iI} - C_{i, I + 1 - i}) \,.
 \end{equation}
 Notice that this allows us to bypass \eqref{eq:reserve-predictor} completely, altough we still expect that
 \begin{equation}
-    \frac{1}{N} \sum_{k = 1}^N R^*_k \approx \hat{R} \,.
+    \frac{1}{N} \sum_{k = 1}^N R^{(b)}_k \approx \widehat{R} \,.
 \end{equation}
-In view of \eqref{eq:time-series-model}, the most evident way to generate $(\mathcal{D}^{\mathsf{c}}_I)^*$ is to start from the antidiagonal in $\mathcal{D}_I$ and successively sample
+In view of \eqref{eq:time-series-model}, the most evident way to generate $(\mathcal{D}^{\mathsf{c}}_I)^{(b)}$ is to start from the antidiagonal in $\mathcal{D}_I$ and successively sample
 \begin{equation} \label{eq:normal-sampling}
-    C^*_{i, j + 1} \sim \mathcal{N}(\hat{f}^*_j \, C_{ij}, \hat{\sigma}^*_j \, C_{ij}) \,.
+    C^{(b)}_{i, j + 1} \sim \mathcal{N}(\widehat{f}^{(b)}_j \, C_{ij}, \widehat{\sigma}^{(b)}_j \, C_{ij}) \,.
 \end{equation}
-This approach has a major drawback, however: it makes it possible to draw negative samples for the cumulative loss amounts. One way to remedy this would obviously be to simply discard a simulated triangle as soon as it contains a negative value. 
+
+major drawback, however: it makes it possible to draw negative samples for the cumulative loss amounts. One way to remedy this would obviously be to simply discard a simulated triangle as soon as it contains a negative value. 
 
 An alternative is to follow the suggestion given in \cite[238]{england:dist} and subtitute in place of \eqref{eq:normal-sampling} a gamma distribution with the same mean and variance. If we write $C_{ij} \sim \Gamma(\alpha, \beta)$, this means that $\alpha, \beta$ must satisfy
 \begin{equation}
@@ -498,71 +523,248 @@ from which it follows that
 \end{equation}
 This ensures that Mack's assumptions are still valid while avoiding nonsensical outcomes.
 
-\begin{algorithm}
-    \caption{Mack bootstrap}
-    \begin{algorithmic}
-        \Require Loss triangle $\mathcal{D}_I = (C_{ij})_{1 \leq i, j \leq I}$, number of iterations $N$, residuals $(\varepsilon_{ij})_{1 \leq i, j \leq I - 1}$
-        \vspace{2pt}
-        \Ensure{Simulated reserve sample $\hat{R}^*_1, \dots, \hat{R}^*_N$}
-        \vspace{2pt}
-        \For{$l \gets 1, N$}
-            \For{$k \gets 2, I$}
-                \For{$j \gets I + 1 - k, \, I - 1$}
-                    \For{$i \gets 1, \, I + 1 - j$}
-                        \vspace{4pt}
-                        \State $\displaystyle F^*_{ij} \gets \hat{f}_j + \frac{\hat{\sigma}_j}{\sqrt{C_{ij}}} \varepsilon^*_{ij}$
-                        \vspace{4pt}
-                    \EndFor
-                    \vspace{4pt}
-                        \State $\displaystyle \hat{f}^*_j \gets \frac{\sum_{i = 1}^{I - j}F^*_{ij} \, C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}$
-                    \vspace{4pt}
-                \EndFor
-                \vspace{3pt}
-                \State $\hat{C}_{i, I} \gets \prod_{j = I - i}^{I - 1} \hat{f}_j C_{i, I + 1 - i} \,,$
-                \vspace{2pt}
-                \State $\hat{R}^*_{i, l} \gets \hat{C}_{i, I} - C_{i, I + 1 - i}$
-                \vspace{3pt}
-            \EndFor
-            \vspace{2pt}
-            \State $\hat{R}^*_l \gets \sum_{i = 2}^I \hat{R}^*_{i, l}$
-            \vspace{2pt}
-        \EndFor
-    \end{algorithmic}
-\end{algorithm}
 
-\subsection{Numerical implementation and results}
+\subsection{Numerical implementation and results} \label{sec:mack-results}
 
 % We begin by breaking down the MSEP by breaking it down in terms of the individual accident years:
 % \begin{align}
-%     \condexpp*{(\hat{R} - R)^2}{\mathcal{D}_I} &=
-%         \condexpp*{\left( \left \{ \sum_{i=2}^I \hat{C}_{iI} - C_{i, I + 1 - i} \right \} - \left \{ \sum_{i=2}^I C_{iI} - C_{i, I + 1 - i} \right \} \right) ^2}{\mathcal{D}_I} \\
+%     \condexpp*{(\widehat{R} - R)^2}{\mathcal{D}_I} &=
+%         \condexpp*{\left( \left \{ \sum_{i=2}^I \widehat{C}_{iI} - C_{i, I + 1 - i} \right \} - \left \{ \sum_{i=2}^I C_{iI} - C_{i, I + 1 - i} \right \} \right) ^2}{\mathcal{D}_I} \\
 %     %
-%     &= \condexpp*{\left( \sum_{i=2}^I \hat{C}_{iI} - C_{iI} \right)^2}{\mathcal{D}_I} \\
+%     &= \condexpp*{\left( \sum_{i=2}^I \widehat{C}_{iI} - C_{iI} \right)^2}{\mathcal{D}_I} \\
 %     %
 %     \label{eq:msep-decomposition}
-%     &= \sum_{i=2}^I \underbrace{\condexpp*{(\hat{C}_{iI} - C_{iI})^2}{\mathcal{D}_I}}_{= \underset{C_{iI} \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\hat{C}_{iI})} + \sum_{\substack{2 \leq i, j \leq I \\ i \neq j}} \condexpp*{(\hat{C}_{iI} - C_{iI})(\hat{C}_{jI} - C_{jI})}{\mathcal{D}_I} \,
+%     &= \sum_{i=2}^I \underbrace{\condexpp*{(\widehat{C}_{iI} - C_{iI})^2}{\mathcal{D}_I}}_{= \underset{C_{iI} \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\widehat{C}_{iI})} + \sum_{\substack{2 \leq i, j \leq I \\ i \neq j}} \condexpp*{(\widehat{C}_{iI} - C_{iI})(\widehat{C}_{jI} - C_{jI})}{\mathcal{D}_I} \,
 % \end{align}
 % This shows that the total uncertainty is composed of the parameter and process errors for the different cohorts together with a number of cross-terms. 
 
-\section{Poisson GLM}
+We now move on to the second model which we consider in this chapter. 
+
+\section{Overdispersed Poisson model}
+
+The (overdispersed) Poisson model (ODP), proposed by Renshaw and Verrall in \cite{renshaw}, belongs to the family of so-called \emph{generalised linear models} (GLM). In contrast to the Mack CL, it describes the incremental claims $X_{ij}$. As the concept of overdispersion is explained in \Cref{subsec:glm}, we only state the assumptions of the ordinary variant at this point.
 
 \begin{model}[Poisson GLM] \leavevmode \label{model:poisson}
-    \begin{enumerate}
-        \item The incremental claims are independent from each other.
-        \item There exist parameters $c$, $\alpha_2, \dots, \alpha_I$ and $\beta_2, \dots, \beta_I$ such that
-        \begin{equation}
-            \log(\expect{X_{ij}}) = c + \alpha_i + \beta_j \,.
-        \end{equation}
-        \item The incremental claims follow a Poisson distribution with $\mu_{ij} = \expect{X_{ij}}$:
-        \begin{equation}
-            X_{ij} \sim \mathrm{Pois}(e^{c + \alpha_i + \beta_j}) \,.
-        \end{equation}
-    \end{enumerate}
+  \begin{enumerate}
+      \item \label{assump:poisson1}
+      The incremental claims are independent from each other.
+      \item \label{assump:poisson2}
+      There exist parameters $c$, $a_1, \dots, a_I$ and $b_1, \dots, b_I$ such that
+      \begin{equation} \label{eq:linear-predictor-poisson}
+          \log(\expect{X_{ij}}) = c + a_i + b_j \,,
+      \end{equation}
+      with $a_1 = b_1 = 0$.
+      \item \label{assump:poisson3}
+      The incremental claims follow a Poisson distribution with $\mu_{ij} = \expect{X_{ij}}$:
+      \begin{equation}
+          X_{ij} \sim \mathrm{Pois}(e^{c + a_i + b_j}) \,.
+      \end{equation}
+  \end{enumerate}
 \end{model}
+
+The condition $a_1 = b_1 = 0$ is necessary to obtain an identifiable model. Without it, any set of parameters $c, a_1, \dots, a_I, b_1, \dots, b_I$ satisfying the assumptions would yield an infinite number of alternatives $c + a_0 + b_0, a_1 - a_0, \dots, a_I - a_0, b_1 - b_0, \dots, b_I - b_0$ for $a_0, b_0 \in \mathbb{R}$. We can therefore see that we have two superfluous degrees of freedom, which we can get rid of by imposing two conditions on the parameters. 
+
+By defining $\xi_i \coloneqq e^{c + a_i}$ and $\gamma_j \coloneqq e^{b_j}$, we can obtain a different parametrisation of the model with a multiplicative structure for the mean,
+\begin{equation}
+  \expect{X_{ij}} = \xi_i \gamma_j \,,
+\end{equation}
+which is often preferred to the previous one for reasons of interpretability. Indeed, it is clear that the multiplicative form has one fewer degree of freedom than the linear one, and if we remove it by imposing the constraint
+\begin{equation}
+  \sum_{j = 1}^I \gamma_j = 1
+\end{equation}
+then we can view the $\xi_i$ as expected ultimate claim amounts, and the $\gamma_j$ as the expected development pattern.
+
+As mentioned in the introduction, stochastic claims reserving models have to reproduce the chain ladder point predictions in order to be acceptable to practitioners. While less obvious than for the Mack CL, it can be shown that the Poisson model also satisfies this requirement (see \cite[Lemma 2.16]{wuthrich:stochastic-reserving}).
+
+In the next section, we will give a general overview.
+
+\subsection{Generalised linear models} \label{subsec:glm}
+
+GLMs were first conceived by Nelder and Wedderburn in \cite{nelder} as a way of unifying the many disparate generalisations of linear regression with Gaussian errors which were then in existence. These sought to extend the classical model by allowing the use of different functional forms for the conditional mean and different distributions for the response, thus making it suited to modelling counts data (Poisson regression) or the probability of binary events (logistic regression), among others. For a set of covariates $X_1, \dots, X_p$ and a response variable $Y$, a GLM consists of three parts:
+\begin{enumerate}
+  \item The \emph{random component}, a distribution for response $Y$ belonging to the so-called \emph{exponential dispersion model} family (EDM), which consists of all probability distributions whose density (with respect either to the Lebesgue or counting measure) has the form
+  \begin{equation} \label{eq:exp-disp-fam}
+    p(y \mid \theta, \phi) = \exp \left \{ \frac{y \theta - b(\theta)}{a(\phi)} + c(y, \phi) \right \} \,,
+  \end{equation}
+  where $a$, $b$ and $c$ are known functions, and $b$ is at least twice differentiable. We call $\theta$ the \emph{canonical parameter} of the distribution and $\phi$ the \emph{dispersion parameter}.
+  \item The \emph{systematic component}, a predictor $\eta \coloneqq \bm{\mathrm{x}}^T \bm{\beta}$ which is a linear function of the covariates.
+  \item A monotonic differentiable link function $g: \mathbb{R} \rightarrow \mathbb{R}$ giving the relation between the conditional expectation and the linear predictor,
+  \begin{equation}
+    \mu \coloneqq \condexpp{Y}{X_1, \dots, X_p} = g^{-1}(\eta) \,.
+  \end{equation}
+\end{enumerate}
+The Gaussian distribution $\mathcal{N}(\mu, \sigma^2)$ can be seen to belong to the EDM family by rewriting its density as
+\begin{align}
+  \frac{1}{\sqrt{2 \pi} \sigma} \exp \left \{ -\frac{1}{2} \left( \frac{y - \mu}{\sigma} \right)^2\right \} &= \exp \left \{ -\frac{y^2}{2 \sigma^2} + \frac{y \mu}{\sigma^2} - \frac{\mu^2}{2 \sigma^2} - \log(\sqrt{2 \pi} \sigma) \right \} \\
+  &= \exp \left \{ \frac{y \mu - \mu^2 / 2}{\sigma^2} - \frac{y^2}{2 \sigma^2} - \log(\sqrt{2 \pi} \sigma) \right \} \,,
+\end{align}
+which is of the form \cref{eq:exp-disp-fam} with $\theta = \mu$, $b(\theta) = \frac{\theta^2}{2}$, $\phi = \sigma^2$, $a(\phi) = \phi$ and $c(y, \sigma) = -\frac{y^2}{2 \sigma^2} - \log(\sqrt{2 \pi} \sigma)$. Thus, the familiar normal linear model can be obtained from the GLM framework with response distribution $\mathcal{N}(\mu, \sigma^2)$ and identity link $g(\mu) = \mu$.
+
+The EDM family has a number of properties which greatly facilitate the computations involved in estimation. Recall from likelihood theory that $l(\theta \mid y, \phi) \coloneqq \log p(y \mid \theta, \phi)$ satisfies
+\begin{equation} \label{eq:exp-var-likelihood}
+  \expect{\frac{\partial l(\theta \mid Y)}{\partial \theta}} = 0 \,, \qquad \var{\frac{\partial l(\theta \mid Y)}{\partial \theta}} = -\expect{\frac{\partial^2 l(\theta \mid Y)}{\theta^2}} \,,
+\end{equation}
+where $\frac{\partial l(\theta \mid Y)}{\partial \theta}$ is known as the \emph{score function}. Using \cref{eq:exp-disp-fam}, we then find that
+\begin{equation}
+  \expect{\frac{Y - b'(\theta)}{a(\phi)}} = 0 \,, \qquad \var{\frac{Y - b'(\theta)}{a(\phi)}} = -\expect{\frac{-b''(\theta)}{a(\phi)}} \,,
+\end{equation}
+from which we obtain the elegant relations
+\begin{equation}
+  \mu = b'(\theta) \,, \qquad \var{Y} = a(\phi) b''(\theta) \,.
+\end{equation}
+Observe that this implies that $\frac{d \mu}{d \theta} = b''(\theta) > 0$ (because the variance is always positive), which means that $\theta \mapsto \mu(\theta)$ is one-to-one and therefore invertible. In particular, we can always write the likelihood as function of the mean. The function $V(\mu) \coloneqq b''((b')^{-1}(\mu))$ is called the \emph{variance function} and determines how the scale of the response varies as a function of its mean. 
+
+Special care has to be taken with the parameter $\phi$, as it occupies a rather awkward position in GLM theory. The trouble is that we want to incorporate two-parameter distributions, such as the normal and gamma distribution, into the GLM framework which can fundamentally only handle a single parameter gracefully (the more flexible framework of \emph{vector GLMs} is an attempt to remedy this; see \cite[Chapter 2]{yee} for a general discussion). The dispersion is therefore regelated to the role of nuisance parameter and subjected to severe (and often unrealistic) constraints. Basically, we $\phi$ to be the constant as a function of the covariates, but this would preclude certain special cases such as binomial regression with a different number of trials for each observation in the sample. To take this into account, we allow the function $a$ in the denominator of \cref{eq:exp-disp-fam} to vary across different sample responses as $a_i(\phi) = \phi / w_i$, where $w_i$ is a known weight. Not a very elegant solution, perhaps, but one which is foisted upon us by the limitations of the theory. The parameter $\phi$ itself is then considered as known, and estimated outside of the GLM framework, most commonly using the Pearson statistic
+\begin{equation}
+  \widehat{\phi} \coloneqq \frac{1}{n - p} \sum_{i = 1}^N \frac{(Y_i - \widehat{\mu_i})^2}{V(\widehat{\mu_i})} \,.
+\end{equation}
+
+Given a sample $(\bm{\mathrm{x_1}}, Y_1), \dots, (\bm{\mathrm{x_N}}, Y_N)$, the standard way to fit a GLM is by means of maximum likelihood estimation (MLE). The joint log-likelihood of the sample is given by
+\begin{equation} \label{eq:joint-log-likelihood}
+  l(\bm{\beta} \mid \mathbf{y}, \phi) = \sum_{i = 1}^N \frac{y_i \theta_i - b(\theta_i)}{a_i(\phi)} + c(y_i, \phi) \,,
+\end{equation}
+which we must differentiate with respect to $\beta_j$ to obtain the likelihood equations. An application of the chain rule gives us 
+\begin{align}
+  \frac{\partial l(\bm{\beta} \mid \mathbf{y}, \phi)}{\partial \beta_j} &= \sum_{i = 1}^N \frac{\partial l(\bm{\beta} \mid y_i, \phi)}{\partial \theta_i} \frac{\partial \theta_i}{\partial \mu_i} \frac{\partial \mu_i}{\partial \eta_i} \frac{\partial \eta_i}{\partial \beta_j} \\
+  &= \sum_{i = 1}^N \frac{y_i - b'_i(\theta)}{a_i(\phi)} \frac{1}{b_i''(\theta_i)} \frac{\partial \mu_i}{\partial \eta_i} x_{ij} \\
+  &= \sum_{i = 1}^N \frac{y_i - \mu_i}{\var{Y_i}} \frac{\partial \mu_i}{\partial \eta_i} x_{ij} \,, \label{eq:grad-likelihood}
+\end{align}
+and setting this equal to $0$ yields a system of $p$ (usually nonlinear) equations. It is generally impossible to solve these analytically, and so we must resort to numerical methods. In particular, we use a modified version of the Newton-Raphson algorithm known as \emph{Fisher scoring}, which replaces the negative Hessian of the log-likelihood, called the \emph{observed information}, by its expectation
+\begin{equation}
+  \mathcal{I}_{jk} \coloneqq \expect{-\frac{\partial^2 l(\bm{\beta} \mid \mathbf{y}, \phi)}{\partial \beta_j \partial \beta_k}} \,,
+\end{equation}
+which is known as the \emph{Fisher information matrix}. Thus, starting from an initial guess $\bm{\beta}^{(0)}$ for the parameters, we compute a sequence of approximations, where each new value obtained from the previous one via
+\begin{equation} \label{eq:fischer-scoring}
+  \bm{\beta}^{(k + 1)} = \bm{\beta}^{(k)} + \mathcal{I}(\bm{\beta}^{(k)})^{-1} \nabla l(\bm{\beta} \mid \mathbf{y}, \phi) \,.
+\end{equation}
+Similarly to \cref{eq:exp-var-likelihood}, it can be shown that
+\begin{equation}
+  \expect{\frac{\partial^2 l(\bm{\beta} \mid \mathbf{y}, \phi)}{\partial \bm{\beta} \partial \bm{\beta}^T}} = -\var{\nabla l(\bm{\beta} \mid \mathbf{y}, \phi) \nabla l(\bm{\beta} \mid \mathbf{y}, \phi)^T} < 0 \,,
+\end{equation}
+from which we also see that the log-likelihood is concave, and will therefore have a global maximum. Using the fact that the $Y_i$ are independent, so that $\expect{(Y_i - \mu_i)(Y_l - \mu_l)} = 0$ for $i \neq l$, we then obtain
+\begin{align}
+  I_{jk} &= \expect{\left( \sum_{i = 1}^N \frac{Y_i - \mu_i}{\var{Y_i}} \frac{\partial \mu_i}{\partial \eta_i} x_{ij}\right) \left( \sum_{l = 1}^N \frac{Y_l - \mu_l}{\var{Y_l}} \frac{\partial \mu_l}{\partial \eta_l} x_{lk} \right)} \\
+  &= \sum_{i = 1}^N \left( \frac{\partial \mu_i}{\partial \eta_i} \right)^2 \frac{\expect{(Y_i - \mu_i)^2}}{\var{Y_i}^2} x_{ij} x_{ik} \\
+  &= \sum_{i = 1}^N \left( \frac{\partial \mu_i}{\partial \eta_i} \right)^2 \frac{x_{ij} x_{ik}}{\var{Y_i}} \\
+  & = \bm{\mathrm{x}_j}^T \mathbf{W} \bm{\mathrm{x}_k} \label{eq:information-comps}
+\end{align}
+where $\mathbf{W}$ is a diagonal matrix with
+\begin{equation} \label{eq:irls-weight-mat}
+  \mathbf{W}_{ii} = \left( \frac{\partial \mu_i}{\partial \eta_i} \right)^2 \frac{1}{\var{Y_i}} \,.
+\end{equation}
+Hence we have $\mathcal{I} = \mathbf{X}^T \mathbf{W} \mathbf{X}$ and we see from \cref{eq:grad-likelihood} that
+\begin{equation} \label{eq:irls-grad}
+  \nabla l(\bm{\beta} \mid \mathbf{y}, \phi) = \mathbf{X}^T \mathbf{W} \mathbf{\tilde{z}}
+\end{equation}
+with $\mathbf{\tilde{z}}_i = (y_i - \mu_i) \left( \frac{\partial \eta_i}{\partial \mu_i} \right)$. Multiplying both sides of \ref{eq:fischer-scoring} by $\mathcal{I}(\bm{\beta}^{(k)})$ and using \cref{eq:irls-weight-mat,eq:irls-grad,eq:information-comps}, we finally obtain
+\begin{align}
+  \mathbf{X}^T \mathbf{W} \mathbf{X} \bm{\beta}^{(k + 1)} =  \mathbf{X}^T \mathbf{W} \mathbf{z}
+\end{align}
+with $\mathbf{z} = \mathbf{X} \bm{\beta}^{(k)} + \mathbf{\tilde{z}}$ and all quantities evaluated at the current estimate $\bm{\beta}^{(k)}$ of the parameter vector. In other words, the Fisher scoring is equivalent to a series of weighted least squares problems, where the new parameter estimates are obtained by regressing the vector $\mathbf{z}$ on the original covariates $\bm{\mathrm{x}_1}, \dots, \bm{\mathrm{x}_N}$ using weight matrix $\mathbf{W}$, and $\mathbf{z}$ and $\mathbf{W}$ are determined by the current estimate $\bm{\beta}^{(k)}$---hence why the algorithm is called \emph{iteratively reweighted least squares} (IRWLS).
+
+This procedure can be specialised to the particular case of \Cref{model:poisson} in the following way. First, in order to obtain the matrix-vector form used above, we must flatten the tabular response (using, for example, the colexicographical ordering $(i, j) \mapsto j I + i$, i.e.\ column-major order). If we define the parameter vector
+\begin{equation}
+  \bm{\beta} \coloneqq \begin{bmatrix} c & a_2 & \cdots & a_I & b_2 & \cdots & b_I \end{bmatrix}^T \,,
+\end{equation}
+then \cref{eq:linear-predictor-poisson} can be rewritten as
+\begin{equation}
+  \log(\mu_{ij}) = \mu + a_i + b_j = (\bm{\mathrm{e}_1} + \bm{\mathrm{e}_i} + \bm{\mathrm{e}_{I + j - 1}})^T \bm{\beta}
+\end{equation}
+where $\bm{\mathrm{e}_k}$ denotes the $k$th standard basis vector in $\mathbb{R}^{(2I - 1)}$. Hence we see that the covariates are binary vectors of length $2I - 1$, with the position of the nonzero entries determined by the indices of the observation in the triangle, forming the rows of a very sparse design matrix. As the Poisson model uses the log link, we have $\mu_{ij} = e^{\eta_{ij}}$ and
+\begin{equation}
+  \frac{\partial \mu_{ij}}{\partial \eta_{ij}} = e^{\eta_{ij}} \,,
+\end{equation}
+from which, using \cref{eq:irls-weight-mat}, we finally obtain
+\begin{equation}
+  \mathbf{W}_{ii} = \frac{1}{e^{\eta_{ij}}} (e^{\eta_{ij}})^2 = e^{\eta_{ij}} \,,
+\end{equation}
+giving us all the required components of the IRWLS algorithm.
+
+We have assumed up to this point that a GLM requires us to specify an exact distribution for the response variable. In many practical situations, however, this is either infeasible or leads to unrealistic models. An example which is particularly common with count data is a phenomenon known as \emph{overdispersion}, where the variability of the data is greater than would be suggested by e.g.\ the Poisson or binomial distribution. Recall that the variance of a $\mathrm{Pois}(\lambda)$ distribution is $\lambda$, and that of a $B(n, p)$ distribution is $np(1 - p)$; in both cases, it is fully determined by the mean, and we have no degree of freedom with which to adjust it in order to obtain a better fit to the data, as would be the case with the normal distribution, for example.
+
+To remedy this, an extension can be made to the GLM framework, which only relies on the specification of a relation between mean and variance. Recall from above that the MLE works by setting the score equal to $0$. If we write the likelihood in terms of $\bm{\mu}$, this will have components
+\begin{equation} \label{eq:lhood-mean-param}
+  \frac{\partial l(\bm{\mu} \mid \mathbf{y}, \phi)}{\partial \mu_j} = \frac{y_j - \mu_j}{\phi V(\mu_j)} \,,
+\end{equation}
+and is therefore completely determined by $V(\cdot)$. Suppose now, conversely, that we start from $V(\cdot)$. We could then define functions
+\begin{equation}
+  Q_i(\mu \mid y_i, \phi) \coloneqq \int_{y_i}^{\mu} \frac{y_i - u}{\phi V(u)} \, du \,,
+\end{equation}
+and estimate $\bm{\mu}$ (and therefore $\bm{\beta}$) by minimising
+\begin{equation}
+  Q(\bm{\mu} \mid \mathbf{y}, \phi) \coloneqq \sum_{i = 1}^N Q_i(\mu_i \mid y_i, \phi) \,.
+\end{equation}
+It must be stressed that $Q$ has no probabilistic significance: it does not, in general, correspond to the log-likelihood of any distribution. Rather, it functions a device to obtain estimates of the desired parameters, fulfilling in this a similar role to that of the log-likelihood, which is why we refer to it as a \emph{quasi-likelihood function}\sepfootnote{fn:quasi-likelihood}. It is usual to identify quasi-likelihood models derived from specific distributions (i.e.\ using the corresponding variance function) by prefixing 'quasi' to the name of said distribution, e.g.\ quasi-Poisson or quasi-binomial. The derived quasi-model yields the same parameter estimates as the classical GLM if the data follow the original distribution.
+
+We are now finally in a position to describe the overdispersed variant of the Poisson GLM.
+
+\begin{model}[Overdispersed quasi-Poisson] \leavevmode \label{model:odp}
+  \begin{enumerate}
+      \item The incremental claims are independent from each other.
+      \item There exist parameters $c$, $a_1, \dots, a_I$ and $b_1, \dots, b_I$ such that
+      \begin{equation}
+          \log(\mu_{ij}) = c + a_i + b_j \,,
+      \end{equation}
+      with $\mu_{ij} \coloneqq \expect{X_{ij}}$ and $a_1 = b_1 = 0$.
+      \item There exists a parameter $\phi$ such that
+      \begin{equation}
+          \var{X_{ij}} = \phi \mu_{ij} \,.
+      \end{equation}
+  \end{enumerate}
+\end{model}
+
+When the data consists entirely of positive integers (e.g. a triangle of claims counts), it follows from the previous remark that this model yields the same predictions as the chain ladder. More generally, the CL results will be reproduced as long as the additional condition
+\begin{equation}
+  \sum_{i = 1}^I X_{ij} \geq 0
+\end{equation}
+is satisfied for $j \in \{ 1, \dots, I \}$ (see \cite[Section 2]{renshaw}). The quasi-Poisson is therefore robust to the presence of a limited number of negative claim amounts, which is sometimes observed in practice. Moreover, it lifts the unrealistic restriction that the response values must be integers, and gives us a way of accounting for overdispersion, which is a feature of many claims triangles. The absence of a likelihood also poses some difficulties, however, notably in the area of inference and diagnostics.
 
 \subsection{Bootstrap methodology}
 
+Developing a bootstrap procedure for the Poisson and quasi-Poisson models is in some respects easier than for the Mack CL. The absence of a recursive structure makes it more straightforward to reason about resampling. Furthermore, bootstrap methods for claims triangle GLMs have seen more discussion in the literature (see e.g.\ \cite{pinheiro} and \cite{england:dist}), and so we can draw upon this material for our exposition. As with Mack's model, we shall take \Cref{sec:boot} as starting point. Recall that we made a distinction there between nonparametric, semiparametric and parametric approaches to bootstrapping, depending on the assumptions which they make. We will consider each of these in turn, and see how they can be applied to the model under consideration.
+
+For the nonparameteric bootstrap, the essential step is to find a satisfactory definition for the residuals such that they are i.i.d. Things are more complicated here than for Mack's model, as there generally exists no natural seperation of the response into mean and additive error for a non-Gaussian response (this problem was recognised early on in the literature on GLM bootstrapping, see \cite{moulton}). Consequently, a multitude of different residual types are available. We will consider three of these in particular.
+
+The \emph{Pearson residuals}
+\begin{equation} \label{eq:pearson-resid}
+  r_{ij} \coloneqq \frac{X_{ij} - \widehat{\mu}_{ij}}{\sqrt{V(\widehat{\mu}_{ij})}} \,,
+\end{equation}
+attempt to deal with the inherent heteroscedasticity of the GLM response by dividing out the component of the variance which is specific to each observation. In this, they resemble the standardised residuals in the context of weighted linear regression. Extending this analogy further, we can adjust \cref{eq:pearson-resid} for the leverage of the observation, i.e.
+\begin{equation}
+  \tilde{r}_{ij} \coloneqq \frac{X_{ij} - \widehat{\mu}_{ij}}{\sqrt{V(\widehat{\mu}_{ij}) (1 - h_{ij})}} \,,
+\end{equation}
+where $h_{ij}$ is the appropriate diagonal element in the hat matrix
+\begin{equation}
+  \mathbf{H} = \mathbf{X} (\mathbf{XWX})^{-1} \mathbf{X}^T \mathbf{W} \mathbf{z}
+\end{equation}
+corresponding to the final iteration of the IRWLS algorithm.
+
+Another kind of residuals are based on a goodness-of-fit measure for GLMs known as the \emph{deviance}. It can be derived from \cref{eq:lhood-mean-param} by noticing that the mean parametrisation of the log-likelihood is maximised at $\bm{\mu} = \mathbf{y}$, so that the quantity
+\begin{equation}
+  D(\mathbf{y}, \bm{\mu}) \coloneqq \sum_{i = 1}^N d(y_i, \mu_i) \coloneqq 2 \sum_{i = 1}^N (l(y_i \mid y_i) - l(\widehat{\mu}_i \mid y_i)) 
+\end{equation}
+expresses the departure of our model from a perfect fit. The functions $D(\mathbf{y}, \bm{\mu})$ and $d(y_i, \mu_i)$ are called the \emph{total} and \emph{unit deviance}, respectively. The \emph{deviance residuals} are then defined as
+\begin{equation}
+  r_{ij} \coloneqq \mathrm{sign}(x_{ij} - \mu_{ij}) \sqrt{d(x_{ij}, \mu_{ij})} \,.
+\end{equation}
+
+Finally, we consider a third type known as \emph{quantile residuals} (see \cite{dunn} for a general discussion), which are most easily explained for continuous response distributions. In that case, an elementary fact from probability theory states that
+\begin{equation}
+  F(Y \mid \mu, \phi) \sim U(0, 1) \,,
+\end{equation}
+and it should therefore follow that the empirical distribution of the transformed sample
+\begin{equation}
+  r_i \coloneqq F(Y_i \mid \widehat{\mu_i}, \widehat{\phi})
+\end{equation}
+is approximately uniform, provided the sampling variability of $\bm{\widehat{\mu}}$ and $\widehat{\phi}$ is not too severe. If $F(\cdot \mid \bm{\mu}, \phi)$ is discrete, the definition is amended as follows: for every observation $y_i$, set
+\begin{equation}
+  a_i \coloneqq \lim_{y \uparrow y_i} F(y \mid \widehat{\mu_i}, \widehat{\phi}), \qquad b_i \coloneqq F(y_i \mid \widehat{\mu_i}, \widehat{\phi}) \,,
+\end{equation}
+and define the $r_i$ as mutually independent random variables which are uniformly distributed on $(a_i, b_i]$.
+
 \subsection{Numerical implementation and results}
+
+% \footnote{Specifically, we require that the derivative with respect to the parameter exists and is dominated by an integrable function. For a proof that the EDM family satisfies this condition, see \cite[Theorem 2.7.1]{lehmann}.}
 
 \backmatter%
 \chapter{Conclusion}

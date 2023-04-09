@@ -4,10 +4,10 @@
 #include <Rcpp.h>
 #include <stdlib.h>
 
-inline Rcpp::NumericMatrix na2zero(Rcpp::NumericMatrix triangle) {
+inline Rcpp::NumericMatrix na_to_zero(Rcpp::NumericMatrix triangle) {
   int n_dev = triangle.rows();
-  for (int i=0; i<n_dev; i++) {
-    for (int j=0; j<n_dev; j++) {
+  for (int i = 0; i<n_dev; i++) {
+    for (int j = 0; j<n_dev; j++) {
       if (triangle(i, j) == Rcpp::NA) triangle(i, j) = 0;
     }
   }

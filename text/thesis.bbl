@@ -16,7 +16,34 @@
   {}
 \endgroup
 
-\datalist[entry]{nty/global//global/global}
+\datalist[entry]{none/global//global/global}
+  \entry{efron:intro}{book}{}
+    \name{author}{2}{}{%
+      {{hash=EB}{%
+         family={Efron},
+         familyi={E\bibinitperiod},
+         given={Bradley},
+         giveni={B\bibinitperiod},
+      }}%
+      {{hash=TR}{%
+         family={Tibshirani},
+         familyi={T\bibinitperiod},
+         given={Robert},
+         giveni={R\bibinitperiod},
+      }}%
+    }
+    \list{publisher}{1}{%
+      {Boca Raton, Fla Chapman \& Hall/Crc}%
+    }
+    \strng{namehash}{EBTR1}
+    \strng{fullhash}{EBTR1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{isbn}{9780412042317}
+    \field{title}{An introduction to the bootstrap}
+    \field{year}{1998}
+  \endentry
+
   \entry{davison}{book}{}
     \name{author}{2}{}{%
       {{hash=DAC}{%
@@ -39,39 +66,79 @@
     \strng{fullhash}{DACHDV1}
     \field{labelnamesource}{author}
     \field{labeltitlesource}{title}
-    \field{sortinit}{D}
-    \field{sortinithash}{D}
     \field{title}{Bootstrap methods and their application}
     \field{year}{1997}
   \endentry
 
-  \entry{efron}{book}{}
-    \name{author}{2}{}{%
-      {{hash=EB}{%
-         family={Efron},
-         familyi={E\bibinitperiod},
-         given={Bradley},
-         giveni={B\bibinitperiod},
+  \entry{mack:chain-ladder}{article}{}
+    \name{author}{1}{}{%
+      {{hash=MT}{%
+         family={Mack},
+         familyi={M\bibinitperiod},
+         given={Thomas},
+         giveni={T\bibinitperiod},
       }}%
-      {{hash=TR}{%
-         family={Tibshirani},
-         familyi={T\bibinitperiod},
-         given={Robert},
-         giveni={R\bibinitperiod},
+    }
+    \strng{namehash}{MT1}
+    \strng{fullhash}{MT1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{number}{2}
+    \field{title}{Distribution-free Calculation of the Standard Error of Chain
+  Ladder Reserve Estimates}
+    \field{volume}{23}
+    \field{journaltitle}{Astin Bulletin}
+    \field{year}{1993}
+  \endentry
+
+  \entry{wuthrich:stochastic-reserving}{book}{}
+    \name{author}{2}{}{%
+      {{hash=WMV}{%
+         family={Wüthrich},
+         familyi={W\bibinitperiod},
+         given={Mario\bibnamedelima V.},
+         giveni={M\bibinitperiod\bibinitdelim V\bibinitperiod},
+      }}%
+      {{hash=MM}{%
+         family={Merz},
+         familyi={M\bibinitperiod},
+         given={Michael},
+         giveni={M\bibinitperiod},
       }}%
     }
     \list{publisher}{1}{%
-      {Boca Raton, Fla Chapman \& Hall/Crc}%
+      {John Wiley \& Sons}%
     }
-    \strng{namehash}{EBTR1}
-    \strng{fullhash}{EBTR1}
+    \strng{namehash}{WMVMM1}
+    \strng{fullhash}{WMVMM1}
     \field{labelnamesource}{author}
     \field{labeltitlesource}{title}
-    \field{sortinit}{E}
-    \field{sortinithash}{E}
-    \field{isbn}{9780412042317}
-    \field{title}{An introduction to the bootstrap}
-    \field{year}{1998}
+    \field{title}{Stochastic Claims Reserving Methods in Insurance}
+    \field{year}{2008}
+  \endentry
+
+  \entry{hayashi}{book}{}
+    \name{author}{1}{}{%
+      {{hash=HF}{%
+         family={Hayashi},
+         familyi={H\bibinitperiod},
+         given={Fumio},
+         giveni={F\bibinitperiod},
+      }}%
+    }
+    \list{publisher}{1}{%
+      {Princeton University Press}%
+    }
+    \strng{namehash}{HF1}
+    \strng{fullhash}{HF1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{isbn}{9780691010182}
+    \field{title}{Econometrics}
+    \list{location}{1}{%
+      {Princeton, Nj ; Oxford}%
+    }
+    \field{year}{2000}
   \endentry
 
   \entry{england:dist}{article}{}
@@ -93,67 +160,12 @@
     \strng{fullhash}{EPDVRJ1}
     \field{labelnamesource}{author}
     \field{labeltitlesource}{title}
-    \field{sortinit}{E}
-    \field{sortinithash}{E}
     \field{number}{1}
     \field{title}{Predictive Distributions of Outstanding Liabilities in
   General Insurance}
     \field{volume}{1}
     \field{journaltitle}{Annals of Actuarial Science}
     \field{year}{2006}
-  \endentry
-
-  \entry{gisler:msep}{article}{}
-    \name{author}{1}{}{%
-      {{hash=GA}{%
-         family={Gisler},
-         familyi={G\bibinitperiod},
-         given={Alois},
-         giveni={A\bibinitperiod},
-      }}%
-    }
-    \list{publisher}{1}{%
-      {Cambridge University Press}%
-    }
-    \strng{namehash}{GA1}
-    \strng{fullhash}{GA1}
-    \field{labelnamesource}{author}
-    \field{labeltitlesource}{title}
-    \field{sortinit}{G}
-    \field{sortinithash}{G}
-    \verb{doi}
-    \verb 10.1017/S0515036100014653
-    \endverb
-    \field{number}{2}
-    \field{pages}{554–565}
-    \field{title}{The Estimation Error in the Chain-Ladder Reserving Method: A
-  Bayesian Approach}
-    \field{volume}{36}
-    \field{journaltitle}{ASTIN Bulletin: The Journal of the IAA}
-    \field{year}{2006}
-  \endentry
-
-  \entry{mack:chain-ladder}{article}{}
-    \name{author}{1}{}{%
-      {{hash=MT}{%
-         family={Mack},
-         familyi={M\bibinitperiod},
-         given={Thomas},
-         giveni={T\bibinitperiod},
-      }}%
-    }
-    \strng{namehash}{MT1}
-    \strng{fullhash}{MT1}
-    \field{labelnamesource}{author}
-    \field{labeltitlesource}{title}
-    \field{sortinit}{M}
-    \field{sortinithash}{M}
-    \field{number}{2}
-    \field{title}{Distribution-free Calculation of the Standard Error of Chain
-  Ladder Reserve Estimates}
-    \field{volume}{23}
-    \field{journaltitle}{Astin Bulletin}
-    \field{year}{1993}
   \endentry
 
   \entry{mack:chain-ladder-variability}{inproceedings}{}
@@ -169,10 +181,87 @@
     \strng{fullhash}{MT1}
     \field{labelnamesource}{author}
     \field{labeltitlesource}{title}
-    \field{sortinit}{M}
-    \field{sortinithash}{M}
     \field{title}{Measuring the Variability of Chain Ladder Reserve Estimates}
     \field{year}{1999}
+  \endentry
+
+  \entry{lindholm:msep}{article}{}
+    \name{author}{3}{}{%
+      {{hash=LM}{%
+         family={Lindholm},
+         familyi={L\bibinitperiod},
+         given={Mathias},
+         giveni={M\bibinitperiod},
+      }}%
+      {{hash=LF}{%
+         family={Lindskog},
+         familyi={L\bibinitperiod},
+         given={Filip},
+         giveni={F\bibinitperiod},
+      }}%
+      {{hash=WF}{%
+         family={Wahl},
+         familyi={W\bibinitperiod},
+         given={Felix},
+         giveni={F\bibinitperiod},
+      }}%
+    }
+    \list{publisher}{1}{%
+      {Cambridge University Press}%
+    }
+    \strng{namehash}{LMLFWF1}
+    \strng{fullhash}{LMLFWF1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \verb{doi}
+    \verb 10.1017/S174849951900006X
+    \endverb
+    \field{number}{1}
+    \field{pages}{93–128}
+    \field{title}{Estimation of conditional mean squared error of prediction
+  for claims reserving}
+    \field{volume}{14}
+    \field{journaltitle}{Annals of Actuarial Science}
+    \field{year}{2020}
+  \endentry
+
+  \entry{wuthrich:chain-ladder-msep}{article}{}
+    \name{author}{4}{}{%
+      {{hash=WMV}{%
+         family={Wüthrich},
+         familyi={W\bibinitperiod},
+         given={Mario\bibnamedelima V.},
+         giveni={M\bibinitperiod\bibinitdelim V\bibinitperiod},
+      }}%
+      {{hash=BM}{%
+         family={Buchwalder},
+         familyi={B\bibinitperiod},
+         given={Markus},
+         giveni={M\bibinitperiod},
+      }}%
+      {{hash=BH}{%
+         family={Bühlmann},
+         familyi={B\bibinitperiod},
+         given={Hans},
+         giveni={H\bibinitperiod},
+      }}%
+      {{hash=MM}{%
+         family={Merz},
+         familyi={M\bibinitperiod},
+         given={Michael},
+         giveni={M\bibinitperiod},
+      }}%
+    }
+    \strng{namehash}{WMVBMBH+1}
+    \strng{fullhash}{WMVBMBHMM1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{number}{2}
+    \field{title}{The Mean Square Error of Prediction in the Chain Ladder
+  Reserving Method (Mack and Murphy Revisited)}
+    \field{volume}{36}
+    \field{journaltitle}{Astin Bulletin}
+    \field{year}{2006}
   \endentry
 
   \entry{mack:msep}{article}{}
@@ -203,8 +292,6 @@
     \strng{fullhash}{MTQGBC1}
     \field{labelnamesource}{author}
     \field{labeltitlesource}{title}
-    \field{sortinit}{M}
-    \field{sortinithash}{M}
     \verb{doi}
     \verb 10.1017/S051503610001463X
     \endverb
@@ -212,6 +299,62 @@
     \field{pages}{543–552}
     \field{title}{The Mean Square Error of Prediction in the Chain Ladder
   Reserving Method – A Comment}
+    \field{volume}{36}
+    \field{journaltitle}{ASTIN Bulletin: The Journal of the IAA}
+    \field{year}{2006}
+  \endentry
+
+  \entry{gisler:msep}{article}{}
+    \name{author}{1}{}{%
+      {{hash=GA}{%
+         family={Gisler},
+         familyi={G\bibinitperiod},
+         given={Alois},
+         giveni={A\bibinitperiod},
+      }}%
+    }
+    \list{publisher}{1}{%
+      {Cambridge University Press}%
+    }
+    \strng{namehash}{GA1}
+    \strng{fullhash}{GA1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \verb{doi}
+    \verb 10.1017/S0515036100014653
+    \endverb
+    \field{number}{2}
+    \field{pages}{554–565}
+    \field{title}{The Estimation Error in the Chain-Ladder Reserving Method: A
+  Bayesian Approach}
+    \field{volume}{36}
+    \field{journaltitle}{ASTIN Bulletin: The Journal of the IAA}
+    \field{year}{2006}
+  \endentry
+
+  \entry{venter:msep}{article}{}
+    \name{author}{1}{}{%
+      {{hash=VGG}{%
+         family={Venter},
+         familyi={V\bibinitperiod},
+         given={Gary\bibnamedelima G.},
+         giveni={G\bibinitperiod\bibinitdelim G\bibinitperiod},
+      }}%
+    }
+    \list{publisher}{1}{%
+      {Cambridge University Press}%
+    }
+    \strng{namehash}{VGG1}
+    \strng{fullhash}{VGG1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \verb{doi}
+    \verb 10.1017/S0515036100014665
+    \endverb
+    \field{number}{2}
+    \field{pages}{566–571}
+    \field{title}{Discussion of the Mean Square Error of Prediction in the
+  Chain Ladder Reserving Method}
     \field{volume}{36}
     \field{journaltitle}{ASTIN Bulletin: The Journal of the IAA}
     \field{year}{2006}
@@ -240,110 +383,204 @@
     \strng{fullhash}{SGAFLAJ1}
     \field{labelnamesource}{author}
     \field{labeltitlesource}{title}
-    \field{sortinit}{S}
-    \field{sortinithash}{S}
     \field{isbn}{9780471415404}
     \field{title}{Linear regression analysis}
     \field{year}{2003}
   \endentry
 
-  \entry{venter:msep}{article}{}
-    \name{author}{1}{}{%
-      {{hash=VGG}{%
-         family={Venter},
+  \entry{renshaw}{article}{}
+    \name{author}{2}{}{%
+      {{hash=RA}{%
+         family={Renshaw},
+         familyi={R\bibinitperiod},
+         given={A.E.},
+         giveni={A\bibinitperiod},
+      }}%
+      {{hash=VR}{%
+         family={Verrall},
          familyi={V\bibinitperiod},
-         given={Gary\bibnamedelima G.},
-         giveni={G\bibinitperiod\bibinitdelim G\bibinitperiod},
+         given={R.J.},
+         giveni={R\bibinitperiod},
       }}%
     }
     \list{publisher}{1}{%
       {Cambridge University Press}%
     }
-    \strng{namehash}{VGG1}
-    \strng{fullhash}{VGG1}
+    \strng{namehash}{RAVR1}
+    \strng{fullhash}{RAVR1}
     \field{labelnamesource}{author}
     \field{labeltitlesource}{title}
-    \field{sortinit}{V}
-    \field{sortinithash}{V}
     \verb{doi}
-    \verb 10.1017/S0515036100014665
+    \verb 10.1017/S1357321700000222
     \endverb
-    \field{number}{2}
-    \field{pages}{566–571}
-    \field{title}{Discussion of the Mean Square Error of Prediction in the
-  Chain Ladder Reserving Method}
-    \field{volume}{36}
-    \field{journaltitle}{ASTIN Bulletin: The Journal of the IAA}
-    \field{year}{2006}
+    \field{number}{4}
+    \field{pages}{903–923}
+    \field{title}{A Stochastic Model Underlying the Chain-Ladder Technique}
+    \field{volume}{4}
+    \field{journaltitle}{British Actuarial Journal}
+    \field{year}{1998}
   \endentry
 
-  \entry{wuthrich:stochastic-reserving}{book}{}
+  \entry{nelder}{article}{}
     \name{author}{2}{}{%
-      {{hash=WMV}{%
-         family={Wüthrich},
-         familyi={W\bibinitperiod},
-         given={Mario\bibnamedelima V.},
-         giveni={M\bibinitperiod\bibinitdelim V\bibinitperiod},
+      {{hash=NJA}{%
+         family={Nelder},
+         familyi={N\bibinitperiod},
+         given={J.\bibnamedelima A.},
+         giveni={J\bibinitperiod\bibinitdelim A\bibinitperiod},
       }}%
-      {{hash=MM}{%
-         family={Merz},
-         familyi={M\bibinitperiod},
-         given={Michael},
-         giveni={M\bibinitperiod},
+      {{hash=WRWM}{%
+         family={Wedderburn},
+         familyi={W\bibinitperiod},
+         given={R.\bibnamedelima W.\bibnamedelima M.},
+         giveni={R\bibinitperiod\bibinitdelim W\bibinitperiod\bibinitdelim
+  M\bibinitperiod},
       }}%
     }
     \list{publisher}{1}{%
-      {John Wiley \& Sons}%
+      {[Royal Statistical Society, Wiley]}%
     }
-    \strng{namehash}{WMVMM1}
-    \strng{fullhash}{WMVMM1}
+    \strng{namehash}{NJAWRWM1}
+    \strng{fullhash}{NJAWRWM1}
     \field{labelnamesource}{author}
     \field{labeltitlesource}{title}
-    \field{sortinit}{W}
-    \field{sortinithash}{W}
-    \field{title}{Stochastic Claims Reserving Methods in Insurance}
-    \field{year}{2008}
+    \field{issn}{00359238}
+    \field{number}{3}
+    \field{pages}{370\bibrangedash 384}
+    \field{title}{Generalized Linear Models}
+    \field{volume}{135}
+    \field{journaltitle}{Journal of the Royal Statistical Society. Series A
+  (General)}
+    \field{year}{1972}
   \endentry
 
-  \entry{wuthrich:chain-ladder-msep}{article}{}
-    \name{author}{4}{}{%
-      {{hash=WMV}{%
-         family={Wüthrich},
-         familyi={W\bibinitperiod},
-         given={Mario\bibnamedelima V.},
-         giveni={M\bibinitperiod\bibinitdelim V\bibinitperiod},
+  \entry{yee}{book}{}
+    \name{author}{1}{}{%
+      {{hash=YTW}{%
+         family={Yee},
+         familyi={Y\bibinitperiod},
+         given={Thomas\bibnamedelima W},
+         giveni={T\bibinitperiod\bibinitdelim W\bibinitperiod},
       }}%
-      {{hash=BM}{%
-         family={Buchwalder},
-         familyi={B\bibinitperiod},
-         given={Markus},
-         giveni={M\bibinitperiod},
+    }
+    \list{publisher}{1}{%
+      {Springer}%
+    }
+    \strng{namehash}{YTW1}
+    \strng{fullhash}{YTW1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{isbn}{9781493928187}
+    \field{title}{Vector Generalized Linear and Additive Models}
+    \field{year}{2015}
+    \warn{\item Invalid format of field 'month'}
+  \endentry
+
+  \entry{pinheiro}{article}{}
+    \name{author}{3}{}{%
+      {{hash=PPJR}{%
+         family={Pinheiro},
+         familyi={P\bibinitperiod},
+         given={Paulo J.\bibnamedelima R.},
+         giveni={P\bibinitperiod\bibinitdelim J\bibinitperiod\bibinitdelim
+  R\bibinitperiod},
       }}%
-      {{hash=BH}{%
-         family={Bühlmann},
-         familyi={B\bibinitperiod},
-         given={Hans},
-         giveni={H\bibinitperiod},
+      {{hash=eSJMA}{%
+         prefix={e},
+         prefixi={e},
+         family={Silva},
+         familyi={S\bibinitperiod},
+         given={João Manuel\bibnamedelima Andrade},
+         giveni={J\bibinitperiod\bibinitdelim M\bibinitperiod\bibinitdelim
+  A\bibinitperiod},
       }}%
-      {{hash=MM}{%
-         family={Merz},
-         familyi={M\bibinitperiod},
-         given={Michael},
+      {{hash=dLCM}{%
+         prefix={de},
+         prefixi={d\bibinitperiod},
+         family={Lourdes\bibnamedelima Centeno},
+         familyi={L\bibinitperiod\bibinitdelim C\bibinitperiod},
+         given={Maria},
          giveni={M\bibinitperiod},
       }}%
     }
-    \strng{namehash}{WMV+1}
-    \strng{fullhash}{WMVBMBHMM1}
+    \list{publisher}{2}{%
+      {[American Risk}%
+      {Insurance Association, Wiley]}%
+    }
+    \strng{namehash}{PPJRSJMAeLCMd1}
+    \strng{fullhash}{PPJRSJMAeLCMd1}
     \field{labelnamesource}{author}
     \field{labeltitlesource}{title}
-    \field{sortinit}{W}
-    \field{sortinithash}{W}
-    \field{number}{2}
-    \field{title}{The Mean Square Error of Prediction in the Chain Ladder
-  Reserving Method (Mack and Murphy Revisited)}
-    \field{volume}{36}
-    \field{journaltitle}{Astin Bulletin}
-    \field{year}{2006}
+    \field{issn}{00224367, 15396975}
+    \field{number}{4}
+    \field{pages}{701\bibrangedash 714}
+    \field{title}{Bootstrap Methodology in Claim Reserving}
+    \field{volume}{70}
+    \field{journaltitle}{The Journal of Risk and Insurance}
+    \field{year}{2003}
+  \endentry
+
+  \entry{moulton}{article}{}
+    \name{author}{2}{}{%
+      {{hash=MLH}{%
+         family={Moulton},
+         familyi={M\bibinitperiod},
+         given={Lawrence\bibnamedelima H.},
+         giveni={L\bibinitperiod\bibinitdelim H\bibinitperiod},
+      }}%
+      {{hash=ZSL}{%
+         family={Zeger},
+         familyi={Z\bibinitperiod},
+         given={Scott\bibnamedelima L.},
+         giveni={S\bibinitperiod\bibinitdelim L\bibinitperiod},
+      }}%
+    }
+    \strng{namehash}{MLHZSL1}
+    \strng{fullhash}{MLHZSL1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \verb{doi}
+    \verb https://doi.org/10.1016/0167-9473(91)90052-4
+    \endverb
+    \field{issn}{0167-9473}
+    \field{number}{1}
+    \field{pages}{53\bibrangedash 63}
+    \field{title}{Bootstrapping generalized linear models}
+    \field{volume}{11}
+    \field{journaltitle}{Computational Statistics \& Data Analysis}
+    \field{year}{1991}
+  \endentry
+
+  \entry{dunn}{article}{}
+    \name{author}{2}{}{%
+      {{hash=DPK}{%
+         family={Dunn},
+         familyi={D\bibinitperiod},
+         given={Peter\bibnamedelima K.},
+         giveni={P\bibinitperiod\bibinitdelim K\bibinitperiod},
+      }}%
+      {{hash=SGK}{%
+         family={Smyth},
+         familyi={S\bibinitperiod},
+         given={Gordon\bibnamedelima K.},
+         giveni={G\bibinitperiod\bibinitdelim K\bibinitperiod},
+      }}%
+    }
+    \list{publisher}{1}{%
+      {{{Taylor \& Francis, Ltd.}, American Statistical Association, Institute
+  of Mathematical Statistics, Interface Foundation of America}}%
+    }
+    \strng{namehash}{DPKSGK1}
+    \strng{fullhash}{DPKSGK1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{issn}{10618600}
+    \field{number}{3}
+    \field{pages}{236\bibrangedash 244}
+    \field{title}{Randomized Quantile Residuals}
+    \field{volume}{5}
+    \field{journaltitle}{Journal of Computational and Graphical Statistics}
+    \field{year}{1996}
   \endentry
 \enddatalist
 \endinput

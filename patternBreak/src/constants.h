@@ -2,7 +2,7 @@
 #define CONSTANTS
 
 #include <Rcpp.h>
-#include <unordered_map>
+#include <map>
 
 const int NONE = 0;
 
@@ -22,20 +22,20 @@ const int SINGLE = 1;
 const int CALENDAR = 2;
 const int ORIGIN = 3;
 
-std::unordered_map<Rcpp::String, int> key = {
-  {"none", NONE},
-  {"normal", NORMAL},
-  {"gamma", GAMMA},
-  {"parametric", PARAMETRIC},
-  {"non-parametric", RESID},
-  {"pairs", PAIRS},
-  {"standardised", STANDARDISED},
-  {"modified", MODIFIED},
-  {"studentised", STUDENTISED},
-  {"log-normal", LOGNORMAL},
-  {"single", SINGLE},
-  {"calendar", CALENDAR},
-  {"origin", ORIGIN}
-};
+Rcpp::List key = Rcpp::List::create(
+  Rcpp::Named("") = NONE,
+  Rcpp::Named("normal") = NORMAL,
+  Rcpp::Named("gamma") = GAMMA,
+  Rcpp::Named("parametric") = PARAMETRIC,
+  Rcpp::Named("residuals") = RESID,
+  Rcpp::Named("pairs") = PAIRS,
+  Rcpp::Named("standardised") = STANDARDISED,
+  Rcpp::Named("modified") = MODIFIED,
+  Rcpp::Named("studentised") = STUDENTISED,
+  Rcpp::Named("log-normal") = LOGNORMAL,
+  Rcpp::Named("single") = SINGLE,
+  Rcpp::Named("calendar") = CALENDAR,
+  Rcpp::Named("origin") = ORIGIN
+);
 
 #endif

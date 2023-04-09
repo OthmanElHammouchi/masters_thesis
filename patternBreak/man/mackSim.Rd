@@ -5,7 +5,7 @@
 \title{Simulate Mack CL reserve for different perturbed and excluded points.}
 \usage{
 mackSim(triangle, sim_type, n_boot, factor, boot_type, proc_dists, conds,
-  resids_type = NULL, show_progress = TRUE)
+  resids_type = NULL, show_progress = TRUE, seed = 42L)
 }
 \arguments{
 \item{triangle}{Cumulative claims triangle}

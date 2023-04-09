@@ -31,6 +31,8 @@ module mod_global
 
   type(c_ptr) :: rng
   integer(c_int) :: i_thread
+  integer(c_int), save :: n_threads
+  logical(c_bool), save :: first_call = .true.
   !$omp threadprivate(rng, i_thread)
   
 end module mod_global

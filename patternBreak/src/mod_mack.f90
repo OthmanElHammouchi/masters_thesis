@@ -8,32 +8,33 @@ module mod_mack
 
   implicit none
 
-  ! Global simulation variables
+  ! Simulation configuration
   integer(c_int) :: boot_type, proc_dist, resids_type
   logical(c_bool) :: cond
   !$omp threadprivate(boot_type, resids_type, proc_dist, cond)
 
-  ! Shared containers
-  real(c_double), allocatable :: scale_facs(:, :), sigma_jack(:, :)
-  real(c_double), allocatable :: log_normal_means(:), log_normal_sigmas(:)
-  real(c_double), allocatable :: log_normal_shift(:)
+  ! Shared variables
+  real(c_double), allocatable :: scale_facs(:, :), sigmas_jack(:, :)
+  real(c_double), allocatable :: ln_means(:), ln_sigmas(:)
+  real(c_double), allocatable :: ln_shifts(:)
   real(c_double), allocatable :: dev_facs(:), sigmas(:)
   real(c_double), allocatable :: resids(:, :), resampled_resids(:, :)
   logical(c_bool), allocatable :: mask(:, :)
   real(c_double), allocatable :: sim_table(:, :)
-  !$omp threadprivate(scale_facs, sigma_jack, log_normal_means, log_normal_sigmas, &
-  !$omp& log_normal_shift, dev_facs, sigmas, resids, resampled_resids, mask, sim_table)
+  !$omp threadprivate(scale_facs, sigmas_jack, ln_means, ln_sigmas, &
+  !$omp& ln_shifts, dev_facs, sigmas, resids, resampled_resids, mask, sim_table)
 
 contains
 
-  subroutine sim(n_dev, triangle, sim_type, n_boot, n_res, m_res, res, show_progress) bind(c, name="mack_sim_")
+  subroutine mack_sim(n_dev, triangle, sim_type, n_boot, n_res, m_res, res, show_progress, seed) bind(c, name="mack_sim_")
     integer(c_int), intent(in), value :: n_dev, n_boot, sim_type
     integer(c_int), intent(in), value :: n_res, m_res
     logical(c_bool), intent(in), value :: show_progress
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     real(c_double), intent(out) :: res(n_res, m_res)
+    integer(c_int), intent(in), value :: seed
 
-    integer(c_int) :: i, j, k, l, i_sim, n_rows, n_threads
+    integer(c_int) :: i, j, k, l, i_sim, n_rows
     integer(c_int) :: n_outliers, n_excl, n_sim
     integer(c_int) :: excl_diagidx, excl_rowidx, excl_colidx
     integer(c_int) :: outlier_rowidx, outlier_colidx, outlier_diagidx
@@ -50,8 +51,12 @@ contains
 
     call fit(triangle, dev_facs_original, sigmas_original, use_mask=.false., compute_resids=.false.)
 
-    n_threads = init_omp()
-    rng = init_rng(n_threads, 42)
+    if (first_call) then
+      n_threads = init_omp()
+      rng = init_rng(n_threads, seed)
+      first_call = .false._c_bool
+    end if
+
     n_sim = size(sim_table, 1)
     pgbar = pgbar_create(n_sim, 1)
 
@@ -67,10 +72,10 @@ contains
     allocate(dev_facs(n_dev - 1), source=0._c_double)
     allocate(sigmas(n_dev - 1), source=0._c_double)
     allocate(scale_facs(n_dev - 1, n_dev - 1), source=0._c_double)
-    allocate(sigma_jack(n_dev - 1, n_dev - 1), source=0._c_double)
-    allocate(log_normal_shift(n_dev - 1), source=0._c_double)
-    allocate(log_normal_means(n_dev - 1), source=0._c_double)
-    allocate(log_normal_sigmas(n_dev - 1), source=0._c_double)
+    allocate(sigmas_jack(n_dev - 1, n_dev - 1), source=0._c_double)
+    allocate(ln_shifts(n_dev - 1), source=0._c_double)
+    allocate(ln_means(n_dev - 1), source=0._c_double)
+    allocate(ln_sigmas(n_dev - 1), source=0._c_double)
     allocate(resids(n_dev - 1, n_dev - 1), source=0._c_double)
     allocate(resampled_resids(n_dev - 1, n_dev - 1), source=0._c_double)
 
@@ -145,20 +150,6 @@ contains
 
         triangle_sim = calendar_outlier(triangle, dev_facs_original, sigmas_original, outlier_diagidx, factor)
 
-        ! test = outlier_diagidx == excl_diagidx .and. outlier_diagidx == 1 .and. factor == 1.5 .and. boot_type == 3
-
-        ! if (test) then
-        !   print *, raise(2)
-        !   call fit(triangle_sim, dev_facs, sigmas, use_mask = .false., compute_resids = .true.)
-        !   call print_vector(dev_facs)
-        !   call print_vector(sigmas)
-        !   resids_mask = mask(1:(n_dev - 1), 2:n_dev)
-        !   resampled_resids = sample(resids, resids_mask)
-        !   call resample(triangle_sim, dev_facs, sigmas, status)
-        !   call print_vector(dev_facs)
-        !   call print_vector(sigmas)
-        ! end if
-
         call boot(n_dev, triangle_sim, n_boot, reserve, mask)
 
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_res) = spread(sim_table(i_sim, 1:(m_res - 1)), 1, n_boot)
@@ -198,11 +189,11 @@ contains
     end select
 
     ! Free shared containers
-    deallocate(log_normal_shift)
-    deallocate(log_normal_means)
-    deallocate(log_normal_sigmas)
+    deallocate(ln_shifts)
+    deallocate(ln_means)
+    deallocate(ln_sigmas)
     deallocate(scale_facs)
-    deallocate(sigma_jack)
+    deallocate(sigmas_jack)
     deallocate(dev_facs)
     deallocate(sigmas)
     deallocate(resids)
@@ -211,11 +202,11 @@ contains
     deallocate(reserve)
     !$omp end parallel
     deallocate(sim_table)
-  end subroutine sim
+  end subroutine mack_sim
 
-  subroutine build_sim_table_(sim_type, n_dev, n_boot, n_factors, factors, &
+  subroutine init_config(sim_type, n_dev, n_boot, n_factors, factors, &
     n_boot_types, boot_types, n_proc_dists, proc_dists, n_conds, conds, &
-    n_resids_types, resids_types, n_res, m_res) bind(c)
+    n_resids_types, resids_types, n_res, m_res) bind(c, name="init_config_")
     integer(c_int), intent(in), value :: sim_type
     integer(c_int), intent(in), value :: n_dev, n_boot, n_factors, n_boot_types
     integer(c_int), intent(in), value :: n_proc_dists, n_conds, n_resids_types
@@ -284,10 +275,10 @@ contains
                     end if
                   end do
                 end do cond_loop_single
-              end do proc_loop_single 
-            end do 
-          end do 
-        end do 
+              end do proc_loop_single
+            end do
+          end do
+        end do
       end do
 
      case (CALENDAR)
@@ -333,7 +324,7 @@ contains
                 end do cond_loop_cal
               end do proc_loop_cal
             end do
-          end do 
+          end do
         end do
       end do
 
@@ -394,7 +385,7 @@ contains
 
     n_res = n_boot * n_sim
     m_res = m_sim + 1
-  end subroutine build_sim_table_
+  end subroutine init_config
 
   subroutine boot(n_dev, triangle, n_boot, reserve, mask)
     integer(c_int), intent(in) :: n_boot, n_dev
@@ -546,7 +537,7 @@ contains
         end do
 
        case (STUDENTISED)
-        sigma_jack = 0
+        sigmas_jack = 0
         allocate(col_mask(n_dev - 1))
         do j = 1, n_dev - 1
           n_rows = n_dev - j
@@ -557,25 +548,25 @@ contains
             dev_fac_jack = sum(triangle(1:n_rows, j + 1), mask=col_mask(1:n_rows)) / &
               sum(triangle(1:n_rows, j), mask=col_mask(1:n_rows))
             if (n_pts_col >= 2) then
-              sigma_jack(i, j) = sqrt(sum(triangle(1:n_rows, j) * &
+              sigmas_jack(i, j) = sqrt(sum(triangle(1:n_rows, j) * &
                 (indiv_dev_facs(1:n_rows, j) - dev_fac_jack) ** 2, mask=col_mask(1:n_rows)) / (n_pts_col - 1))
             else
-              sigma_jack(i, j) = extrapolate_sigma(sigma_jack(i, :), j)
+              sigmas_jack(i, j) = extrapolate_sigma(sigmas_jack(i, :), j)
             end if
             resids(i, j) = (triangle(i, j + 1) - dev_facs(j) * triangle(i, j)) / &
-              (sigma_jack(i, j) * scale_facs(i, j) * sqrt(triangle(i, j)))
+              (sigmas_jack(i, j) * scale_facs(i, j) * sqrt(triangle(i, j)))
           end do
         end do
-        
+
        case (LOGNORMAL)
         do j = 1, n_dev
           n_rows = n_dev - j
           do i = 1, n_rows
-            log_normal_shift(i) = dev_facs(j) * sqrt(triangle(i, j)) / sigmas(j)
-            log_normal_sigmas(i) = sqrt(log(1 + 1 / log_normal_shift(i) ** 2))
-            log_normal_means(i) = log(log_normal_shift(i)) - log_normal_sigmas(i) ** 2 / 2
+            ln_shifts(i) = dev_facs(j) * sqrt(triangle(i, j)) / sigmas(j)
+            ln_sigmas(i) = sqrt(log(1 + 1 / ln_shifts(i) ** 2))
+            ln_means(i) = log(ln_shifts(i)) - ln_sigmas(i) ** 2 / 2
             resids(i, j) = (triangle(i, j + 1) - dev_facs(j) * triangle(i, j)) / (sigmas(j) * sqrt(triangle(i, j)))
-            resids(i, j) = (log(resids(i, j) + log_normal_shift(i)) - log_normal_means(i)) / log_normal_sigmas(i)
+            resids(i, j) = (log(resids(i, j) + ln_shifts(i)) - ln_means(i)) / ln_sigmas(i)
           end do
         end do
       end select
@@ -681,10 +672,10 @@ contains
                 scale_facs(i, j) * sqrt(triangle(i, j)) * resampled_resids(i, j)
             else if (resids_type == STUDENTISED) then
               resampled_triangle(i, j + 1) = dev_facs(j) * triangle(i, j) + &
-                sigma_jack(i, j) * scale_facs(i, j) * sqrt(triangle(i, j)) * resampled_resids(i, j)
+                sigmas_jack(i, j) * scale_facs(i, j) * sqrt(triangle(i, j)) * resampled_resids(i, j)
             else if (resids_type == LOGNORMAL) then
-              resampled_triangle(i, j + 1) = exp(resampled_resids(i, j) * log_normal_sigmas(i) + &
-               log_normal_means(i)) - log_normal_shift(i)
+              resampled_triangle(i, j + 1) = exp(resampled_resids(i, j) * ln_sigmas(i) + &
+                ln_means(i)) - ln_shifts(i)
               resampled_triangle(i, j + 1) = dev_facs(j) * triangle(i, j) + &
                 sigmas(j) * sqrt(triangle(i, j)) * resampled_triangle(i, j + 1)
             end if
@@ -704,10 +695,10 @@ contains
                 scale_facs(i, j) * sqrt(resampled_triangle(i, j)) * resampled_resids(i, j)
             else if (resids_type == STUDENTISED) then
               resampled_triangle(i, j + 1) = dev_facs(j) * resampled_triangle(i, j) + &
-                sigma_jack(i, j) * scale_facs(i, j) * sqrt(resampled_triangle(i, j)) * resampled_resids(i, j)
+                sigmas_jack(i, j) * scale_facs(i, j) * sqrt(resampled_triangle(i, j)) * resampled_resids(i, j)
             else if (resids_type == LOGNORMAL) then
-              resampled_triangle(i, j + 1) = exp(resampled_resids(i, j) * log_normal_sigmas(i) + &
-               log_normal_means(i)) - log_normal_shift(i)
+              resampled_triangle(i, j + 1) = exp(resampled_resids(i, j) * ln_sigmas(i) + &
+                ln_means(i)) - ln_shifts(i)
               resampled_triangle(i, j + 1) = dev_facs(j) * resampled_triangle(i, j) + &
                 sigmas(j) * sqrt(resampled_triangle(i, j)) * resampled_triangle(i, j + 1)
             end if
@@ -761,20 +752,21 @@ contains
     extrapolate_sigma = sqrt(min(sigmas(col - 1) ** 2, sigmas(col - 2) ** 2, sigmas(col - 1) ** 4 / sigmas(col - 2) ** 2))
   end function extrapolate_sigma
 
-  subroutine mack_boot_(n_dev, triangle, boot_type_, proc_dist_, cond_, &
-    resids_type_, n_boot, reserve) bind(c)
+  subroutine boot_cpp(n_dev, triangle, boot_type_, proc_dist_, cond_, &
+    resids_type_, n_boot, reserve, seed) bind(c, name="mack_boot_")
     integer(c_int), intent(in), value :: n_boot, n_dev, proc_dist_, resids_type_, boot_type_
     logical(c_bool), intent(in), value :: cond_
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     real(c_double), intent(out) :: reserve(n_boot)
+    integer(c_int), intent(in), value :: seed
 
     allocate(dev_facs(n_dev - 1), source=0._c_double)
     allocate(sigmas(n_dev - 1), source=0._c_double)
     allocate(scale_facs(n_dev, n_dev), source=0._c_double)
-    allocate(sigma_jack(n_dev - 1, n_dev - 1), source=0._c_double)
-    allocate(log_normal_shift(n_dev - 1), source=0._c_double)
-    allocate(log_normal_means(n_dev - 1), source=0._c_double)
-    allocate(log_normal_sigmas(n_dev - 1), source=0._c_double)
+    allocate(sigmas_jack(n_dev - 1, n_dev - 1), source=0._c_double)
+    allocate(ln_shifts(n_dev - 1), source=0._c_double)
+    allocate(ln_means(n_dev - 1), source=0._c_double)
+    allocate(ln_sigmas(n_dev - 1), source=0._c_double)
     allocate(resids(n_dev - 1, n_dev - 1), source=0._c_double)
 
     boot_type = boot_type_
@@ -785,11 +777,25 @@ contains
     allocate(mask(n_dev, n_dev))
     mask = .true.
 
-    rng = init_rng(1, 42)
+    if (first_call) then
+      rng = init_rng(1, seed)
+      first_call = .false.
+    end if
+
     i_thread = 0
 
     call boot(n_dev, triangle, n_boot, reserve, mask)
-  end subroutine mack_boot_
+
+    deallocate(dev_facs)
+    deallocate(sigmas)
+    deallocate(scale_facs)
+    deallocate(sigmas_jack)
+    deallocate(ln_shifts)
+    deallocate(ln_means)
+    deallocate(ln_sigmas)
+    deallocate(resids)
+    deallocate(mask)
+  end subroutine boot_cpp
 
   function single_outlier(triangle, dev_facs, sigmas, outlier_rowidx, outlier_colidx, factor)
     integer(c_int), intent(in):: outlier_rowidx, outlier_colidx

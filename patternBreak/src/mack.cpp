@@ -6,38 +6,40 @@
 #include "constants.h"
 
 extern "C" {
-  void mack_boot_(int n_dev, double* triangle, int boot_type, int process_dist, bool conditional, int resids_type, int n_boot, double* reserve);
+  void mack_boot_(int n_dev, double* triangle, int boot_type, int process_dist, bool conditional, int resids_type, int n_boot, double* reserve, int seed);
 
-  void mack_sim_(int n_dev, double* triangle, int sim_type, int n_boot, int n_res, int m_res, double* results, bool show_progress);
+  void mack_sim_(int n_dev, double* triangle, int sim_type, int n_boot, int n_res, int m_res, double* results, bool show_progress, int seed);
 
-  void build_sim_table_(int sim_type, int n_dev, int n_boot, int n_factors, double* factors, int n_boot_types, int* boot_types, int n_proc_dists, int* proc_dists, int n_conds, bool* conds, int n_resids_types, int* resids_types, int* n_res, int* m_res);
+  void init_config_(int sim_type, int n_dev, int n_boot, int n_factors, double* factors, int n_boot_types, int* boot_types, int n_proc_dists, int* proc_dists, int n_conds, bool* conds, int n_resids_types, int* resids_types, int* n_res, int* m_res);
 }
 
 //' Simulate Mack CL reserve.
 //'
 //' @param triangle Cumulative claims triangle
+//' @param n_boot Number of bootstrap simulations
+//' @param boot_type Type of bootstrap: `"parametric"`, `"residuals"`, or `"pairs"`
+//' @param proc_dist Distribution of process error: `"normal"` or `"gamma"`
+//' @param conditional Specified whether the bootstrap should be conditional or unconditional. Default is `TRUE`.
 //' @export
 // [[Rcpp::export]]
-Rcpp::NumericVector mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::String boot_type, Rcpp::String process_dist, bool cond, Rcpp::Nullable<Rcpp::String> resids_type_ = R_NilValue) {
+Rcpp::NumericVector mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::String boot_type, Rcpp::String proc_dist, bool conditional, Rcpp::Nullable<Rcpp::String> resids_type = R_NilValue, int seed = 42) {
   int n_dev = triangle.rows();
-  triangle = na2zero(triangle);
+  triangle = na_to_zero(triangle);
 
-  Rcpp::String resids_type;
-  if (resids_type_.isNotNull()) {
-    resids_type = resids_type_;
+  Rcpp::String resids_type_ = "";
+  if (resids_type.isNotNull()) {
+    resids_type_ = Rcpp::String(resids_type);
     if (boot_type != "residuals") {
       Rcpp::stop("Argument 'resids_type' only valid for residuals bootstrap.");
       }
-    } else {
-      resids_type = "none";
     }
 
-    if (boot_type == "pairs" && !cond) {
-      Rcpp::stop("Unconditional method invalid for pairs bootstrap.");
-    }
+  if (boot_type == "pairs" && !conditional) {
+    Rcpp::stop("Unconditional method invalid for pairs bootstrap.");
+  }
 
   Rcpp::NumericVector reserve(n_boot);
-  mack_boot_(n_dev, triangle.begin(), key[boot_type], key[process_dist], cond, key[resids_type], n_boot, reserve.begin());
+  mack_boot_(n_dev, triangle.begin(), key[boot_type], key[proc_dist], conditional, key[resids_type_], n_boot, reserve.begin(), seed);
   return(reserve);
 };
 
@@ -56,10 +58,10 @@ Rcpp::NumericVector mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::Str
 //' either strings or character vectors. In the latter case, the simulation is computed for all feasible combinations.
 //' @export
 // [[Rcpp::export]]
-Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector factor, Rcpp::CharacterVector boot_type, Rcpp::CharacterVector proc_dists, Rcpp::LogicalVector conds, Rcpp::Nullable<Rcpp::CharacterVector> resids_type = R_NilValue, bool show_progress = true) {
+Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector factor, Rcpp::CharacterVector boot_type, Rcpp::CharacterVector proc_dists, Rcpp::LogicalVector conds, Rcpp::Nullable<Rcpp::CharacterVector> resids_type = R_NilValue, bool show_progress = true, int seed = 42) {
 
   int n_dev = triangle.rows();
-  triangle = na2zero(triangle);
+  triangle = na_to_zero(triangle);
 
   Rcpp::CharacterVector resids_types__;
   if (resids_type.isNotNull()) {
@@ -137,10 +139,10 @@ Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int
   
   // Call Fortran simulation routine.
   int n_res, m_res;
-  build_sim_table_(sim_type_, n_dev, n_boot, n_factors, factor.begin(), n_boot_types, boot_types_, n_proc_dists, proc_dists_, n_conds, conds_, n_resids_types, resids_types_, &n_res, &m_res);
+  init_config_(sim_type_, n_dev, n_boot, n_factors, factor.begin(), n_boot_types, boot_types_, n_proc_dists, proc_dists_, n_conds, conds_, n_resids_types, resids_types_, &n_res, &m_res);
 
   Rcpp::NumericMatrix res_(n_res, m_res);
-  mack_sim_(n_dev, triangle.begin(), sim_type_, n_boot, n_res, m_res, res_.begin(), show_progress);
+  mack_sim_(n_dev, triangle.begin(), sim_type_, n_boot, n_res, m_res, res_.begin(), show_progress, seed);
 
   // Convert result to dataframe with proper column names and descriptive elements.
   Rcpp::Function asDataFrame("as.data.frame");

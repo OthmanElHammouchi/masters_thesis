@@ -1,10 +1,7 @@
 if (require("RUnit", quietly = TRUE)) {
-
     require("patternBreak")
-
-    load(file.path(system.file(package = "patternBreak"), "data", "test_triangle.RData"))
-
     test.dir <- system.file("unit_tests", package = "patternBreak")
+    test.triangle <- ChainLadder::UKMotor
 
     testsuite <- defineTestSuite("patternBreak",
         dirs = test.dir,
@@ -15,5 +12,4 @@ if (require("RUnit", quietly = TRUE)) {
 
     testResult <- runTestSuite(testsuite, verbose = 1)
     printTextProtocol(testResult)
-
 }

@@ -4,11 +4,19 @@
 \alias{mackBoot}
 \title{Simulate Mack CL reserve.}
 \usage{
-mackBoot(triangle, n_boot, boot_type, process_dist, cond,
-  resids_type_ = NULL)
+mackBoot(triangle, n_boot, boot_type, proc_dist, conditional,
+  resids_type = NULL, seed = 42L)
 }
 \arguments{
 \item{triangle}{Cumulative claims triangle}
+
+\item{n_boot}{Number of bootstrap simulations}
+
+\item{boot_type}{Type of bootstrap: `"parametric"`, `"residuals"`, or `"pairs"`}
+
+\item{proc_dist}{Distribution of process error: `"normal"` or `"gamma"`}
+
+\item{conditional}{Specified whether the bootstrap should be conditional or unconditional. Default is `TRUE`.}
 }
 \description{
 Simulate Mack CL reserve.
