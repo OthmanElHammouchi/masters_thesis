@@ -1,94 +1,6 @@
 \documentclass[a4paper]{book}
 
-\usepackage{amsmath, amsfonts, amsthm, amssymb}
-\usepackage{tikz, tikz-cd}
-\usepackage{mathtools}
-\usepackage[nottoc,numbib]{tocbibind}
-\usepackage{etoolbox}
-\cslet{blx@noerroretextools}\empty
-\usepackage[backend=bibtex, citestyle=numeric, style=ieee]{biblatex} 
-\usepackage{derivative}
-\usepackage{esint}
-\usepackage{xparse}
-\usepackage{braket}
-\usepackage{setspace}
-\usepackage{float}
-
-\usepackage{enumerate}
-\usepackage[mathscr]{euscript}
-\usepackage{mathrsfs}
-\usepackage{comment}
-\usepackage{bm}
-\usepackage{caption}
-\usepackage{algorithm, algpseudocode}
-
-\usepackage{vub}
-\usepackage{sepfootnotes}
-\usepackage{cleveref}
-\usepackage{autonum}
-\usepackage[intoc]{nomencl}
-
-\crefname{equation}{}{}
-
-\makeatletter
-\autonum@generatePatchedReferenceCSL{Cref}
-\makeatother
-
-\addbibresource{bibliography.bib}
-%
-\DeclareMultiCiteCommand{\footfullcites}[\mkbibfootnote]
-  {\footfullcite}{\addsemicolon\space}
-
-\theoremstyle{plain}
-\newtheorem{model}{Model}
-\newtheorem{theorem}{Theorem}
-
-\makeatletter
-\def\th@plain{%
-  \thm@notefont{}
-  \itshape
-}
-\def\th@definition{%
-  \thm@notefont{}
-  \normalfont
-}
-\makeatother
-
-\DeclarePairedDelimiterX\condexppx[2]{\lbrack}{\rbrack}%
-{#1\ \delimsize\Vert\ \mathopen{}#2}
-\newcommand{\condexpp}{\mathbb{E}\condexppx}
-
-\DeclarePairedDelimiterX\condexpx[2]{\lbrack}{\rbrack}%
-{#1\ \delimsize\vert\ \mathopen{}#2}
-\newcommand{\condexp}{\mathbb{E}\condexpx}
-
-\DeclarePairedDelimiterX\condvarrx[2]{(}{)}%
-{#1\ \delimsize\Vert\ \mathopen{}#2}
-\newcommand{\condvarr}{\mathrm{Var}\condvarrx}
-
-\DeclarePairedDelimiterX\condvarx[2]{(}{)}%
-{#1\ \delimsize\vert\ \mathopen{}#2}
-\newcommand{\condvar}{\mathrm{Var}\condvarx}
-
-\DeclarePairedDelimiterXPP\expectx[2]{{\ifblank{#1}{\mathbb{E}}{\mathbb{E}_{#1}}}}{\lbrack}{\rbrack}{}{#2}
-\newcommand\expect[2][]{\expectx*{#1}{#2}}
-
-\DeclarePairedDelimiter\varx{(}{)}
-\newcommand{\var}{\mathrm{Var}\varx*}
-
-\newcommand\notation{\mathrel{\overset{\makebox[0pt]{\mbox{\normalfont\tiny\sffamily not.}}}{=}}}
-
-\algrenewcommand\algorithmicrequire{\textbf{Input:}}
-\algrenewcommand\algorithmicensure{\textbf{Output:}}
-
-\makeatletter
-\newenvironment{procedure}[1][htb]{%
-    \renewcommand{\ALG@name}{Procedure}%
-   \begin{algorithm}[#1]%
-  }{\end{algorithm}}
-\makeatother
-
-\newcommand{\horz}{\rotatebox[origin=c]{90}{$\vert$}}
+\input{preamble.tex}
 
 \title{Exploration of various machine learning techniques in the context of non-life insurance}
 \pretitle{\flushleft{Graduation thesis submitted in partial fulfilment of the requirements for the degree of Master of Science in Mathematics}}
@@ -147,11 +59,50 @@ To simplify the formulas, we assume throughout this exposition that $I = J$. Emb
 \end{equation}
 by forecasting the values in the lower triangle $\mathcal{D}^{\mathsf{c}}_I$. A special difficulty arising in the actuarial context is the relatively small number of observations which is usually available.
 
-One of the most frequently used loss reserving techniques in practice is the so-called \emph{chain ladder} (CL), which predicts the cumulative claim in development year $j$ by multiplying the previous year's amount by a so-called \emph{age-to-age factor}, \emph{link ratio} or \emph{development factor}. It was originally conceived as a purely computational algorithm, but there have since been various attempts to frame it in terms of a stochastic model. The central assumption it makes is that the pattern observed in earlier cohorts is applicable to later ones. In one sense, this is of course perfectly reasonable: all models ultimately use the past as a guide to the future. The dearth of data typically available to the actuary makes it challenging to verify its validity, as it limits the efficacy of classical statistical techniques. In particular, this makes it difficult to detect structural breaks in the claims development pattern.
+One of the most frequently used loss reserving techniques in practice is the so-called \emph{chain ladder} (CL), which predicts the cumulative claim in development year $j$ by multiplying the previous year's amount by a so-called \emph{age-to-age factor}, \emph{link ratio} or \emph{development factor}. It was originally conceived as a purely computational algorithm, but has since been framed as a stochastic model in a variety of ways. The central assumption it makes, is that the pattern observed in earlier cohorts is applicable to later ones. In one sense, this is of course perfectly reasonable: all models ultimately use the past as a guide to the future. The dearth of data typically available to the actuary makes it challenging to verify its validity, however, as it limits the efficacy of classical statistical techniques. In particular, it makes it difficult to detect structural breaks in the claims development pattern. 
 
-Our aim in this chapter is to investigate whether it is possible to use bootstrap simulations to remedy this problem.  Specifically, we start from two widely-used chain ladder models (Mack's model and the Poisson GLM) and simulate run-off triangles which perfectly follow their assumptions. We then perturb the triangles in a myriad of ways and calculate a bootstrap reserve for the resulting data, allowing us to investigate how the simulated reserve is impacted by deviations from the model assumptions.
+To illustrate this point, consider \Cref{tab:uk-motor}, which contains the dataset of cumulative payments for a motor insurance account from the UK given in \cite{christofides} (this will serve as the running example throughout this text). It consists of a 7 by 7 claims triangle with a total of 28 observations. \Cref{fig:diag-plot-original} shows the diagnostic plot of standardised residuals against fitted value for the Mack chain ladder model, which will be discussed in \Cref{sec:mack}. The details are not important at this point; all that matters at present is that it should be symmetric around the x-axis and exhibit no structural patterns if the model gives a good fit. The same diagnostic plots are shown in \Cref{fig:diag-plot-perturbed} for the case where the single points $(2, 5)$ and $(4, 4)$ of this triangle has been perturbed by a factor $1.5$, either by direct multiplication or through simulation from the underlying model. The residual corresponding to the pathological observation has been highlighted in red. As these examples demonstrate, it is not always feasible to identify deviations from the model assumptions by examining such plots, even for the trained eye. 
 
-The chapter is divided as follows. The next section introduces the bootstrap method and explains how it can be applied to regression models, which will
+\begin{table}
+  \centering
+  \begin{tabular}{|c|c|c|c|c|c|c|c|}
+    \hline 
+    \diagbox[font=\footnotesize]{orig.}{dev.} &  1 &  2 & 3 & 4 & 5 & 6 & 7 \\ \hline
+    2007 & 3511 & 6726 & 8992  & 10704 & 11763 & 12350 & 12690 \\ \hline
+    2008 & 4001 & 7703 & 9981  & 11161 & 12117 & 12746 &       \\ \hline
+    2009 & 4355 & 8287 & 10233 & 11755 & 12993 &       &       \\ \hline
+    2010 & 4295 & 7750 &  9773 & 11093 &       &       &       \\ \hline
+    2011 & 4150 & 7897 & 10217 &       &       &       &       \\ \hline
+    2012 & 5102 & 9650 &       &       &       &       &       \\ \hline
+    2013 & 6283 &      &       &       &       &       &       \\
+    \hline
+  \end{tabular}
+  \caption{UK Motor claims triangle from \textcite{christofides}}
+  \label{tab:uk-motor}
+\end{table}
+
+\begin{figure}
+  \centering
+  \includegraphics{original_resids}
+  \caption{Diagnostic plot for original triangle}
+  \label{fig:diag-plot-original}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \begin{subfigure}{\textwidth}
+    \includegraphics{perturbed_resids}
+    \caption{Perturbed directly}
+  \end{subfigure}
+  \begin{subfigure}{\textwidth}
+    \includegraphics{model_perturbed_resids}
+    \caption{Perturbed according to model}
+  \end{subfigure}
+  \caption{Diagnostic plots for perturbed triangles}
+  \label{fig:diag-plot-perturbed}
+\end{figure}
+
+Our aim in this chapter is to investigate whether it is possible to use bootstrap simulations to remedy this problem. The chapter is divided as follows. The next section introduces the bootstrap and explains how it can be used for inference on regression models, which is how we will frame the reserving methods under consideration. In the subsequent two sections, we will then apply this theory to two of the most widespread stochastic claims reserving models, the Mack chain ladder and the (overdispersed) Poisson GLM, in order to study whether it is possible to identify pattern breaks by using the bootstrap. Specifically, we simulate claims triangles which perfectly follow the model assumptions, perturb these, and generate a bootstrap reserve from the resulting dataset. This will allow us to investigate how the simulated reserve is impacted by deviations from the model assumptions.
 
 \section{The bootstrap method} \label{sec:boot}
 
@@ -211,7 +162,9 @@ For the parametric case, we have to make an additional assumption about the dist
 
 With this introduction complete, we now move on to discussing our first model.
 
-\section{Mack's model} \label{subsec:mack-intro}
+\section{Mack's model} \label{sec:mack}
+
+\subsection{Introduction} \label{subsec:mack-intro}
 
 In his seminal paper \cite{mack:chain-ladder}, Mack proposed the following model for cumulative claims triangles, which remains among the most influencial in actuarial reserving.
 \begin{model}[Mack Chain Ladder] \label{model:mack} \leavevmode
@@ -286,7 +239,7 @@ with $\bm{\varepsilon}$ a random vector satisfying
 \end{equation}
 Consequently, it follows (see \cite[Proposition 1.7]{hayashi}) that the weighted least squares method with weights matrix
 \begin{equation}
-  \mathbf{W} = \frac{1}{\sigma^2_j}
+  \mathbf{W} =
   \begin{bmatrix}
     1 / C_{1j} & & \\
     & \ddots & \\
@@ -299,7 +252,7 @@ leads to an estimator for $f_j$ which has minimal variance in the class of linea
 \end{equation}
 which is the same expression as \cref{eq:devfac-estimator}.
 
-\subsection{A challenging simulation}
+\subsection{A challenging simulation} \label{subsec:mack-challenge}
 
 Owing to its recursive nature, Mack's model does not readily lend itself to application of the theory from \Cref{sec:boot}. The actuarial literature on bootstrap methods is not very helpful in this regard either, as it has mostly tended to focus on generalised linear models---even papers like \cite{england:dist} which address the Mack CL do so by reframing it in this way. As will become clear shortly, this passes over some subtleties related to the particular structure of Mack's model, and we will therefore take a different approach. In particular, our starting point will be the problem of deriving a closed-form estimate of the so-called conditional \emph{mean square error of prediction} (MSEP) for the Mack predictor. While this might appear at first glance to be unrelated to the bootstrap, we will see that it furnishes us with the necessary theoretical framework to understand the special issues involved in resampling a recursive model.
 
@@ -391,33 +344,29 @@ There has been some controversy about which of these approaches should be prefer
   \end{equation}
 \end{theorem}
 
-In the conditional approach, the resampled parameter estimates are independent by construction, and so they cannot incorporate this covariance structure. In light of this, it would appear that the unconditional scheme has slightly better theoretical properties. As the empirical difference between the two is minimal, however, the conditional version is a reasonable approximation to fall back on if necessary. In the next section, we will see how both approaches give rise to a variety of different bootstrap methods.
+\noindent In the conditional approach, the resampled parameter estimates are independent by construction, and so they cannot incorporate this covariance structure. In light of this, it would appear that the unconditional scheme has slightly better theoretical properties. As the empirical difference between the two is minimal, however, the conditional version is a reasonable approximation to fall back on if necessary. In the next section, we will see how both approaches give rise to a variety of different bootstrap methods.
 
-\subsection{Bootstrap methodology}
+\subsection{Bootstrap methodology} \label{subsec:mack-boot}
 
-Using the taxonomy from \Cref{subsec:boot-reg}, we now consider in turn the application of the semiparameteric, nonparametric and parametric type to \Cref{model:mack}. For the semiparametric bootstrap, the crucial step is to find a suitable definition for the residuals which ensures that they are interchangeable. Here the view we outlined in \Cref{subsec:mack-intro} of the Mack CL as a series of weighted linear regressions will be useful, because it gives us access to the results of classical regression theory. The distribution-free nature of the model does lead to one additional complication, however: it means that we cannot make precise statements about the distribution of the errors. This can be resolved in one of two ways. A first option would be to extrapolate from homogeneity of the first two moments to homogeneity of the distributions. In that case, the \emph{raw residuals}
+Using the taxonomy from \Cref{subsec:boot-reg}, we now consider in turn the application of the semiparameteric, nonparametric and parametric type to \Cref{model:mack}. For the semiparametric bootstrap, the crucial step is to find a suitable definition for the residuals which ensures that they are interchangeable. The distribution-free nature of the model makes this difficult, however, as does not allow us to make precise statements about the distribution of the errors. 
+
+This can be resolved in one of two ways. A first option would be to extrapolate from homogeneity of the first two moments to homogeneity of the distributions. In that case, the \emph{raw residuals}
 \begin{equation}
-  e_i \coloneqq C_{i, j + 1} - \widehat{C}_{i, j + 1} = C_{i, j + 1} - \widehat{f}_j C_{ij}
+  e_{i, j + 1} \coloneqq C_{i, j + 1} - \widehat{C}_{i, j + 1} = C_{i, j + 1} - \widehat{f}_j C_{ij}
 \end{equation}
 are not an option, as these suffer from heteroscedasticity,
 \begin{equation}
-  \condvarr{e_i}{C_{ij}} = \sigma^2_j \left( C_{ij} - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}} \right) \,.
+  \condvarr{e_{i, j + 1}}{C_{ij}} = \sigma^2_j \left( C_{ij} - \frac{C^2_{ij}}{\sum_{i = 1}^{I - j} C_{ij}} \right) \,.
 \end{equation}
-Hence we could address this by dividing out this variance, i.e. we consider the errors
+We can address this by dividing out this variance, i.e. we consider the errors
 \begin{equation}
-  \varepsilon_{i, j + 1} \coloneqq \frac{(F_{i, j + 1} - f_j)\sqrt{C_{i, j}}}{\sigma_j \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,,
+  \varepsilon_{i, j + 1} \coloneqq \frac{C_{i, j + 1} - f_j C_{ij}}{\sigma_j \sqrt{C_{ij}} \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,,
 \end{equation}
-which satisfy $\expect{\varepsilon_{i, j + 1}} = 0$ and $\var{\varepsilon_{i, j + 1}} = 1$. Provided the sampling variability of $\widehat{f}_j$ and $\widehat{\sigma}_j$ is not too bad (which is not obvious given the small sample sizes we're usually dealing with), the same should hold approximately for the corresponding residuals
+which satisfy $\condexpp{\varepsilon_{i, j + 1}}{C_{ij}} = 0$ and $\condvarr{\varepsilon_{i, j + 1}}{C_{ij}} = 1$. Provided the sampling variability of the $\widehat{f}_j$ and $\widehat{\sigma}_j$ is not too bad (which is not obvious given the small sample sizes we're usually dealing with), the same should hold approximately for the corresponding residuals
 \begin{equation}
-  r_{i, j + 1} \coloneqq \frac{(F_{i, j + 1} - \widehat{f}_j)\sqrt{C_{i, j}}}{\widehat{\sigma}_j \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,,
+  r_{i, j + 1} \coloneqq \frac{C_{i, j + 1} - \widehat{f}_j C_{ij}}{\widehat{\sigma}_j \sqrt{C_{ij}} \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,,
 \end{equation}
-obtained by substituting these estimators. We emphasize that such additional assumptions should not be made lightly: it is perfectly possible for the error distribution to exhibit heterogeneity in other ways than through its mean and variance (see \cite[114]{efron:intro} for an example where the \emph{percentiles} vary with the value of the regressor).
-
-Alternatively, we could choose to augment our model with some distributional assumptions, allowing us to make more precise statements about errors and residuals. In particular, we will consider the autoregressive Gaussian time series model
-\begin{equation} \label{eq:time-series-model}
-    C_{i, j + 1} = f_j C_{ij} + \sigma_j \, \sqrt{C_{ij}} \, \varepsilon_{i, j}, \qquad \varepsilon \sim \mathcal{N}(0, 1) \,,
-\end{equation}
-which can easily be seen to be compatible with \Cref{model:mack}. Recallling that the hat matrix corresponding to the regression of column $j + 1$ on column $j$ is given by
+obtained by substituting these estimators. Note that the factor $\sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}$ in the denominator corresponds to the leverage adjustment, as can be seen by computing the hat matrix:
 \begin{align}
   \mathbf{H} &= \bm{\mathrm{c}_j} (\bm{\mathrm{c}_j}^T \mathbf{W} \bm{\mathrm{c}_j})^{-1} \bm{\mathrm{c}_j}^T \mathbf{W} \\[4pt]
   &= \frac{1}{\sum_{i = 1}^{I - j} C_{ij}}
@@ -425,74 +374,195 @@ which can easily be seen to be compatible with \Cref{model:mack}. Recallling tha
     C_{1j} & \dots & C_{1j} \\
     \vdots & \ddots & \vdots\\
     C_{I - j, j} & \dots & C_{I - j, j}
-  \end{bmatrix} \,,
+  \end{bmatrix} \,.
 \end{align}
-we know, for example, that the \emph{externally studentised residuals}
+It's worth emphasising, however, that the above extrapolation should not be made lightly, as it is perfectly possible for the error distribution to exhibit heterogeneity in other ways than through its mean and variance (see \cite[114]{efron:intro} for an example where the \emph{percentiles} vary with the value of the regressor). In light of this, an alternative approach would be to augment our model with some explicit distributional assumptions, which is more transparent and allows us to make precise statements about errors and residuals. One such augmentation that has been studied in the literature (see \cite[49]{wuthrich:stochastic-reserving}) is the autoregressive Gaussian time series model
+\begin{equation} \label{eq:time-series-model}
+    C_{i, j + 1} = f_j C_{ij} + \sigma_j \, \sqrt{C_{ij}} \, \varepsilon_{i, j + 1}, \qquad \varepsilon \sim \mathcal{N}(0, 1) \,,
+\end{equation}
+which can easily be seen to be compatible with \Cref{model:mack}. Because the Mack CL can be viewed as a series of weighted linear regressions, as we say in \Cref{subsec:mack-intro}, this has the benefit of making available to us the results of classical regression theory. We know, for example, that the \emph{externally studentised residuals}
 \begin{equation}
-  r_{i, j + 1} \coloneqq \frac{e_i}{\widehat{\sigma}_{j (i)} \sqrt{1 - \mathbf{H}_{ii}}} \sqrt{\mathbf{W}_{ii}} = \frac{(F_{i, j + 1} - \widehat{f}_j)\sqrt{C_{i, j}}}{\widehat{\sigma}_{j (i)} \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,,
+  r_{i, j + 1} 
+  \coloneqq \frac{e_{i, j + 1}}{\widehat{\sigma}_{j (i)} \sqrt{1 - \mathbf{H}_{ii}}} \sqrt{\mathbf{W}_{ii}} 
+  = \frac{C_{i, j + 1} - \widehat{f}_j C_{ij}}{\widehat{\sigma}_{j (i)} \sqrt{C_{ij}} \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,,
 \end{equation}
 with $\widehat{\sigma}_{j (i)}$ denoting the leave-$i$-out estimator of $\sigma_j$, follow a $t_{I - j - 1}$ distribution. Another option are the \emph{standardised} or \emph{internally studentised} residuals
 \begin{equation}
-  r_{i, j + 1} \coloneqq \frac{(F_{i, j + 1} - \widehat{f}_j)\sqrt{C_{i, j}}}{\widehat{\sigma}_j \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,
+  r_{i, j + 1} \coloneqq \frac{C_{i, j + 1} - \widehat{f}_j C_{ij}}{\widehat{\sigma}_j \sqrt{C_{ij}} \sqrt{1 - \frac{C_{ij}}{\sum_{i = 1}^{I - j} C_{ij}}}} \,
 \end{equation}
-which also share the same distribution, albeit a more complicated one (see \cite[267 \psqq]{seber}). Note that all residuals can be written in the form $\delta(C_{ij}, \hat{C}_{ij})$ for an appropriate $\delta$.
+which also share the same distribution, albeit a more complicated one (see \cite[267 \psqq]{seber}). 
 
-For any particular choice of residuals, the algorithm then proceeds in the following way. First, we resample the residuals to obtain pseudo-realisations $r^{(b)}_{ij}$. Under the conditional approach, bootstrapped claims triangle variables are then obtained by inverting the appropriate formula, which can be stated in general as solving
+The Gaussian model has a major shortcoming: it possible to have a negative realisation in the next step of the time series, in which case all future observations from that point on are undefined, because of the square root factor appearing in the variance. To avoid this problem, we must find a way to guarantee
+\begin{equation} \label{eq:lower-limit-err}
+  \varepsilon_{i, j + 1} > -\frac{f_j C_{ij}}{\sigma_j} \,.
+\end{equation}
+This can be achieved by choosing an alternative error distribution in \cref{eq:time-series-model}, one whose support is bounded from below. For example, we could use a shifted lognormal distribution, i.e.
 \begin{equation}
-  \delta
+  \log(\varepsilon_{i, j + 1} - \alpha_{ij}) \sim \mathcal{N}(\beta_{ij}, \gamma_{ij}^2)
+\end{equation} 
+for certain parameters $\alpha_{ij}$, $\beta_{ij}$ and $\gamma_{ij}$. This has support $(\alpha_{ij}, +\infty)$, so that the requirement \cref{eq:lower-limit-err} is satisfied with $\alpha_{ij} = -\frac{f_j C_{ij}}{\sigma_j}$. It then remains for us to determine $\beta_{ij}$ and $\gamma_{ij}$ such that the assumptions of \Cref{model:mack} are satisfied, meaning
+\begin{equation}
+  \condexpp{\varepsilon_{i, j + 1}}{C_{ij}} = \exp \left( \beta_{ij} + \frac{\gamma_{ij}^2}{2} \right) + \alpha_{ij} = 0, \qquad \condvarr{\varepsilon_{i, j + 1}}{C_{ij}} = (\exp{\gamma_{ij}^2} - 1) \exp(\gamma_{ij}^2 + 2 \beta_{ij}) = 1 \,.
 \end{equation}
+Solving these equations, we obtain
+\begin{equation}
+  \gamma_{ij} = \sqrt{\log \left( 1 - \frac{1}{\alpha^2_{ij}} \right)}, \qquad \beta_{ij} = \log(-\alpha_{ij}) - \frac{\gamma_{ij}}{2} \,.
+\end{equation}
+Provided the sampling variability of $\widehat{f}_j$ and $\widehat{\sigma}_j$ is not too severe, this means that the residuals
+\begin{align}
+  r_{i, j + 1} 
+  &\coloneqq \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j C_{ij} / \widehat{\sigma}_j \right) - \widehat{\beta}_{ij}}{\widehat{\gamma}_{ij}} \\
+  &= \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j C_{ij} / \widehat{\sigma}_j \right) - \log(\widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j) + \frac{1}{2} \left( \sqrt{\log \left( 1 + \widehat{\sigma}_j / \widehat{f}_j C_{ij} \right)} \right)}{\sqrt{\log \left( 1 + \widehat{\sigma}_j / \widehat{f}_j C_{ij} \right)}}
+\end{align}
+are approximately $\mathcal{N}(0, 1)$-distributed.
 
-\begin{algorithm}[H]
-  \caption{Semiparametric resampling for Mack CL}
+After choosing a particular definition, the next step of is to fit Mack's model and compute the residuals from it. We then resample these to generate bootstrap residuals $r^{(b)}_{ij}$, from which a bootstrap triangle is obtained by inverting the appropriate residuals formula. In the conditional approach, the inversion is based on the original triangle, whereas the unconditional version uses the previously generated bootstrap observations. Finally, the model is refitted to the generated triangle to obtain bootstrap development factor and dispersion parameter estimators $\widehat{\bm{f}}$ and $\widehat{\bm{\sigma}}$. The entire procedure is outlined in \Cref{alg:semiparam-mack} for the case of standardised residuals.
+
+\begin{algorithm}
+  \caption{Semiparametric resampling for Mack CL} 
+  \label{alg:semiparam-mack}
+  \begin{algorithmic} 
+    \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$, parameter \textsc{conditional} specifying the resampling approach}
+    \vspace{5pt}
+    \State $(\{ r_{ij} \mid i + j \leq I + 1 \}, \bm{\widehat{f}}, \bm{\widehat{\sigma}}) \gets$ \Call{fit}{$\mathcal{D}_I$} 
+    \vspace{5pt}
+    \For{$b \gets 1, B$}
+        \vspace{5pt}
+        \State $\{ r^{(b)}_{ij} \mid i + j \leq I + 1 \} \gets$ \Call{resample}{$\{ r_{ij} \mid i + j \leq I + 1 \}$}
+        \vspace{5pt}
+        \If{\textsc{conditional}}
+          \vspace{5pt}
+          \For{$j \gets 1, I - 1$}
+            \For{$i \gets 1, I - j$}
+              \vspace{5pt}
+              \State $C^{(b)}_{i, j + 1} \gets \widehat{f}_j C_{ij} + \widehat{\sigma}_j \sqrt{C_{ij}} \sqrt{1 - \frac{{C_{ij}}}{\sum_{i = 1}^{I - j} C_{ij}}} r_{i, j + 1}$
+              \vspace{5pt}
+              \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C_{ij}$
+              \vspace{5pt}
+            \EndFor
+            \vspace{5pt}
+            \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C_{ij}$
+            \vspace{5pt}
+            \If{$j < I - 1$}
+              \vspace{5pt}
+              \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I - j - 1}\sum_{i = 1}^{I - j} C_{ij} \left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
+              \vspace{5pt}
+            \Else
+              \vspace{5pt}
+              \State $\widehat{\sigma}^{(b)}_{I - 1} \gets \sqrt{\min{ \left \{ \displaystyle \frac{(\widehat{\sigma}^{(b)}_{I - 2})^4}{(\widehat{\sigma}^{(b)}_{I - 3})^2}, (\widehat{\sigma}^{(b)}_{I - 2})^2, (\widehat{\sigma}^{(b)}_{I - 3})^2 \right \} }}$
+              \vspace{5pt}
+            \EndIf
+          \EndFor
+        \Else
+          \For{$i \gets 1, I$}
+            \vspace{5pt}
+            \State $C^{(b)}_{i1} \gets C_{i1}$
+            \vspace{5pt}
+          \EndFor
+          \For{$j \gets 1, I - 1$}
+            \For{$i \gets 1, I - j$}
+              \vspace{5pt}
+              \State $C^{(b)}_{i, j + 1} \gets \widehat{f}_j C^{(b)}_{ij} + \widehat{\sigma}_j \sqrt{C^{(b)}_{ij}} \sqrt{1 - \frac{{C^{(b)}_{ij}}}{\sum_{i = 1}^{I - j} C^{(b)}_{ij}}} r_{i, j + 1}$
+              \vspace{5pt}
+              \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
+              \vspace{5pt}
+            \EndFor
+            \vspace{5pt}
+            \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
+            \vspace{5pt}
+            \If{$j < I - 1$}
+              \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I - j - 1}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
+            \Else
+              \vspace{5pt}
+              \State $\widehat{\sigma}^{(b)}_{I - 1} \gets \sqrt{\min{ \left \{ \displaystyle \frac{(\widehat{\sigma}^{(b)}_{I - 2})^4}{(\widehat{\sigma}^{(b)}_{I - 3})^2}, (\widehat{\sigma}^{(b)}_{I - 2})^2, (\widehat{\sigma}^{(b)}_{I - 3})^2 \right \} }}$
+              \vspace{5pt}
+            \EndIf
+          \EndFor
+          \vspace{5pt}
+        \EndIf
+    \EndFor
+    \State \Return $\{ (\widehat{\bm{f}}^{(b)}, \widehat{\bm{\sigma}}^{(b)}) \mid b = 1, \dots, B \}$
+  \end{algorithmic}
+\end{algorithm}
+
+The fully nonparametric bootstrap requires us to resample the pairs $(C_{ij}, C_{i, j + 1})$ in the regression of column $j + 1$ on column $j$. In the conditional version, the original pairs are resampled; in the unconditional one, we use the resampled second response column from the previous step as the regressor column in the next one. We then refit the model to obtain bootstrapped development factor and dispersion parameter estimates; the complete procedure is outlined in \Cref{alg:pairs-mack}.
+
+\begin{table}
+  \begin{subtable}{\textwidth}
+    \centering
+    \begin{tabular}{|m{5em}|m{5em}|m{5em}|m{5em}|m{5em}|}\hline%
+      $j$ & $\widehat{f}_j$ & $\widehat{\sigma}_j$ & $\widehat{R}$ & $\mathrm{se}(\widehat{R})$ \\ \hline
+      \csvreader[
+        head to column names,
+        late after line = \\\hline
+      ]{%
+        ../results/example/res_pairs_cond.csv
+      }{}{%
+        \devyr & \devfacs & \sigmas & \reservemean & \reservese
+      }%
+    \end{tabular}
+    \subcaption{Conditional resampling}
+  \end{subtable}
+  \par\bigskip
+  \begin{subtable}{\textwidth}
+    \centering
+    \begin{tabular}{|m{5em}|m{5em}|m{5em}|m{5em}|m{5em}|}\hline%
+      $j$ & $\widehat{f}_j$ & $\widehat{\sigma}_j$ & $\widehat{R}$ & $\mathrm{se}(\widehat{R})$ \\ \hline
+      \csvreader[
+        head to column names,
+        late after line = \\\hline
+      ]{%
+        ../results/example/res_pairs_uncond.csv
+      }{}{%
+        \devyr & \devfacs & \sigmas & \reservemean & \reservese
+      }%
+    \end{tabular}
+    \subcaption{Unconditional resampling}
+  \end{subtable}
+  \caption{Pairs bootstrap results}
+\end{table}
+
+\begin{algorithm}
+  \caption{Pairs resampling for Mack CL}
+  \label{alg:pairs-mack}
   \begin{algorithmic}
     \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$, parameter \textsc{conditional} specifying the resampling approach}
     \For{$b \gets 1, B$}
-      \For{$j \gets 1, I - 1$}
-        \vspace{5pt}
-        \State $r_{i, j + 1} \gets \delta(C_{i, j + 1}, \hat{C}_{i, j + 1})$
-        \vspace{5pt}
-        \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
-        \vspace{5pt}
-        \For{$i \gets 1, I - j$}
-          \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
+      \If{\textsc{conditional}}
+        \For{$j \gets 1, I - 1$}
           \vspace{5pt}
+          \State $\{ (C^{(b)}_{i, j}, C^{(b)}_{i, j + 1}) \mid i = 1, \dots, I - j \} \gets$ \Call{resample}{$\{ (C_{i, j}, C_{i, j + 1}) \mid i = 1, \dots, I - j \}$}
+          \vspace{5pt}
+          \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
+          \vspace{5pt}
+          \For{$i \gets 1, I - j$}
+            \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
+            \vspace{5pt}
+          \EndFor
+          \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I-j}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
         \EndFor
-        \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I-j}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
-      \EndFor
+      \Else
+        \For{$j \gets 1, I - 1$}
+          \vspace{5pt}
+          \State $\{ (\widetilde{C}^{(b)}_{i, j}, C^{(b)}_{i, j + 1}) \mid i = 1, \dots, I - j \} \gets$ \Call{resample}{$\{ (C^{(b)}_{i, j}, C_{i, j + 1}) \mid i = 1, \dots, I - j \}$}
+          \vspace{5pt}
+          \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
+          \vspace{5pt}
+          \For{$i \gets 1, I - j$}
+            \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
+            \vspace{5pt}
+          \EndFor
+          \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I-j}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
+        \EndFor
+      \EndIf
     \EndFor
-    \State \Return $\{ (\widehat{f}^{(b)}_j, \widehat{\sigma}^{(b)}_j) \mid b = 1, \dots, B \}$
+    \State \Return $\{ (\widehat{\bm{f}}^{(b)}, \widehat{\bm{\sigma}}^{(b)}) \mid b = 1, \dots, B \}$
   \end{algorithmic}
 \end{algorithm}
 
-The fully nonparametric bootstrap requires us to resample the pairs $(C_{ij}, C_{i, j + 1})$ in the regression of the. We then refit the model to obtain bootstrapped development factor and dispersion parameter estimates. 
+Finally, for the parametric bootstrap, we simulate directly from the fitted distribution.
 
-The only additional remark we must make here, is that it is not possible to apply the unconditional approach to this type of bootstrap => YES WE CAN!!!!
-
-\begin{algorithm}[H]
-  \caption{Pairs resampling for Mack CL (conditional)}
-  \begin{algorithmic}
-    \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$}
-    \For{$b \gets 1, B$}
-      \For{$j \gets 1, I - 1$}
-        \vspace{5pt}
-        \State $\{ (C^{(b)}_{i, j}, C^{(b)}_{i, j + 1}) \mid i = 1, \dots, I - j \} \gets$ \Call{resample}{$\{ (C_{i, j}, C_{i, j + 1}) \mid i = 1, \dots, I - j \}$}
-        \vspace{5pt}
-        \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
-        \vspace{5pt}
-        \For{$i \gets 1, I - j$}
-          \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
-          \vspace{5pt}
-        \EndFor
-        \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I-j}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
-      \EndFor
-    \EndFor
-    \State \Return $\{ (\widehat{f}^{(b)}_j, \widehat{\sigma}^{(b)}_j) \mid b = 1, \dots, B \}$
-  \end{algorithmic}
-\end{algorithm}
-
-
-
-Finally, we discuss how to incorporate the process error in our bootstrap, which will be done in the same way for all the different types.
+We conclude this section by discussing how to incorporate the process error in our bootstrap, which will be done in the same way for all the different types.
 
 \begin{equation}
     \widehat{\sigma}^{(b)}_j = \frac{1}{I-j}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{ij} - \widehat{f}^{(b)}_j \right)^2
@@ -511,9 +581,7 @@ In view of \eqref{eq:time-series-model}, the most evident way to generate $(\mat
     C^{(b)}_{i, j + 1} \sim \mathcal{N}(\widehat{f}^{(b)}_j \, C_{ij}, \widehat{\sigma}^{(b)}_j \, C_{ij}) \,.
 \end{equation}
 
-major drawback, however: it makes it possible to draw negative samples for the cumulative loss amounts. One way to remedy this would obviously be to simply discard a simulated triangle as soon as it contains a negative value. 
-
-An alternative is to follow the suggestion given in \cite[238]{england:dist} and subtitute in place of \eqref{eq:normal-sampling} a gamma distribution with the same mean and variance. If we write $C_{ij} \sim \Gamma(\alpha, \beta)$, this means that $\alpha, \beta$ must satisfy
+major drawback, however: it makes it possible to draw negative samples for the cumulative loss amounts. One way to remedy this would be to simply discard a simulated triangle as soon as it contains a negative value. Alternatively, we can follow the suggestion given in \cite[238]{england:dist} and subtitute in place of \eqref{eq:normal-sampling} a gamma distribution with the same mean and variance. If we write $C_{ij} \sim \Gamma(\alpha, \beta)$, this means that $\alpha, \beta$ must satisfy
 \begin{equation}
 \frac{\alpha}{\beta} = f_{j-1} C_{i, j-1} \quad \text{and} \quad \frac{\alpha}{\beta^2} = \sigma^2_{j-1} C_{i, j-1} \,,
 \end{equation}
