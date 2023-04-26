@@ -1,3 +1,48 @@
+.PHONY: all clean simulations plots shiny test example example-plots example-test
+
+TEXTDIR := text
+DOC := $(TEXTDIR)/thesis.tex
+
+RERUN := "(undefined references|Rerun to get (cross-references|the bars|point totals) right|Table widths have changed. Rerun LaTeX.|Linenumber reference failed)"
+RERUNBIB := "No file.*\.bbl|Citation.*undefined"
+
+PDFTEXOPTS := -shell-escape -output-directory $(TEXTDIR)
+BIBEROPTS := --output-directory $(TEXTDIR)
+MAKEINDEXOPTS := $(TEXTDIR)/thesis.nlo -s $(TEXTDIR)/nomencl.ist -o $(TEXTDIR)/thesis.nls
+
+all: clean example-plots doc
+
+doc: clean $(DOC:.tex=.pdf)
+
+$(TEXTDIR)/%.pdf: $(TEXTDIR)/%.tex
+	pdflatex $(PDFTEXOPTS) $<
+	@egrep -q $(RERUNBIB) $(TEXTDIR)/$*.log && biber $(BIBEROPTS) $* && pdflatex $(PDFTEXOPTS) $<; true
+	makeindex $(MAKEINDEXOPTS) && pdflatex $(PDFTEXOPTS) $<; true
+	@egrep -q $(RERUN) $(TEXTDIR)/$*.log && pdflatex $(PDFTEXOPTS) $<; true
+	@egrep -q $(RERUN) $(TEXTDIR)/$*.log && pdflatex $(PDFTEXOPTS) $<; true
+
+clean:
+	-rm -f $(DOC:.tex=.pdf)
+	-rm -f $(TEXTDIR)/*.{aux,dvi,log,bbl,blg,brf,fls,toc,thm,out,fdb_latexmk}
+
+EXAMPLEDIR = $(wildcard scripts/example/*.r)
+
+example:
+	for file in $(EXAMPLEDIR); do\
+			$${file} -r --nboot 1000 --nsim 100;\
+	done
+
+example-plots:
+	-rm -f plots/example/*
+	for file in $(EXAMPLEDIR); do\
+			$${file};\
+	done
+
+example-test:
+	for file in $(EXAMPLEDIR); do\
+			$${file} -r --nboot 10 --nsim 10;\
+	done
+
 simulations:
 	Rscript scripts/simulations.r
 
@@ -9,42 +54,3 @@ shiny:
 
 test:
 	R -e 'source("patternBreak/tests/run_tests.r")'
-
-example:
-	Rscript scripts/example/diag_plots.r -r --nboot 1000 --nsim 1000
-	Rscript scripts/example/mack_pairs.r -r --nboot 1000 --nsim 1000
-	Rscript scripts/example/mack_semiparam.r -r --nboot 1000 --nsim 1000
-	Rscript scripts/example/mack_param.r -r --nboot 1000 --nsim 1000
-	Rscript scripts/example/mack_bench.r -r --nboot 1000 --nsim 1000
-	Rscript scripts/example/boot_est.r -r --nboot 1000 --nsim 1000
-	Rscript scripts/example/boot_reg.r -r --nboot 1000 --nsim 1000
-
-example-plots:
-	Rscript scripts/example/diag_plots.r
-	Rscript scripts/example/mack_pairs.r
-	Rscript scripts/example/mack_semiparam.r
-	Rscript scripts/example/mack_param.r
-	Rscript scripts/example/mack_bench.r
-	Rscript scripts/example/boot_est.r
-	Rscript scripts/example/boot_reg.r
-
-example-test:
-	Rscript scripts/example/diag_plots.r -r --nboot 10 --nsim 10
-	Rscript scripts/example/mack_pairs.r -r --nboot 10 --nsim 10
-	Rscript scripts/example/mack_semiparam.r -r --nboot 10 --nsim 10
-	Rscript scripts/example/mack_param.r -r --nboot 10 --nsim 10
-	Rscript scripts/example/mack_bench.r -r --nboot 10 --nsim 10
-	Rscript scripts/example/boot_est.r -r --nboot 10 --nsim 10
-	Rscript scripts/example/boot_reg.r -r --nboot 10 --nsim 10
-
-TEXFILE=thesis
-RDIR= .
-FIGDIR= ./figs
-
-$(RDIR)/%.Rout: $(RDIR)/%.R $(RDIR)/functions.R
-	R CMD BATCH $< 
-
-$(TEXFILE).pdf: $(TEXFILE).tex $(OUT_FILES) $(CROP_FILES)
-	latexmk -pdf -quiet $(TEXFILE)
-
-

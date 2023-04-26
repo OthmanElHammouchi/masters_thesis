@@ -154,7 +154,7 @@ with $\bar{g} = \frac{1}{B} \sum_{b=1}^B g^{(b)}$. Provided $F \approx \widehat{
 
 By contrast, in the parametric bootstrap, we first fit a model using the data, and then simulate samples from this with the help of a random number generator. As usual, the parametric approach offers the advantage of efficiency if its assumptions are met, at the risk of increased error when they are violated. If we assume that $F$ belongs to some family $\left \{ F_{\bm{\theta}} \mid  \bm{\theta} \in \Theta \right \}$, then we can use the sample $X_1, \dots, X_n$ to produce an estimate $\bm{\widehat{\theta}}$ of the parameter. Plugging this in then gives us $F_{\bm{\widehat{\theta}}}$, from which we can simulate $X^{(b)}_1, \dots , X^{(b)}_n$ and $g^{(b)}$ as before. An estimate of the sampling variance is likewise obtained the same manner.
 
-Although we have thus far only used it for the calculation of a single statistic, it is clear that the bootstrap produces a complete \emph{simulated distribution} of the estimator, which can be used for any arbitrary form of inference. This shows its tremendous potential as a tool for statistical analysis, which explains the rise in popularity of these methods with the advent of powerful personal computers capable of carrying out the requisite calculations. Let us give an example to illustrate this. \Cref{fig:boot-est} compares, for a $\Gamma(\alpha, \beta)$-distribution with $\alpha = 2$ and $\beta = 0.5$, the bootstrap distributions of the maximum likelihood estimators to their exact counterparts. We use a simulated sample of size $n = 1000$ and compute . The analytic distributions are based on the well-known fact from likelihood theory that the asymptotic distribution of the MLE is given by the multivariate normal distribution $\mathcal{N}(\bm{\theta}, I(\bm{\theta})^{-1})$, where $\bm{\theta}$ is the parameter vector and $I(\bm{\theta})$ the Fisher information matrix. For the gamma distribution, the latter is given by
+Although we have thus far only used it for the calculation of a single statistic, it is clear that the bootstrap produces a complete \emph{simulated distribution} of the estimator, which can be used for many different forms of inference. This highlights its tremendous potential as a tool for statistical analysis, which explains the rise in popularity of bootstrap methods once personal computers powerful enough to carry out the requisite calculations became widely available. Let us give an example to illustrate this. \Cref{fig:boot-est} compares, for a $\Gamma(\alpha, \beta)$-distribution with $\alpha = 2$ and $\beta = 0.5$, the bootstrap distributions of the maximum likelihood estimators to their exact counterparts. It is clear that the bootstrap distribution approaches the analytic one. We use a simulated sample of size $n = 1000$ and compute . The analytic distributions are based on the well-known fact from likelihood theory that the asymptotic distribution of the MLE is given by the multivariate normal distribution $\mathcal{N}(\bm{\theta}, I(\bm{\theta})^{-1})$, where $\bm{\theta}$ is the parameter vector and $I(\bm{\theta})$ the Fisher information matrix. For the gamma distribution, the latter is given by
 \begin{equation}
   I(\alpha, \beta) = n
   \begin{pmatrix}
@@ -162,7 +162,7 @@ Although we have thus far only used it for the calculation of a single statistic
       -1 / \beta & \alpha / \beta^2
   \end{pmatrix} \,
 \end{equation}
-where $\psi(x) \coloneqq \odv{}{x} \log \Gamma(x)$ is the so-called digamma function. It is clear that 
+where $\psi(x) \coloneqq \odv{}{x} \log \Gamma(x)$ is the so-called digamma function. 
 
 \begin{landscape}
   \begin{figure}
@@ -174,7 +174,7 @@ where $\psi(x) \coloneqq \odv{}{x} \log \Gamma(x)$ is the so-called digamma func
       \includegraphics{boot_est_nonparam}
       \subcaption{Nonparametric}
     \end{subfigure}
-    \caption{Analytic and bootstrap distribution of MLE for a gamma distribution with $\alpha = 2$ and $\beta = 0.5$.}
+    \caption{Analytic and bootstrap distribution of MLE for a gamma distribution with $\alpha = 2$ and $\beta = 0.5$}
     \label{fig:boot-est}
   \end{figure}
 \end{landscape}
@@ -197,13 +197,13 @@ with $\expect{\varepsilon_i} = 0$, $\operatorname{Var}(\varepsilon_i) = \sigma$ 
 \end{equation}
 we resample these for $B$ times to obtain pseudo-residuals $r^{(b)}_1, \dots, r^{(b)}_n$, which in turn yield  pseudo-responses
 \begin{equation}
-    Y_i^{(b)} \coloneqq \mathbf{x}^T \widehat{\bm{\beta}} + \widehat{\sigma} \sqrt{1 - h_{ii}} r^{(b)}_i \,.
+    Y_i^{(b)} \coloneqq \mathbf{x}^T \widehat{\bm{\beta}} + \widehat{\sigma} r^{(b)}_i \,.
 \end{equation}
 By refitting the model to this new pseudo-data, we then obtain bootstrapped regression parameter estimates $\widehat{\bm{\beta}}^{(b)}$ for $1, \dots, B$. 
 
 An alternative approach, which is fully nonparametric, is to resample the pairs $(\bm{\mathrm{x}_i}, Y_i)$ themselves (see \cites[Section 9.5]{efron:intro}[Algorithm 6.2]{davison}), which corresponds to approximating the multivariate distribution of $(X_1, \dots, X_n, Y)$ by the empirical distribution of the data. This has the significant benefit of parsimony, making no other assumption beside the i.i.d.-ness of the sample. The model is then fitted to the bootstrap samples $(\bm{\mathrm{x}_1}^{(b)}, Y^{(b)}_1), \dots, (\bm{\mathrm{x}_n}^{(b)}, Y^{(b)}_n)$ to produce pseudo-realisations $\widehat{\bm{\beta}}^{(b)}$ of the regression parameter estimator.
 
-For the parametric case, we have to make an additional assumption about the distribution of $\epsilon$, the classical choice being the normal distribution. We then begin to fit \cref{eq:linear-model}, which gives us estimates $\widehat{\beta}$ for the regression parameters. With the help of a random number generator, we then produce bootstrap responses $Y^{(b)}_1, \dots, Y^{(b)}_n$ by drawing from the estimated distribution $\mathcal{N}(\bm{\mathrm{x}}^T \widehat{\bm{\beta}}, \widehat{\sigma}^2)$, and fit the model to this new data to obtain bootstrap samples $\widehat{\bm{\beta}}^{(b)}$ of the regression parameters.
+For the parametric case, we have to make an additional assumption about the distribution of $\epsilon$, the classical choice being the Gaussian one. We then begin to fit \cref{eq:linear-model}, which gives us estimates $\widehat{\beta}$ for the regression parameters. With the help of a random number generator, we then produce bootstrap responses $Y^{(b)}_1, \dots, Y^{(b)}_n$ by drawing from the estimated distribution $\mathcal{N}(\bm{\mathrm{x}}^T \widehat{\bm{\beta}}, \widehat{\sigma}^2)$, and fit the model to this new data to obtain bootstrap samples $\widehat{\bm{\beta}}^{(b)}$ of the regression parameters.
 
 \section{Process variance and predictive distributions} \label{sec:boot-proc}
 
@@ -211,16 +211,15 @@ If we want to do predictive inference on a regression model using the bootstrap,
 \begin{equation}
   \delta \coloneqq Y_+ - \widehat{Y}_+
 \end{equation}
-(see \cite[Algorithm 6.4]{davison}). The second term in this expression can be bootstrapped using any one of the methods described in the previous section, as these yield replicates $\widehat{\bm{\beta}}^{(b)}$ of the parameter estimator and hence of the predictor $\widehat{Y}^{(b)}_+ = \mathbf{x_+}^T \widehat{\bm{\beta}}^{(b)}$. It then remains for us to produce bootstrap simulations of the response $Y_+$ itself. In the semiparametric approach, this can be achieved by resampling the residuals a second time to obtain pseudo-realisations $r^{(s)}$ for $s = 1, \dots, S$, and adding these (after correctly scaling them) to the value of the regression line at $x_+$. The resulting pseudo-responses $Y^{(s)}_+$ mimick the random fluctuations of $Y_+$, allowing us to approximate $\delta$ by the bootstrapped prediction errors
+(see \cite[Algorithm 6.4]{davison}). The second term in this expression can be bootstrapped using any one of the methods described in the previous section, as these yield replicates $\widehat{\bm{\beta}}^{(b)}$ of the parameter estimator and hence of the predictor $\widehat{Y}^{(b)}_+ = \mathbf{x_+}^T \widehat{\bm{\beta}}^{(b)}$. It then remains for us to produce bootstrap simulations of the response $Y_+$ itself. In the semiparametric approach, this can be achieved by resampling the residuals a second time to obtain pseudo-realisations $r^{(s)}$ for $s = 1, \dots, S$, and adding these (after correctly scaling them) to the value of the regression line at $x_+$. The resulting pseudo-responses $Y^{(s)}_+$ mimick the random fluctuations of $Y_+$, allowing us to approximate $\delta$ with the bootstrapped prediction errors
 \begin{equation} \label{eq:pred-error-boot}
   \widehat{\delta}^{(b, s)} \coloneqq Y^{(s)}_+ - \widehat{Y}^{(b)}_+ = (\widehat{\mathbf{x}}^T_+ \widehat{\bm{\beta}} + r^{(s)}) - \widehat{\mathbf{x}}^T_+ \widehat{\bm{\beta}}^{(b)} \,.
 \end{equation}
+A similar procedure can be outlined for the parametric bootstrap by appropriately adjusting the method of generating bootstrap response replicates. The method cannot be applied to the pairs bootstrap, however, as it lacks a mechanism for simulating new response values by themselves; we must therefore borrow this part from one of the alternative approaches, forsaking part of its parsimony and robustness properties in the process. We can then use \Cref{eq:pred-error-boot} for different kinds of inference, e.g. obtaining prediction intervals or estimating the mean squared error of prediction.
 
-A similar procedure can be outlined for the parametric bootstrap by appropriately adjusting the method of generating bootstrap response replicates. The method cannot be applied to the pairs bootstrap, however, as it lacks a mechanism for simulating new response values by themselves; we must therefore borrow this part from one of the alternative approaches, forsaking part of its parsimony and robustness properties in the process. We can then use \Cref{eq:pred-error-boot} to do all kinds of inference, e.g. obtaining prediction intervals or computing the mean squared error of prediction.
+While this offers an avenue for incorporating the process variance into bootstrap procedures for predictive inference, it is not the one best suited to our purposes. Recall from \Cref{chapter:intro} that we want to study how the reserve is impacted by violations of the assumptions of a given actuarial model which can be framed in terms of regression, as we shall see in \Cref{chapter:mack,chapter:poisson}. In other words, we would like to simulate the distribution of the response itself. In \Cref{eq:pred-error-boot}, this was done by generating fluctuations around $\widehat{\bm{\beta}}$ through resampling (or in the parametric case, with the help of a random number generator). The trouble with this approach is that it fails to account for the error in our parameter estimates, leading to an underestimation of the prediction uncertainty. Although we will endeavour in this exposition to remain agnostic with respect to philosophical questions about the interpretation of probability, it will be necessary in this case, for reasons which will become apparent shortly, to borrow a concept from Bayesian school of statistics in order to address this problem.
 
-While the prediction error offers an avenue of incorporating process variance into bootstrap procedures for predictive inference, it is not the most fitting one for our purposes. Recall from \Cref{chapter:intro} that we want to study how the reserve is impacted by violation of the assumptions of certain actuarial models, which can be framed in terms of regression, as we shall see in \Cref{chapter:mack,chapter:poisson}. In other words, we would like to simulate the distribution of the response itself. In \Cref{eq:pred-error-boot}, this was done by generating fluctuations around $\widehat{\bm{\beta}}$ through resampling (or in the parametric case, with the help of a random number generator). The trouble with this approach is that it fails to account for the error in our parameter estimates, leading to an underestimation of the prediction uncertainty. Although we will endeavour in this exposition to remain agnostic with respect to philosophical questions about the interpretation of probability, it will be necessary in this case, for reasons which will become apparent shortly, to borrow a concept from Bayesian school of statistics in order to address this problem.
-
-Recall that the Bayesian point of view is premised on the idea that the parameters $\bm{\theta}$ governing a statistical model $p(y \mid \bm{\theta}, x_1, \dots, x_p)$ are themselves random variables. These are assumed to follow a so-called \emph{prior distribution} $p(\theta)$, which is a probabilistic expression of the beliefs we have about them before observing any data\sepfootnote{fn:bayes}. When presented with a sample $D = \{ (\bm{\mathrm{x}_1}, Y_1), \dots, (\bm{\mathrm{x}_n}, Y_n) \}$, we are then led to update our beliefs, and using the formula
+Recall that the Bayesian point of view is premised on the idea that the parameters $\bm{\theta}$ governing a statistical model $p(y \mid \bm{\theta}, x_1, \dots, x_p)$ are themselves random variables. These are assumed to follow a so-called \emph{prior distribution} $p(\theta)$, which is a probabilistic expression of the beliefs we have about them before observing any data\sepfootnote{fn:bayes}. When presented with a sample $D = \{ (\bm{\mathrm{x}_1}, Y_1), \dots, (\bm{\mathrm{x}_n}, Y_n) \}$, we are then led to \emph{update our beliefs}; using the formula
 \begin{equation}
   p(\bm{\theta} \mid D) \propto p(D \mid \bm{\theta}) p(\bm{\theta}) \,,
 \end{equation}
@@ -228,13 +227,34 @@ which is known as \emph{Bayes' rule}, we obtain the \emph{posterior distribution
 \begin{equation}
   p(y_+ \mid D) = \int p(y_+ \mid \bm{\theta}) p(\bm{\theta} \mid D) \, d \bm{\theta} \,.
 \end{equation}
-of $Y_+$ given $D$; this distribution incorporates both the intrinsic variability of the response as well as our uncertainty regarding the parameters (or, in the classical view, their estimates). Moreover, it can be very easily integrated into the bootstrap framework. Indeed, we can follow the same steps as when simulating the prediction errror, but instead of \Cref{eq:pred-error-boot}, we compute pseudo-realisations
+of $Y_+$ given $D$. This incorporates both the intrinsic variability of the response as well as our uncertainty regarding the parameters (or, in the classical view, their estimates). By contrast, \emph{fitted distribution} $p(y_+ \mid \widehat{\bm{\theta}})$, obtained by plugging in some estimate of the parameters, does not have this virtue. Moreover, the predictive distribution can be very easily integrated into the bootstrap framework. Indeed, we can follow the same steps as when simulating the prediction errror, but instead of \Cref{eq:pred-error-boot}, we compute pseudo-realisations
 \begin{equation} \label{eq:pred-dist}
-  Y_+^{(b, s)} \coloneqq \mathbf{x}_+^T \widehat{\bm{\beta}}^{(b)} + \widehat{\sigma} \sqrt{1 - h_{ii}} r^{(s)} \,.
+  Y_+^{(b, s)} \coloneqq \mathbf{x}_+^T \widehat{\bm{\beta}}^{(b)} + \widehat{\sigma} r^{(s)} \,.
 \end{equation}
-where $h_{ii}$ is the leverage corresponding to the. 
-
 \Cref{eq:pred-dist} also explains why it is difficult to fit this approach within a classical frequentist paradigm, as it is unclear in that case which theoretical quantity these bootstrap replicates would be approximating. We hasten to add that much work has been done to remedy this, leading, among other things, to the concept of a \emph{confidence distribution} (see, for example, \cites{barndorff-nielsen,lawless}). It is true, however, that there has been a multiplicity of disparate frequentist versions of the predictive distribution, as remarked for instance by \textcite{dickson}, lending credence to the idea that the notion fits more naturally into the Bayesian framework.
+
+In order to illustrate the difference between fitted and predictive distributions, we also introduce a bootstrap definition for the former. This only differs from \Cref{eq:pred-dist} in that it uses the original parameter estimate rather than the bootstrap one:
+\begin{equation} \label{eq:fit-dist}
+  Y_+^{(s)} \coloneqq \mathbf{x}_+^T \widehat{\bm{\beta}} + \widehat{\sigma} r^{(s)} \,.
+\end{equation}
+We also note that the notions of predictive and fitted distribution originate in mathematical statistics, where the goal is to derive analytical expressions for them; in this text, we shall always understand them to refer to their bootstrap equivalents. For the following example, we consider a normal linear model with $p = 10$, $n = 1000$, $\sigma = 5.7$ and 
+\begin{displaymath}
+  \bm{\beta} = \begin{bmatrix} 4.1 & 4.4 & -2.1 & 3.3 & 1.4 & 0.2 & 2.4 & -3.7 & 1.6 & 2.1 \end{bmatrix} \,.
+\end{displaymath}
+The predictive and fitted distributions for both the parametric as well as non-parametric bootstrap are is shown in \Cref{fig:boot-reg}. We can see in this case that the two are nigh indistinguishable, which is presumably due to the fact that the data are simulated and thus follow the model perfectly. As we shall see in \Cref{sec:mack-proc-err}, we will not encounter such perfect agreement with the claims reserving models.
+
+\begin{figure}[!htb]
+  \begin{subfigure}{\linewidth}
+    \includegraphics{boot_reg_param}
+    \subcaption{Parametric}
+  \end{subfigure}
+  \begin{subfigure}{\linewidth}
+    \includegraphics{boot_reg_semiparam}
+    \subcaption{Semiparametric}
+  \end{subfigure}
+  \caption{Comparison of the fitted and predictive bootstrap distributions for a normal linear model}
+  \label{fig:boot-reg}
+\end{figure}
 
 \chapter{Mack's model} \label{chapter:mack}
 
@@ -474,7 +494,7 @@ obtained by substituting these estimators. Note that the factor $\sqrt{1 - \frac
 \end{align}
 It's worth emphasising, however, that the above extrapolation should not be made lightly, as it is perfectly possible for the error distribution to exhibit heterogeneity in other ways than through its mean and variance (see \cite[114]{efron:intro} for an example where the \emph{percentiles} vary with the value of the regressor). In light of this, an alternative approach would be to augment our model with some explicit distributional assumptions, which is more transparent and allows us to make precise statements about errors and residuals. One such augmentation that has been studied in the literature (see \cite[49]{wuthrich:stochastic-reserving}) is the autoregressive Gaussian time series model
 \begin{equation} \label{eq:time-series-model}
-    C_{i, j + 1} = f_j C_{ij} + \sigma_j \, \sqrt{C_{ij}} \, \varepsilon_{i, j + 1}, \qquad \varepsilon \sim \mathcal{N}(0, 1) \,,
+    C_{i, j + 1} = f_j C_{ij} + \sigma_j \, \sqrt{C_{ij}} \, \varepsilon_{i, j + 1}, \qquad \varepsilon_{i, j + 1} \sim \mathcal{N}(0, 1) \,,
 \end{equation}
 which can easily be seen to be compatible with \Cref{model:mack}. Because the Mack CL can be viewed as a series of weighted linear regressions, as we say in \Cref{sec:mack-intro}, this has the benefit of making available to us the results of classical regression theory. We know, for example, that the \emph{externally studentised residuals}
 \begin{equation}
@@ -488,110 +508,44 @@ with $\widehat{\sigma}_{j (i)}$ denoting the leave-$i$-out estimator of $\sigma_
 \end{equation}
 which also share the same distribution, albeit a more complicated one (see \cite[267 \psqq]{seber}). 
 
-The Gaussian model has a major shortcoming: it makes it possible to have a negative realisation in the next step of the time series, in which case all future observations from that point on are undefined, because of the square root factor appearing in the variance. This is not merely a theoretical problem: we have sometimes observed this phenomenon in our numerical implementation, where the resampling produces negative pseudo-realisations of certain claim amounts, particularly when the model has been severely perturbed. One obvious way of avoiding it would be to simply discard the current bootstrap iteration as soon as a negative value is produces. This has the drawback of requiring more computational power, sometimes beyond the realm of what is reasonable. Moreover, we have seen cases in which the probability of having no negative replicates was so vanishingly small as to cause the program to get stuck indefinitely. We must therefore develop an alternative approach, if only to have a fail-safe method to fall back upon in case of problems with \Cref{eq:time-series-model}.
+The Gaussian model has a major shortcoming: it makes it possible to have a negative realisation in the next step of the time series, in which case all future observations from that point on are undefined, because of the square root factor appearing in the variance. This is not merely a theoretical problem: we have sometimes observed this phenomenon in our numerical implementation, where the resampling produces negative pseudo-realisations of certain claim amounts, particularly when the model has been severely perturbed. An obvious way of avoiding it would be to simply discard the current bootstrap iteration as soon as a negative value is produced. This has the drawback of requiring more computational power, sometimes beyond the realm of what is reasonable. Moreover, we have seen cases in which the probability of having no negative replicates was so vanishingly small as to cause the program to get stuck indefinitely. It is therefore imperative that we develop a different approach, if only as a fall-back in case of problems with \Cref{eq:time-series-model}.
 
-Fundamentally, we must find of guaranteeing
+\Textcite[238]{england:dist} discuss an analogous difficulty in the narrower context of generating bootstrap realisations of future claim amounts in order to simulate a predictive claims distribution (see \Cref{sec:mack-proc-err}). Here as well, one needs to ensure that the model does not produce negative draws, and the authors achieve this by subtituting for the normal distribution a gamma distribution with the same mean and variance. If we write $C_{ij} \sim \Gamma(\alpha, \beta)$, this means that $\alpha, \beta$ must satisfy
+\begin{equation}
+\frac{\alpha}{\beta} = f_{j-1} C_{i, j-1} \quad \text{and} \quad \frac{\alpha}{\beta^2} = \sigma^2_{j-1} C_{i, j-1} \,,
+\end{equation}
+hence
+\begin{equation} \label{eq:gamma-sim}
+\alpha = \frac{f_{j-1}^2 C_{i, j-1}}{\sigma_{j-1}^2} \quad \text{and} \quad \beta = \frac{f_{j-1}}{\sigma_{j-1}^2} \,.
+\end{equation}
+While this does not directly address our present concern, namely of bootstrapping the parameters in \Cref{model:mack}, it suggests that our woes may be remedied through replacement of the Gaussian distribution in \Cref{eq:time-series-model} with a different one capable of guaranteeing
 \begin{equation} \label{eq:lower-limit-err}
   \varepsilon_{i, j + 1} > -\frac{f_j C_{ij}}{\sigma_j} \,.
 \end{equation}
-This can be achieved by choosing an alternative error distribution in \cref{eq:time-series-model}, one whose support is bounded from below. For example, we could use a shifted lognormal distribution, i.e.
+Clearly, the support of such a distribution has to be bounded from below, and it must moreover allow for normalisation, so that the resulting residuals can be made interchangeable by an algebraic transformation. The only candidate satisfying these conditions which readily springs to mind is the \emph{shifted lognormal distribution}
 \begin{equation}
-  \log(\varepsilon_{i, j + 1} - \alpha_{ij}) \sim \mathcal{N}(\beta_{ij}, \gamma_{ij}^2)
+  \log(\varepsilon_{i, j + 1} - \xi_{ij}) \sim \mathcal{N}(\mu_{ij}, s_{ij}^2)
 \end{equation} 
-for certain parameters $\alpha_{ij}$, $\beta_{ij}$ and $\gamma_{ij}$. This has support $(\alpha_{ij}, +\infty)$, so that the requirement \cref{eq:lower-limit-err} is satisfied with $\alpha_{ij} = -\frac{f_j C_{ij}}{\sigma_j}$. It then remains for us to determine $\beta_{ij}$ and $\gamma_{ij}$ such that the assumptions of \Cref{model:mack} are satisfied, meaning
+for certain parameters $\xi_{ij}$, $\mu_{ij}$ and $s_{ij}$. his has support $(\xi_{ij}, +\infty)$, leading us to choose $\xi_{ij} = -\frac{f_j C_{ij}}{\sigma_j}$, and again we must determine $\mu_{ij}$ and $s_{ij}$ to satisfy
 \begin{equation}
-  \condexpp{\varepsilon_{i, j + 1}}{C_{ij}} = \exp \left( \beta_{ij} + \frac{\gamma_{ij}^2}{2} \right) + \alpha_{ij} = 0, \qquad \condvarr{\varepsilon_{i, j + 1}}{C_{ij}} = (\exp{\gamma_{ij}^2} - 1) \exp(\gamma_{ij}^2 + 2 \beta_{ij}) = 1 \,.
+  \begin{cases}
+    \displaystyle \condexpp{\varepsilon_{i, j + 1}}{C_{ij}} = \exp \left( \mu_{ij} + \frac{s_{ij}^2}{2} \right) + \xi_{ij} = 0 \\ 
+    \displaystyle \condvarr{\varepsilon_{i, j + 1}}{C_{ij}} = (\exp{s_{ij}^2} - 1) \exp(s_{ij}^2 + 2 \mu_{ij}) = 1 \,.
+  \end{cases}
 \end{equation}
 Solving these equations, we obtain
 \begin{equation}
-  \gamma_{ij} = \sqrt{\log \left( 1 - \frac{1}{\alpha^2_{ij}} \right)}, \qquad \beta_{ij} = \log(-\alpha_{ij}) - \frac{\gamma_{ij}}{2} \,.
+  s_{ij} = \sqrt{\log \left( 1 - \frac{1}{\xi^2_{ij}} \right)}, \qquad \mu_{ij} = \log(-\xi_{ij}) - \frac{s_{ij}}{2} \,.
 \end{equation}
 Provided the sampling variability of $\widehat{f}_j$ and $\widehat{\sigma}_j$ is not too severe, this means that the residuals
-\begin{align}
+\begin{align} \label{eq:log-normal-resids}
   r_{i, j + 1} 
-  &\coloneqq \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j C_{ij} / \widehat{\sigma}_j \right) - \widehat{\beta}_{ij}}{\widehat{\gamma}_{ij}} \\
+  &\coloneqq \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j C_{ij} / \widehat{\sigma}_j \right) - \widehat{\mu}_{ij}}{\widehat{s}_{ij}} \\
   &= \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j C_{ij} / \widehat{\sigma}_j \right) - \log(\widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j) + \frac{1}{2} \left( \sqrt{\log \left( 1 + \widehat{\sigma}_j / \widehat{f}_j C_{ij} \right)} \right)}{\sqrt{\log \left( 1 + \widehat{\sigma}_j / \widehat{f}_j C_{ij} \right)}}
 \end{align}
 are approximately $\mathcal{N}(0, 1)$-distributed.
 
 After selecting a particular type of residual, the next step is to fit the model and compute the residuals from it. We then resample these to generate bootstrap residuals $r^{(b)}_{ij}$, from which a bootstrap triangle is obtained by inverting the appropriate residuals formula. In the conditional approach, the inversion is based on the original triangle, whereas the unconditional version uses the previously generated bootstrap observations. Finally, the model is refitted to the generated triangle to obtain bootstrap development factor and dispersion parameter estimators $\widehat{\bm{f}}$ and $\widehat{\bm{\sigma}}$. The entire procedure is outlined in \Cref{alg:cond-semiparam-mack,alg:uncond-semiparam-mack} for the case of standardised residuals, and the results for the example data from \Cref{tab:uk-motor} are given in \Cref{tab:semiparam-mack-res}.
-
-\begin{algorithm}[!htb]
-  \caption{Conditional semiparametric bootstrap for Mack CL} 
-  \label{alg:cond-semiparam-mack}
-  \begin{algorithmic} 
-    \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$}
-    \vspace{3.5pt}
-    \State $(\{ r_{ij} \mid i + j \leq I + 1 \}, \bm{\widehat{f}}, \bm{\widehat{\sigma}}) \gets$ \Call{fit}{$\mathcal{D}_I$} 
-    \vspace{3.5pt}
-    \For{$b \gets 1, B$}
-      \vspace{3.5pt}
-      \State $\{ r^{(b)}_{ij} \mid i + j \leq I + 1 \} \gets$ \Call{resample}{$\{ r_{ij} \mid i + j \leq I + 1 \}$}
-      \vspace{3.5pt}
-      \For{$j \gets 1, I - 1$}
-        \For{$i \gets 1, I - j$}
-          \vspace{3.5pt}
-          \State $C^{(b)}_{i, j + 1} \gets \widehat{f}_j C_{ij} + \widehat{\sigma}_j \sqrt{C_{ij}} \sqrt{1 - \frac{{C_{ij}}}{\sum_{i = 1}^{I - j} C_{ij}}} r_{i, j + 1}$
-          \vspace{3.5pt}
-          \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C_{ij}$
-          \vspace{3.5pt}
-        \EndFor
-        \vspace{3.5pt}
-        \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C_{ij}$
-        \vspace{3.5pt}
-        \If{$j < I - 1$}
-          \vspace{3.5pt}
-          \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I - j - 1}\sum_{i = 1}^{I - j} C_{ij} \left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
-          \vspace{3.5pt}
-        \Else
-          \vspace{3.5pt}
-          \State $\widehat{\sigma}^{(b)}_{I - 1} \gets \sqrt{\min{ \left \{ \displaystyle \frac{(\widehat{\sigma}^{(b)}_{I - 2})^4}{(\widehat{\sigma}^{(b)}_{I - 3})^2}, (\widehat{\sigma}^{(b)}_{I - 2})^2, (\widehat{\sigma}^{(b)}_{I - 3})^2 \right \} }}$
-          \vspace{3.5pt}
-          \EndIf
-        \EndFor
-    \EndFor
-    \State \Return $\{ (\widehat{\bm{f}}^{(b)}, \widehat{\bm{\sigma}}^{(b)}) \mid b = 1, \dots, B \}$
-  \end{algorithmic}
-\end{algorithm}
-%
-\begin{algorithm}[!htb]
-  \caption{Unconditional semiparametric bootstrap for Mack CL} 
-  \label{alg:uncond-semiparam-mack}
-  \begin{algorithmic} 
-    \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$}
-    \vspace{5pt}
-    \State $(\{ r_{ij} \mid i + j \leq I + 1 \}, \bm{\widehat{f}}, \bm{\widehat{\sigma}}) \gets$ \Call{fit}{$\mathcal{D}_I$} 
-    \vspace{5pt}
-    \For{$b \gets 1, B$}
-      \For{$i \gets 1, I$}
-        \vspace{5pt}
-        \State $C^{(b)}_{i1} \gets C_{i1}$
-        \vspace{5pt}
-      \EndFor
-      \For{$j \gets 1, I - 1$}
-        \For{$i \gets 1, I - j$}
-          \vspace{5pt}
-          \State $C^{(b)}_{i, j + 1} \gets \widehat{f}_j C^{(b)}_{ij} + \widehat{\sigma}_j \sqrt{C^{(b)}_{ij}} \sqrt{1 - \frac{{C^{(b)}_{ij}}}{\sum_{i = 1}^{I - j} C^{(b)}_{ij}}} r_{i, j + 1}$
-          \vspace{5pt}
-          \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
-          \vspace{5pt}
-        \EndFor
-        \vspace{5pt}
-        \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
-        \vspace{5pt}
-        \If{$j < I - 1$}
-          \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I - j - 1}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
-        \Else
-          \vspace{5pt}
-          \State $\widehat{\sigma}^{(b)}_{I - 1} \gets \sqrt{\min{ \left \{ \displaystyle \frac{(\widehat{\sigma}^{(b)}_{I - 2})^4}{(\widehat{\sigma}^{(b)}_{I - 3})^2}, (\widehat{\sigma}^{(b)}_{I - 2})^2, (\widehat{\sigma}^{(b)}_{I - 3})^2 \right \} }}$
-          \vspace{5pt}
-        \EndIf
-      \EndFor
-      \vspace{5pt}
-    \EndFor
-    \State \Return $\{ (\widehat{\bm{f}}^{(b)}, \widehat{\bm{\sigma}}^{(b)}) \mid b = 1, \dots, B \}$
-  \end{algorithmic}
-\end{algorithm}
 
 \begin{table}[!htb]
   \centering
@@ -628,6 +582,85 @@ After selecting a particular type of residual, the next step is to fit the model
 \caption{Semiparametric bootstrap results}
 \label{tab:semiparam-mack-res}
 \end{table}
+
+\begin{figure}[p]
+  \begin{algorithm}[H]
+    \caption{Conditional semiparametric bootstrap for Mack CL} 
+    \label{alg:cond-semiparam-mack}
+    \begin{algorithmic} 
+      \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$}
+      \vspace{3pt}
+      \State $(\{ r_{ij} \mid i + j \leq I + 1 \}, \bm{\widehat{f}}, \bm{\widehat{\sigma}}) \gets$ \Call{fit}{$\mathcal{D}_I$} 
+      \vspace{3pt}
+      \For{$b \gets 1, B$}
+        \vspace{3pt}
+        \State $\{ r^{(b)}_{ij} \mid i + j \leq I + 1 \} \gets$ \Call{resample}{$\{ r_{ij} \mid i + j \leq I + 1 \}$}
+        \vspace{3pt}
+        \For{$j \gets 1, I - 1$}
+          \For{$i \gets 1, I - j$}
+            \vspace{3pt}
+            \State $C^{(b)}_{i, j + 1} \gets \widehat{f}_j C_{ij} + \widehat{\sigma}_j \sqrt{C_{ij}} r^{(b)}_{i, j + 1}$
+            \vspace{3pt}
+            \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C_{ij}$
+            \vspace{3pt}
+          \EndFor
+          \vspace{3pt}
+          \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C_{ij}$
+          \vspace{3pt}
+          \If{$j < I - 1$}
+            \vspace{3pt}
+            \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I - j - 1}\sum_{i = 1}^{I - j} C_{ij} \left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
+            \vspace{3pt}
+          \Else
+            \vspace{3pt}
+            \State $\widehat{\sigma}^{(b)}_{I - 1} \gets \sqrt{\min{ \left \{ \displaystyle \frac{(\widehat{\sigma}^{(b)}_{I - 2})^4}{(\widehat{\sigma}^{(b)}_{I - 3})^2}, (\widehat{\sigma}^{(b)}_{I - 2})^2, (\widehat{\sigma}^{(b)}_{I - 3})^2 \right \} }}$
+            \vspace{3pt}
+            \EndIf
+          \EndFor
+      \EndFor
+      \State \Return $\{ (\widehat{\bm{f}}^{(b)}, \widehat{\bm{\sigma}}^{(b)}) \mid b = 1, \dots, B \}$
+    \end{algorithmic}
+  \end{algorithm}
+%
+  \begin{algorithm}[H]
+    \caption{Unconditional semiparametric bootstrap for Mack CL} 
+    \label{alg:uncond-semiparam-mack}
+    \begin{algorithmic} 
+      \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$}
+      \vspace{3pt}
+      \State $(\{ r_{ij} \mid i + j \leq I + 1 \}, \bm{\widehat{f}}, \bm{\widehat{\sigma}}) \gets$ \Call{fit}{$\mathcal{D}_I$} 
+      \vspace{3pt}
+      \For{$b \gets 1, B$}
+        \For{$i \gets 1, I$}
+          \vspace{3pt}
+          \State $C^{(b)}_{i1} \gets C_{i1}$
+          \vspace{3pt}
+        \EndFor
+        \For{$j \gets 1, I - 1$}
+          \For{$i \gets 1, I - j$}
+            \vspace{3pt}
+            \State $C^{(b)}_{i, j + 1} \gets \widehat{f}_j C^{(b)}_{ij} + \widehat{\sigma}_j \sqrt{C^{(b)}_{ij}} r^{(b)}_{i, j + 1}$
+            \vspace{3pt}
+            \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
+            \vspace{3pt}
+          \EndFor
+          \vspace{3pt}
+          \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
+          \vspace{3pt}
+          \If{$j < I - 1$}
+            \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I - j - 1}\sum_{i = 1}^{I-j} C^{(b)}_{ij}\left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
+          \Else
+            \vspace{3pt}
+            \State $\widehat{\sigma}^{(b)}_{I - 1} \gets \sqrt{\min{ \left \{ \displaystyle \frac{(\widehat{\sigma}^{(b)}_{I - 2})^4}{(\widehat{\sigma}^{(b)}_{I - 3})^2}, (\widehat{\sigma}^{(b)}_{I - 2})^2, (\widehat{\sigma}^{(b)}_{I - 3})^2 \right \} }}$
+            \vspace{3pt}
+          \EndIf
+        \EndFor
+        \vspace{3pt}
+      \EndFor
+      \State \Return $\{ (\widehat{\bm{f}}^{(b)}, \widehat{\bm{\sigma}}^{(b)}) \mid b = 1, \dots, B \}$
+    \end{algorithmic}
+  \end{algorithm}
+\end{figure}
 
 Next, we consider the fully nonparametric bootstrap, in which we resample the pairs \linebreak
 $(C_{ij}, C_{i, j + 1})$ at every development year index $j$. For this procedure, we have no choice regarding the resampling scheme which is used: the only possibility is conditional resampling. To see why this is the case, consider what it would mean to implement unconditional resampling. If the resampled pairs for the first two columns are denoted by
@@ -706,85 +739,87 @@ Hence the only option is to carry out the resampling of each column pairs indepe
 \label{tab:pairs-mack-res}
 \end{table}
 
-Finally, we discuss the parametric bootstrap, in which we simulate directly from the fitted model. Based on \Cref{eq:time-series-model}, we might be tempted to simply substitute $\mathcal{N}(0, 1)$-distributed draws from a random number generator for the residuals in \Cref{alg:cond-semiparam-mack,alg:uncond-param-mack}. The problem with this approach, is that it doesn't extend easily to other distributions, because it is not possible, in general, to write these as the sum of a mean and a scaled error term. A better idea is therefore to generate bootstrap responses directly from the fitted distribution. Depending on whether the conditional or the unconditional scheme is used, this will either depend on the original triangle observations or the ones generated at the previous step. The Mack CL is then refitted to the bootstrapped triangle in order to obtain $\widehat{\bm{f}}^{(b)}$ and $\widehat{\bm{\sigma}}^{(b)}$.
+Finally, we discuss the parametric bootstrap, in which we simulate directly from the fitted model. Based on \Cref{eq:time-series-model}, we might be tempted to simply substitute $\mathcal{N}(0, 1)$-distributed draws from a random number generator for the residuals in \Cref{alg:cond-semiparam-mack,alg:uncond-param-mack}. The problem with this approach, is that it doesn't extend easily to other distributions, because it is not possible, in general, to write these as the sum of a mean and a scaled error term. A better idee, then, is to generate bootstrap responses directly from the fitted distribution. Depending on whether the conditional or the unconditional scheme is used, this will either depend on the original triangle observations or the ones generated at the previous step. The Mack CL is then refitted to the bootstrapped triangle in order to obtain $\widehat{\bm{f}}^{(b)}$ and $\widehat{\bm{\sigma}}^{(b)}$.
 
-\begin{algorithm}[!htb]
-  \caption{Conditional parametric bootstrap for Mack CL} 
-  \label{alg:cond-param-mack}
-  \begin{algorithmic} 
-    \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$}
-    \vspace{5pt}
-    \State $(\bm{\widehat{f}}, \bm{\widehat{\sigma}}) \gets$ \Call{fit}{$\mathcal{D}_I$} 
-    \vspace{5pt}
-    \For{$b \gets 1, B$}
-      \vspace{5pt}
-      \For{$j \gets 1, I - 1$}
-        \For{$i \gets 1, I - j$}
-          \vspace{5pt}
-          \State $C^{(b)}_{i, j + 1} \gets$ \Call{sample}{$ \, \mathcal{N}(\widehat{f}_j C_{ij}, \widehat{\sigma}^2_j C_{ij}) \, $}
-          \vspace{5pt}
-          \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C_{ij}$
-          \vspace{5pt}
-        \EndFor
-        \vspace{5pt}
-        \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C_{ij}$
-        \vspace{5pt}
-        \If{$j < I - 1$}
-          \vspace{5pt}
-          \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I - j - 1}\sum_{i = 1}^{I - j} C_{ij} \left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
-          \vspace{5pt}
-        \Else
-          \vspace{5pt}
-          \State $\widehat{\sigma}^{(b)}_{I - 1} \gets \sqrt{\min{ \left \{ \displaystyle \frac{(\widehat{\sigma}^{(b)}_{I - 2})^4}{(\widehat{\sigma}^{(b)}_{I - 3})^2}, (\widehat{\sigma}^{(b)}_{I - 2})^2, (\widehat{\sigma}^{(b)}_{I - 3})^2 \right \} }}$
-          \vspace{5pt}
-          \EndIf
-        \EndFor
-    \EndFor
-    \State \Return $\{ (\widehat{\bm{f}}^{(b)}, \widehat{\bm{\sigma}}^{(b)}) \mid b = 1, \dots, B \}$
-  \end{algorithmic}
-\end{algorithm}
-%
-\begin{algorithm}[!htb]
-  \caption{Unconditional parametric bootstrap for Mack CL} 
-  \label{alg:uncond-param-mack}
-  \begin{algorithmic} 
-    \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$}
-    \vspace{5pt}
-    \State $(\{ r_{ij} \mid i + j \leq I + 1 \}, \bm{\widehat{f}}, \bm{\widehat{\sigma}}) \gets$ \Call{fit}{$\mathcal{D}_I$} 
-    \vspace{5pt}
-    \For{$b \gets 1, B$}
-      \vspace{5pt}
-      \For{$i \gets 1, I$}
-        \vspace{5pt}
-        \State $C^{(b)}_{i1} \gets C_{i1}$
-        \vspace{5pt}
+\begin{figure}[p]
+  \begin{algorithm}[H]
+    \caption{Conditional parametric bootstrap for Mack CL} 
+    \label{alg:cond-param-mack}
+    \begin{algorithmic} 
+      \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$}
+      \vspace{3pt}
+      \State $(\bm{\widehat{f}}, \bm{\widehat{\sigma}}) \gets$ \Call{fit}{$\mathcal{D}_I$} 
+      \vspace{3pt}
+      \For{$b \gets 1, B$}
+        \vspace{3pt}
+        \For{$j \gets 1, I - 1$}
+          \For{$i \gets 1, I - j$}
+            \vspace{3pt}
+            \State $C^{(b)}_{i, j + 1} \gets$ \Call{sample}{$ \, \mathcal{N}(\widehat{f}_j C_{ij}, \widehat{\sigma}^2_j C_{ij}) \, $}
+            \vspace{3pt}
+            \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C_{ij}$
+            \vspace{3pt}
+          \EndFor
+          \vspace{3pt}
+          \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C_{ij}$
+          \vspace{3pt}
+          \If{$j < I - 1$}
+            \vspace{3pt}
+            \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I - j - 1}\sum_{i = 1}^{I - j} C_{ij} \left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
+            \vspace{3pt}
+          \Else
+            \vspace{3pt}
+            \State $\widehat{\sigma}^{(b)}_{I - 1} \gets \sqrt{\min{ \left \{ \displaystyle \frac{(\widehat{\sigma}^{(b)}_{I - 2})^4}{(\widehat{\sigma}^{(b)}_{I - 3})^2}, (\widehat{\sigma}^{(b)}_{I - 2})^2, (\widehat{\sigma}^{(b)}_{I - 3})^2 \right \} }}$
+            \vspace{3pt}
+            \EndIf
+          \EndFor
       \EndFor
-      \vspace{5pt}
-      \For{$j \gets 1, I - 1$}
-        \For{$i \gets 1, I - j$}
-          \vspace{5pt}
-          \State $C^{(b)}_{i, j + 1} \gets$ \Call{sample}{$ \, \mathcal{N}(\widehat{f}_j C^{(b)}_{ij}, \widehat{\sigma}^2_j C^{(b)}_{ij}) \, $}
-          \vspace{5pt}
-          \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
-          \vspace{5pt}
+      \State \Return $\{ (\widehat{\bm{f}}^{(b)}, \widehat{\bm{\sigma}}^{(b)}) \mid b = 1, \dots, B \}$
+    \end{algorithmic}
+  \end{algorithm}
+  %
+  \begin{algorithm}[H]
+    \caption{Unconditional parametric bootstrap for Mack CL} 
+    \label{alg:uncond-param-mack}
+    \begin{algorithmic} 
+      \Require{Cumulative claims triangle $\mathcal{D}_I$, required number of bootstrap samples $B$}
+      \vspace{3pt}
+      \State $(\{ r_{ij} \mid i + j \leq I + 1 \}, \bm{\widehat{f}}, \bm{\widehat{\sigma}}) \gets$ \Call{fit}{$\mathcal{D}_I$} 
+      \vspace{3pt}
+      \For{$b \gets 1, B$}
+        \vspace{3pt}
+        \For{$i \gets 1, I$}
+          \vspace{3pt}
+          \State $C^{(b)}_{i1} \gets C_{i1}$
+          \vspace{3pt}
         \EndFor
-        \vspace{5pt}
-        \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
-        \vspace{5pt}
-        \If{$j < I - 1$}
-          \vspace{5pt}
-          \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I - j - 1}\sum_{i = 1}^{I - j} C^{(b)}_{ij} \left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
-          \vspace{5pt}
-        \Else
-          \vspace{5pt}
-          \State $\widehat{\sigma}^{(b)}_{I - 1} \gets \sqrt{\min{ \left \{ \displaystyle \frac{(\widehat{\sigma}^{(b)}_{I - 2})^4}{(\widehat{\sigma}^{(b)}_{I - 3})^2}, (\widehat{\sigma}^{(b)}_{I - 2})^2, (\widehat{\sigma}^{(b)}_{I - 3})^2 \right \} }}$
-          \vspace{5pt}
-          \EndIf
-        \EndFor
-    \EndFor    
-    \State \Return $\{ (\widehat{\bm{f}}^{(b)}, \widehat{\bm{\sigma}}^{(b)}) \mid b = 1, \dots, B \}$
-  \end{algorithmic}
-\end{algorithm}
+        \vspace{3pt}
+        \For{$j \gets 1, I - 1$}
+          \For{$i \gets 1, I - j$}
+            \vspace{3pt}
+            \State $C^{(b)}_{i, j + 1} \gets$ \Call{sample}{$ \, \mathcal{N}(\widehat{f}_j C^{(b)}_{ij}, \widehat{\sigma}^2_j C^{(b)}_{ij}) \, $}
+            \vspace{3pt}
+            \State $\displaystyle F^{(b)}_{i, j + 1} \gets C^{(b)}_{i, j + 1} / C^{(b)}_{ij}$
+            \vspace{3pt}
+          \EndFor
+          \vspace{3pt}
+          \State $\widehat{f}^{(b)}_j \gets \sum_{i = 1}^{I - j} C^{(b)}_{i, j + 1} / \sum_{i = 1}^{I - j} C^{(b)}_{ij}$
+          \vspace{3pt}
+          \If{$j < I - 1$}
+            \vspace{3pt}
+            \State $\displaystyle \widehat{\sigma}^{(b)}_j \gets \frac{1}{I - j - 1}\sum_{i = 1}^{I - j} C^{(b)}_{ij} \left( F^{(b)}_{i, j + 1} - \widehat{f}^{(b)}_j \right)^2$
+            \vspace{3pt}
+          \Else
+            \vspace{3pt}
+            \State $\widehat{\sigma}^{(b)}_{I - 1} \gets \sqrt{\min{ \left \{ \displaystyle \frac{(\widehat{\sigma}^{(b)}_{I - 2})^4}{(\widehat{\sigma}^{(b)}_{I - 3})^2}, (\widehat{\sigma}^{(b)}_{I - 2})^2, (\widehat{\sigma}^{(b)}_{I - 3})^2 \right \} }}$
+            \vspace{3pt}
+            \EndIf
+          \EndFor
+      \EndFor    
+      \State \Return $\{ (\widehat{\bm{f}}^{(b)}, \widehat{\bm{\sigma}}^{(b)}) \mid b = 1, \dots, B \}$
+    \end{algorithmic}
+  \end{algorithm}
+\end{figure}
 
 \begin{table}[!htb]
   \centering
@@ -820,40 +855,67 @@ Finally, we discuss the parametric bootstrap, in which we simulate directly from
 \label{tab:param-mack-res}
 \end{table}
 
-\section{Incorporating the process error}
+\section{Incorporating the process error} \label{sec:mack-proc-err}
 
-We end this chapter by discussing how the process error can be incorporated into these bootstrap procedures. As described in \Cref{sec:boot-proc}, our aim is to obtain a predictive distribution of the reserve which incorporates both parameter and process error. Following the procedure outlined there, we can achieve this by simulating the lower triangle $\mathcal{D}^{\mathsf{c}}_I = \{ C_{ij} \mid i + j > I + 1 \}$, giving us pseudo-realisations $C_{ij}$ of the relevant claim amounts. This, in turn, yields bootstrap replicates
+We end this chapter by discussing how the process error can be incorporated into these bootstrap procedures. As described in \Cref{sec:boot-proc}, our aim is to obtain a predictive distribution of the reserve which incorporates both parameter and process error. Following the procedure outlined there, we can achieve this by simulating the lower triangle $\mathcal{D}^{\mathsf{c}}_I = \{ C_{ij} \mid i + j > I + 1 \}$, giving us pseudo-realisations of the future claim amounts. This will then in turn yield bootstrap replicates
 \begin{equation}
     R^{(b)} \coloneqq \sum_{i = 2}^I (C^{(b)}_{iI} - C_{i, I + 1 - i})
 \end{equation}
-for the reserve. In view of \eqref{eq:time-series-model}, one way of achieving this would be to start from the antidiagonal of $\mathcal{D}_I$ and successively sample
+\newgeometry{bottom=0.1cm}
+\noindent for the reserve. The method proposed in \cite{england:dist} is based on \eqref{eq:time-series-model}: starting from the antidiagonal of $\mathcal{D}_I$, we recursively sample
 \begin{equation} \label{eq:normal-sampling}
-    C^{(b)}_{i, j + 1} \sim \mathcal{N}(\widehat{f}^{(b)}_j \, C^{(b)}_{ij}, \widehat{\sigma}^{(b)}_j \, C_{ij}) \,.
+    C^{(b)}_{i, j + 1} \sim \mathcal{N}(\widehat{f}^{(b)}_j \, C^{(b)}_{ij}, \widehat{\sigma}^{(b)}_j \, C_{ij}) \,,
 \end{equation}
-As with the parameter error in \Cref{sec:mack-boot}, however, we are faced with the problem of possibly drawing negative samples. Again, we could solve this by simply discard a simulated triangle as soon as it contains a negative value, but this can lead to computationally infeasible situations. 
+until the final development year $I$ is reached. As noted in \Cref{sec:mack-boot} when discussing the semiparametric bootstrap, however, this approach makes it possible to draw negative samples, which problematic. The remedies available to us here depend on the type of bootstrap employed. It is possible to avoid this difficulty with the semiparametric bootstrap by using the residuals from \Cref{eq:log-normal-resids}, which are based on the shifted log-normal distribution. For the parametric bootstrap, we can follow the suggestion from \cite{england:dist}, discussed in the previous section, and use \Cref{eq:gamma-sim} to simulate future claim amounts. The solution adopted for the pairs bootstrap will depend on which of the two other variants is used in the simulation step.
 
-we can follow the suggestion given in \cite[238]{england:dist} and subtitute in place of \eqref{eq:normal-sampling} a gamma distribution with the same mean and variance. If we write $C_{ij} \sim \Gamma(\alpha, \beta)$, this means that $\alpha, \beta$ must satisfy
-\begin{equation}
-\frac{\alpha}{\beta} = f_{j-1} C_{i, j-1} \quad \text{and} \quad \frac{\alpha}{\beta^2} = \sigma^2_{j-1} C_{i, j-1} \,,
-\end{equation}
-from which it follows that
-\begin{equation}
-\alpha = \frac{f_{j-1}^2 C_{i, j-1}}{\sigma_{j-1}^2} \quad \text{and} \quad \beta = \frac{f_{j-1}}{\sigma_{j-1}^2} \,.
-\end{equation}
+In the synthetic example we gave in \Cref{sec:boot-proc}, not much difference could be discerned between the fitted and predictive distributions. This stands in stark contrast to \Cref{fig:fit-pred-pairs,fig:fit-pred-semiparam,fig:fit-pred-param}, which compare these for the reserve under different bootstrap configurations. We can clearly see that fitted distribution severely underestimates the uncertainty of the reserve in all cases.
 
-% \begin{figure}
-%   \includegraphics{pred_dist_semiparam}
-% \end{figure}
+\vspace{-0.39cm}
 
-\begin{figure}
-  \includegraphics{mack_pairs_dist}
-  \caption{Comparison of the simulated distribution of the reserve with and without parameter error}
+\begin{figure}[!htb]
+  \begin{subfigure}{0.45 \textwidth}
+    \includegraphics{mack_pairs_param}
+    \subcaption{Parametric}
+  \end{subfigure}
+  \begin{subfigure}{0.45 \textwidth}
+    \includegraphics{mack_pairs_semiparam}
+    \subcaption{Semiparametric}
+  \end{subfigure}
+  \caption{Comparison of the fitted and predictive distribution from the pairs bootstrap for different methods in the prediction step}
+  \label{fig:fit-pred-pairs}
 \end{figure}
 
-\begin{figure}
-  \includegraphics{mack_dist_param}
-  \caption{Comparison of the simulated distribution of the reserve with and without parameter error}
+\vspace{-0.75cm}
+
+\begin{figure}[!htb]
+  \begin{subfigure}{0.45 \textwidth}
+    \includegraphics{mack_semiparam_cond}
+    \subcaption{Conditional}
+  \end{subfigure}
+  \begin{subfigure}{0.45 \textwidth}
+    \includegraphics{mack_semiparam_uncond}
+    \subcaption{Unconditional}
+  \end{subfigure}
+  \caption{Comparison of the fitted and predictive distribution for the semiparametric bootstrap}
+  \label{fig:fit-pred-semiparam}
 \end{figure}
+
+\restoregeometry
+
+\begin{landscape}
+  \begin{figure}
+    \begin{subfigure}{\linewidth}
+      \includegraphics{mack_param_cond}
+      \subcaption{Conditional}
+    \end{subfigure}
+    \begin{subfigure}{\linewidth}
+      \includegraphics{mack_param_uncond}
+      \subcaption{Unconditional}
+    \end{subfigure}
+    \caption{Comparison of the fitted and predictive distribution for the parametric bootstrap}
+    \label{fig:fit-pred-param}
+  \end{figure}
+\end{landscape}
 
 \chapter{Poisson GLM} \label{chapter:poisson}
 
