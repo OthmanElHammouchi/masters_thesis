@@ -739,7 +739,7 @@ Hence the only option is to carry out the resampling of each column pairs indepe
 \label{tab:pairs-mack-res}
 \end{table}
 
-Finally, we discuss the parametric bootstrap, in which we simulate directly from the fitted model. Based on \Cref{eq:time-series-model}, we might be tempted to simply substitute $\mathcal{N}(0, 1)$-distributed draws from a random number generator for the residuals in \Cref{alg:cond-semiparam-mack,alg:uncond-param-mack}. The problem with this approach, is that it doesn't extend easily to other distributions, because it is not possible, in general, to write these as the sum of a mean and a scaled error term. A better idee, then, is to generate bootstrap responses directly from the fitted distribution. Depending on whether the conditional or the unconditional scheme is used, this will either depend on the original triangle observations or the ones generated at the previous step. The Mack CL is then refitted to the bootstrapped triangle in order to obtain $\widehat{\bm{f}}^{(b)}$ and $\widehat{\bm{\sigma}}^{(b)}$.
+Finally, we discuss the parametric bootstrap, in which we simulate directly from the fitted model. Based on \Cref{eq:time-series-model}, we might be tempted to simply substitute $\mathcal{N}(0, 1)$-distributed draws from a random number generator for the residuals in \Cref{alg:cond-semiparam-mack,alg:uncond-param-mack}. The problem with this approach, is that it doesn't extend easily to other distributions, because it is not possible, in general, to write these as the sum of a mean and a scaled error term. A better idea, then, is to generate bootstrap responses directly from the fitted distribution. Depending on whether the conditional or the unconditional scheme is used, this will either depend on the original triangle observations or the ones generated at the previous step. The Mack CL is then refitted to the bootstrapped triangle in order to obtain $\widehat{\bm{f}}^{(b)}$ and $\widehat{\bm{\sigma}}^{(b)}$.
 
 \begin{figure}[p]
   \begin{algorithm}[H]
@@ -951,7 +951,9 @@ which is often preferred to the previous one for reasons of interpretability. In
 \end{equation}
 then we can view the $\xi_i$ as expected ultimate claim amounts, and the $\gamma_j$ as the expected development pattern.
 
-As mentioned in the introduction, stochastic claims reserving models have to reproduce the chain ladder point predictions in order to be acceptable to practitioners. While less obvious than for the Mack CL, it can be shown that the Poisson model also satisfies this requirement (see \cite[Lemma 2.16]{wuthrich:stochastic-reserving}).
+As mentioned in the introduction, stochastic claims reserving models have to reproduce the chain ladder point predictions in order to be acceptable to practitioners. While less obvious than for the Mack CL, it can be shown that the Poisson model also satisfies this requirement (see \cite[Lemma 2.16]{wuthrich:stochastic-reserving}), as illustrated by the following listing.
+
+\lstinputlisting[language=R, caption=R example]{mack_pois_agreement.r}
 
 \section{Generalised linear models} \label{sec:glm}
 
@@ -1127,7 +1129,29 @@ and estimate $\bm{\mu}$ (and therefore $\bm{\beta}$) by minimising
 \begin{equation}
   Q(\bm{\mu} \mid \mathbf{y}, \phi) \coloneqq \sum_{i = 1}^N Q_i(\mu_i \mid y_i, \phi) \,.
 \end{equation}
-It must be stressed that $Q$ has no probabilistic significance: it does not, in general, correspond to the log-likelihood of any distribution. Rather, it functions a device to obtain estimates of the desired parameters, fulfilling in this a similar role to that of the log-likelihood, which is why we refer to it as a \emph{quasi-likelihood function}\sepfootnote{fn:quasi-likelihood}. It is usual to identify quasi-likelihood models derived from specific distributions (i.e.\ using the corresponding variance function) by prefixing 'quasi' to the name of said distribution, e.g.\ quasi-Poisson or quasi-binomial. The derived quasi-model yields the same parameter estimates as the classical GLM if the data follow the original distribution.
+It must be stressed that $Q$ has no probabilistic significance: it does not, in general, correspond to the log-likelihood of any distribution. Rather, it functions a device to obtain estimates of the desired parameters, fulfilling in this a similar role to that of the log-likelihood, which is why we refer to it as a \emph{quasi-likelihood function}\sepfootnote{fn:quasi-likelihood}. It is usual to identify quasi-likelihood models derived from specific distributions (i.e.\ using the corresponding variance function) by prefixing 'quasi' to the name of said distribution, e.g.\ quasi-Poisson or quasi-binomial. The derived quasi-model yields the same parameter estimates as the classical GLM if the data follow the original distribution. This is the case for the data in \Cref{tab:uk-motor}, as it consists of positive integers, hence the estimates shown in \cref{tab:pois-bench} apply to both models, with the exception of the dispersion parameter (which is always equal to $1$ for the Poisson model).
+
+\begin{table}[!htb]
+  \centering
+  \begin{tabular}{m{3em} m{3em} m{3em} m{3em} m{3em}|}\toprule
+    $j$ & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+    \csvreader[
+      head to column names,
+      late after line = \\
+    ]{%
+      ../results/example/pois_bench_table.csv
+    }{}{%
+      \idx & \a & \b & \reserve
+    } \midrule
+    \end{tabular} \\
+  \begin{tabular}{>{\raggedright}p{3em} >{\raggedleft\arraybackslash}p{12em}}
+    \csvreader[
+      head to column names
+    ]{../results/example/pois_bench_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+  \end{tabular}
+  \caption{Poisson GLM results for UK Motor triangle}
+  \label{tab:pois-bench}
+\end{table}
 
 We are now finally in a position to describe the overdispersed variant of the Poisson GLM.
 
@@ -1158,37 +1182,7 @@ Developing a bootstrap procedure for the Poisson and quasi-Poisson models is in 
 
 As with Mack's model, we shall take \Cref{sec:boot-reg} as our starting point. We distinguished there between nonparametric, semiparametric and parametric approaches to bootstrapping. Of these, the nonparametric bootstrap, which involves resampling predictor-response pairs from the original data, cannot be applied to the Poisson model. To understand why, recall from \Cref{eq:irwls-iter} that the IRWLS algorithm fits a linear model at each step of the iteration in order to obtain a new estimate of the parameters, which requires the matrix on the left-hand side to be invertible. Hence, it follows that the design matrix must have full rank. We also saw in \Cref{eq:poisson-covariates} that the rows of $\mathbf{X}$ are binary vectors indicating the origin and development year (row and column in the claims triangle) to which an observation belongs. Because of the structure of the triangle, every observation corresponds
 
-This leaves us with only the semiparameteric and parametric variants to consider.
-
-% \begin{table}
-%   \centering
-%   \begin{tabular}{|m{5em}|m{5em}|m{5em}|m{5em}|m{5em}|}\hline%
-%     $j$ & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ & $\widehat{\mathrm{MSEP}}(\widehat{R})$ \\ \hline
-%     \csvreader[
-%       head to column names,
-%       late after line = \\\hline
-%     ]{%
-%       ../results/example/mack_bench.csv
-%     }{}{%
-%       \idx & \a & \b & \reserve & \reserveMSE
-%     }%
-%   \end{tabular}
-%   \begin{tabular}{m{5em} m{5em}}\hline%
-%     $\widehat{c}^B$ \\ $\widehat{\phi}^B$ \\ \hline
-%     \csvreader[
-%       head to column names,
-%       late after line = \\\hline
-%     ]{%
-%       ../results/example/mack_bench.csv
-%     }{}{%
-%       \intercept \\ \disp
-%     }%
-%   \end{tabular}
-%   \caption{Poisson GLM results for UK Motor triangle}
-%   \label{tab:pois-bench}
-% \end{table}
-
-For the semiparameteric bootstrap, the essential step is to find a satisfactory definition for the residuals such that they are i.i.d. Things are more complicated here than for Mack's model, as there generally exists no natural seperation of the response into mean and additive error for a non-Gaussian response (this problem was recognised early on in the literature on GLM bootstrapping, see \cite{moulton}). Consequently, a multitude of different residual types are available. We will consider three of these in particular.
+For the semiparameteric bootstrap, the essential step is to find a satisfactory definition for the residuals such that they are i.i.d, exactly as in \Cref{sec:mack-boot}. Things are more complicated here than for Mack's model, as there generally exists no natural seperation of the response into mean and additive error for a non-Gaussian response (this problem was recognised early on in the literature on GLM bootstrapping, see \cite{moulton}). Consequently, a multitude of different residual types are available. We will consider three of these in particular.
 
 The \emph{Pearson residuals}
 \begin{equation} \label{eq:pearson-resid}
@@ -1199,7 +1193,7 @@ attempt to deal with the inherent heteroscedasticity of the GLM response by divi
   \tilde{r}_{ij} \coloneqq \frac{X_{ij} - \widehat{\mu}_{ij}}{\sqrt{V(\widehat{\mu}_{ij}) (1 - h_{ij})}} \,,
 \end{equation}
 where $h_{ij}$ is the appropriate diagonal element in the hat matrix
-\begin{equation}
+\begin{equation} \label{eq:glm-H-mat}
   \mathbf{H} = \mathbf{X} (\mathbf{XWX})^{-1} \mathbf{X}^T \mathbf{W} \mathbf{z}
 \end{equation}
 corresponding to the final iteration of the IRWLS algorithm.
@@ -1210,22 +1204,153 @@ Another kind of residuals are based on a goodness-of-fit measure for GLMs known 
 \end{equation}
 expresses the departure of our model from a perfect fit. The functions $D(\mathbf{y}, \bm{\mu})$ and $d(y_i, \mu_i)$ are called the \emph{total} and \emph{unit deviance}, respectively. The \emph{deviance residuals} are then defined as
 \begin{equation}
-  r_{ij} \coloneqq \mathrm{sign}(x_{ij} - \mu_{ij}) \sqrt{d(x_{ij}, \mu_{ij})} \,.
+  r_{ij} \coloneqq \mathrm{sign}(x_{ij} - \widehat{\mu}_{ij}) \sqrt{d(x_{ij}, \widehat{\mu}_{ij})} \,.
 \end{equation}
+Similarly to the Pearson residuals, we can also define leverage-adjusted version of these:
+\begin{equation}
+  \tilde{r}_{ij} \coloneqq \frac{\mathrm{sign}(x_{ij} - \widehat{\mu}_{ij}) \sqrt{d(x_{ij}, \widehat{\mu}_{ij})}}{\sqrt(1 - h_{ij})} \,,
+\end{equation}
+where $H$ is defined as in \Cref{eq:glm-H-mat}. Under certain assumptions (see \cite[Section 7.5]{dunn:rand-quant-res}), it can be shown that both the Pearson and deviance residuals have an asymptotic normal distribution.
 
-Finally, we consider a third type known as \emph{quantile residuals} (see \cite{dunn} for a general discussion), which are most easily explained for continuous response distributions. In that case, an elementary fact from probability theory states that
+Finally, we consider a third type known as \emph{quantile residuals} (introduced in \cite{dunn:rand-quant-res}), which are most easily explained for continuous response distributions. In that case, an elementary fact from probability theory states that
 \begin{equation}
   F(Y \mid \mu, \phi) \sim U(0, 1) \,,
 \end{equation}
 and it should therefore follow that the empirical distribution of the transformed sample
 \begin{equation}
-  r_i \coloneqq F(Y_i \mid \widehat{\mu_i}, \widehat{\phi})
+  F(Y_i \mid \widehat{\mu_i}, \widehat{\phi})
 \end{equation}
-is approximately uniform, provided the sampling variability of $\bm{\widehat{\mu}}$ and $\widehat{\phi}$ is not too severe. If $F(\cdot \mid \bm{\mu}, \phi)$ is discrete, the definition is amended as follows: for every observation $y_i$, set
+is approximately uniform, provided the sampling variability of $\bm{\widehat{\mu}}$ and $\widehat{\phi}$ is not too severe; hence, these quantities can be chosen as residuals\sepfootnote{fn:quantile-resids}. If $F(\cdot \mid \bm{\mu}, \phi)$ is discrete, the definition is amended as follows: for every observation $y_i$, set
 \begin{equation}
-  a_i \coloneqq \lim_{y \uparrow y_i} F(y \mid \widehat{\mu_i}, \widehat{\phi}), \qquad b_i \coloneqq F(y_i \mid \widehat{\mu_i}, \widehat{\phi}) \,,
+  a_i \coloneqq \lim_{y \uparrow y_i} F(y \mid \widehat{\mu_i}, \widehat{\phi}), \qquad b_i \coloneqq \lim_{y \downarrow y_i} F(y \mid \widehat{\mu_i}, \widehat{\phi}) \,,
 \end{equation}
-and define the $r_i$ as mutually independent random variables which are uniformly distributed on $(a_i, b_i]$.
+and define the $r_i$ as mutually independent random variables which are uniformly distributed on $(a_i, b_i]$. Note that we can equivalently write $a_i = F(y_i - 1 \mid \widehat{\mu}_i, \widehat{\phi})$ and $b_i = F(y_i \mid \widehat{\mu}_i, \widehat{\phi})$, because the distribution function $F$ is c\`adl\`ag. Quantile residuals have the significant advantage that their distribution is known exactly (modulo the sampling variability of the parameter estimates), instead of having to be approximated by asymptotic results.
+
+\Cref{tab:semiparam-pois-dev-res,tab:semiparam-pois-pears-res,tab:semiparam-pois-quant-res} show the results of applying the poisson and quasi-poisson semiparameteric bootstraps with the different residuals to the data in \Cref{tab:uk-motor}. It can be seen that they all yield similar results, in comparison to each other as well as \Cref{tab:pois-bench}, lending empirical support to these efficacy of these methods. 
+
+\begin{table}[!htb]
+  \centering
+  \begin{subtable}{0.45\linewidth}
+    \begin{tabular}{m{3em} m{3em} m{3em} m{3em} m{3em}|}\toprule
+      $j$ & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+      \csvreader[
+        head to column names,
+        late after line = \\
+      ]{%
+        ../results/example/pois_semiparam_dev_table.csv
+      }{}{%
+        \idx & \a & \b & \reserve
+      } \midrule
+      \end{tabular} \\
+    \begin{tabular}{>{\raggedright}p{3em} >{\raggedleft\arraybackslash}p{12em}}
+      \csvreader[
+        head to column names
+      ]{../results/example/pois_semiparam_dev_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+    \end{tabular}
+    \subcaption{Poisson}
+  \end{subtable}
+  \begin{subtable}{0.45\linewidth}
+    \begin{tabular}{m{3em} m{3em} m{3em} m{3em} m{3em}|}\toprule
+      $j$ & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+      \csvreader[
+        head to column names,
+        late after line = \\
+      ]{%
+        ../results/example/quasipois_semiparam_dev_table.csv
+      }{}{%
+        \idx & \a & \b & \reserve
+      } \midrule
+      \end{tabular} \\
+    \begin{tabular}{>{\raggedright}p{3em} >{\raggedleft\arraybackslash}p{12em}}
+      \csvreader[
+        head to column names
+      ]{../results/example/quasipois_semiparam_dev_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+    \end{tabular}
+    \subcaption{Quasi-poisson}
+  \end{subtable}
+\caption{Results for semiparameteric bootstrap with deviance residuals}
+\label{tab:semiparam-pois-dev-res}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \begin{subtable}{0.45\linewidth}
+    \begin{tabular}{m{3em} m{3em} m{3em} m{3em} m{3em}|}\toprule
+      $j$ & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+      \csvreader[
+        head to column names,
+        late after line = \\
+      ]{%
+        ../results/example/pois_semiparam_pears_table.csv
+      }{}{%
+        \idx & \a & \b & \reserve
+      } \midrule
+      \end{tabular} \\
+    \begin{tabular}{>{\raggedright}p{3em} >{\raggedleft\arraybackslash}p{12em}}
+      \csvreader[
+        head to column names
+      ]{../results/example/pois_semiparam_pears_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+    \end{tabular}
+    \subcaption{Poisson}
+  \end{subtable}
+  \begin{subtable}{0.45\linewidth}
+    \begin{tabular}{m{3em} m{3em} m{3em} m{3em} m{3em}|}\toprule
+      $j$ & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+      \csvreader[
+        head to column names,
+        late after line = \\
+      ]{%
+        ../results/example/quasipois_semiparam_pears_table.csv
+      }{}{%
+        \idx & \a & \b & \reserve
+      } \midrule
+      \end{tabular} \\
+    \begin{tabular}{>{\raggedright}p{3em} >{\raggedleft\arraybackslash}p{12em}}
+      \csvreader[
+        head to column names
+      ]{../results/example/quasipois_semiparam_pears_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+    \end{tabular}
+    \subcaption{Quasi-poisson}
+  \end{subtable}
+\caption{Results for semiparameteric bootstrap with Pearson residuals}
+\label{tab:semiparam-pois-pears-res}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+    \begin{tabularx}{0.7\textwidth}{XXXX}\toprule
+      $j$ & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+      \csvreader[
+        head to column names,
+        late after line = \\
+      ]{%
+        ../results/example/pois_semiparam_quant_table.csv
+      }{}{%
+        \idx & \a & \b & \reserve
+      } \midrule
+      \end{tabularx} \\
+    \begin{tabularx}{0.7\textwidth}{>{\raggedright}X >{\raggedleft\arraybackslash}X}
+      \csvreader[
+        head to column names
+      ]{../results/example/pois_semiparam_quant_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+    \end{tabularx}
+\caption{Results for semiparameteric bootstrap with quantile residuals}
+\label{tab:semiparam-pois-quant-res}
+\end{table}
+
+Next, we move on to the parametric bootstrap. Here again, the development proceeds in a very similar way to \Cref{sec:mack-boot}. We begin by fitting the model to the original data, giving us estimates for $\alpha_i$
+
+\section{Incorporating the process error}
+
+Finally, we consider the question of incorporating the intrinsic variability of the response in our bootstrap simulations. Just as in \Cref{sec:boot-proc} and \Cref{sec:mack-proc}, we will use the concept of the predictive distribution to achieve this. Depending on the type of bootstrap under consideration, this will result in different procedures. For the semiparametric bootstrap, we resample the residuals a second time and invert the appropriate formula to obtain bootstrap responses.
+
+\Cref{fig:pred-semiparam,fig:pred-param} show the predictive distribution
+
+\begin{figure}[!htb]
+  \includegraphics{pois_semiparam}
+  \caption{Predictive distributions for different types of semiparameteric bootstrap}
+  \label{fig:pred-semiparam}
+\end{figure}
 
 \chapter{Numerical implementation}
 
