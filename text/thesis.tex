@@ -1074,22 +1074,22 @@ It must be stressed that $Q$ has no probabilistic significance: it does not, in 
 
 \begin{table}[!htb]
   \centering
-  \begin{tabular}{m{3em} m{3em} m{3em} m{3em} m{3em}|}\toprule
-    $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+  \begin{tabularx}{0.5\linewidth}{CCC \mcol{4em} C}\toprule
+    $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
     \csvreader[
       head to column names,
-    late after line =                                                   \\
+    late after line =                                                                                                                \\
     ]{%
       ../results/example/pois_bench_table.csv
     }{}{%
-    \idx & \a                & \b                     & \reserve
+    \idx  & \a                & \b                & \reserve          & \prederror
     } \midrule
-  \end{tabular} \\
-  \begin{tabular}{>{\raggedright}p{3em} >{\raggedleft\arraybackslash}p{12em}}
+  \end{tabularx} \\
+  \begin{tabularx}{0.5\linewidth}{LR}
     \csvreader[
       head to column names
     ]{../results/example/pois_bench_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-  \end{tabular}
+  \end{tabularx}
   \caption{Poisson GLM results for UK Motor triangle}
   \label{tab:pois-bench}
 \end{table}
@@ -1121,7 +1121,7 @@ is satisfied for $j \in \{ 1, \dots, I \}$ (see \cite[Section 2]{renshaw}). The 
 
 Developing a bootstrap procedure for the Poisson and quasi-Poisson models is in some respects easier than for \modelref{model:mack}. The absence of a recursive structure makes it more straightforward to reason about resampling. Furthermore, bootstrap methods for claims triangle GLMs have seen more discussion in the literature (see e.g.\ \cite{pinheiro} and \cite{england:dist}), and so we can draw upon this material for our exposition.
 
-As with Mack's model, we shall take \cref{sec:boot-reg} as our starting point. We distinguished there between nonparametric, semiparametric and parametric approaches to bootstrapping. Of these, the nonparametric bootstrap, which involves resampling predictor-response pairs from the original data, is difficult to apply to \modelref{model:poisson}. To understand why, recall from \cref{eq:irwls-iter} that the IRWLS algorithm fits a linear model at each step of the iteration in order to obtain a new estimate of the parameters, which requires the matrix on the left-hand side to be invertible. Hence, it follows that the design matrix must have full rank. We also saw in \cref{eq:poisson-covariates} that the rows of $\mathbf{X}$ are binary vectors indicating the origin and development year (row and column in the claims triangle) to which an observation belongs. Because of the structure of the triangle, every observation corresponds
+As with Mack's model, we shall take \cref{sec:boot-reg} as our starting point. We distinguished there between nonparametric, semiparametric and parametric approaches to bootstrapping. Of these, the nonparametric bootstrap, which involves resampling predictor-response pairs from the original data, is difficult to apply to \modelref{model:poisson}. To understand why, recall from \cref{eq:irwls-iter} that the IRWLS algorithm fits a linear model at each step of the iteration in order to obtain a new estimate of the parameters, which requires the matrix on the left-hand side to have full rank. This implies that we cannot estimate a parameter if there are no observations for it, which is especially likely.
 
 For the semiparameteric bootstrap, the essential step is to find a satisfactory definition for the residuals such that they are i.i.d, exactly as in \cref{sec:mack-boot}. Things are more complicated here than for Mack's model, as there generally exists no natural seperation of the response into mean and additive error for a non-Gaussian response (this problem was recognised early on in the literature on GLM bootstrapping, see \cite{moulton}). Consequently, a multitude of different residual types are available. We will consider three of these in particular.
 
@@ -1198,41 +1198,42 @@ which, except in the case of the Pearson residuals, yields a set of nontrivial e
   \begin{table}[H]
     \centering
     \begin{subtable}{0.45\linewidth}
-      \begin{tabular}{m{3em} m{3em} m{3em} m{3em} m{3em}|}\toprule
-        $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
+        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
         \csvreader[
           head to column names,
-        late after line =                                                   \\
+        late after line =                                                                                                                \\
         ]{%
           ../results/example/pois_semiparam_dev_table.csv
         }{}{%
-        \idx & \a                & \b                     & \reserve
+        \idx  & \a                & \b                & \reserve          & \prederror
         } \midrule
-      \end{tabular} \\
-      \begin{tabular}{>{\raggedright}p{3em} >{\raggedleft\arraybackslash}p{12em}}
+      \end{tabularx} \\
+      \begin{tabularx}{\linewidth}{LR}
         \csvreader[
           head to column names
         ]{../results/example/pois_semiparam_dev_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-      \end{tabular}
+      \end{tabularx}
       \subcaption{Poisson}
     \end{subtable}
+    \hfill
     \begin{subtable}{0.45\linewidth}
-      \begin{tabular}{m{3em} m{3em} m{3em} m{3em} m{3em}|}\toprule
-        $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
+        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
         \csvreader[
           head to column names,
-        late after line =                                                   \\
+        late after line =                                                                                                                \\
         ]{%
           ../results/example/quasipois_semiparam_dev_table.csv
         }{}{%
-        \idx & \a                & \b                     & \reserve
+        \idx  & \a                & \b                & \reserve          & \prederror
         } \midrule
-      \end{tabular} \\
-      \begin{tabular}{>{\raggedright}p{3em} >{\raggedleft\arraybackslash}p{12em}}
+      \end{tabularx} \\
+      \begin{tabularx}{\linewidth}{LR}
         \csvreader[
           head to column names
         ]{../results/example/quasipois_semiparam_dev_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-      \end{tabular}
+      \end{tabularx}
       \subcaption{Quasi-poisson}
     \end{subtable}
     \caption{Results for semiparameteric bootstrap with deviance residuals}
@@ -1242,41 +1243,42 @@ which, except in the case of the Pearson residuals, yields a set of nontrivial e
   \begin{table}[H]
     \centering
     \begin{subtable}{0.45\linewidth}
-      \begin{tabular}{m{3em} m{3em} m{3em} m{3em} m{3em}|}\toprule
-        $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
+        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
         \csvreader[
           head to column names,
-        late after line =                                                   \\
+        late after line =                                                                                                                \\
         ]{%
           ../results/example/pois_semiparam_pears_table.csv
         }{}{%
-        \idx & \a                & \b                     & \reserve
+        \idx  & \a                & \b                & \reserve          & \prederror
         } \midrule
-      \end{tabular} \\
-      \begin{tabular}{>{\raggedright}p{3em} >{\raggedleft\arraybackslash}p{12em}}
+      \end{tabularx} \\
+      \begin{tabularx}{\linewidth}{LR}
         \csvreader[
           head to column names
         ]{../results/example/pois_semiparam_pears_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-      \end{tabular}
+      \end{tabularx}
       \subcaption{Poisson}
     \end{subtable}
+    \hfill
     \begin{subtable}{0.45\linewidth}
-      \begin{tabular}{m{3em} m{3em} m{3em} m{3em} m{3em}|}\toprule
-        $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
+        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
         \csvreader[
           head to column names,
-        late after line =                                                   \\
+        late after line =                                                                                                                \\
         ]{%
           ../results/example/quasipois_semiparam_pears_table.csv
         }{}{%
-        \idx & \a                & \b                     & \reserve
+        \idx  & \a                & \b                & \reserve          & \prederror
         } \midrule
-      \end{tabular} \\
-      \begin{tabular}{>{\raggedright}p{3em} >{\raggedleft\arraybackslash}p{12em}}
+      \end{tabularx} \\
+      \begin{tabularx}{\linewidth}{LR}
         \csvreader[
           head to column names
         ]{../results/example/quasipois_semiparam_pears_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-      \end{tabular}
+      \end{tabularx}
       \subcaption{Quasi-poisson}
     \end{subtable}
     \caption{Results for semiparameteric bootstrap with Pearson residuals}
@@ -1285,18 +1287,18 @@ which, except in the case of the Pearson residuals, yields a set of nontrivial e
 
   \begin{table}[H]
     \centering
-    \begin{tabularx}{0.7\textwidth}{XXXX}\toprule
-      $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}^B$ \\ \midrule
+    \begin{tabularx}{0.5\textwidth}{CCCCC}\toprule
+      $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
       \csvreader[
         head to column names,
-      late after line =                                                   \\
+      late after line =                                                                                                                \\
       ]{%
         ../results/example/pois_semiparam_quant_table.csv
       }{}{%
-      \idx & \a                & \b                     & \reserve
+      \idx  & \a                & \b                & \reserve          & \prederror
       } \midrule
     \end{tabularx} \\
-    \begin{tabularx}{0.7\textwidth}{>{\raggedright}X >{\raggedleft\arraybackslash}X}
+    \begin{tabularx}{0.5\textwidth}{LR}
       \csvreader[
         head to column names
       ]{../results/example/pois_semiparam_quant_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
@@ -1306,11 +1308,11 @@ which, except in the case of the Pearson residuals, yields a set of nontrivial e
   \end{table}
 \end{figure}
 
-Finally, we consider the parametric bootstrap. Here again, the development proceeds in a very similar way to \cref{sec:mack-boot}. We begin by fitting the model to the original data, giving us estimates for $c$, $\alpha_i$ and $\beta_j$, as well as $\phi$ if we're using \modelref{model:odp}. With the help of a random number generator, we can then use these to generate a new upper triangle. For \modelref{model:poisson}, this means sampling from a Poisson distribution with mean $\widehat{\mu}_{ij} = \exp{( \widehat{c} + \widehat{\alpha}_i + \widehat{\beta}_j )}$; for \modelref{model:poisson} any distribution satisfying
+Finally, we consider the parametric bootstrap. Here again, the development proceeds in a very similar way to \cref{sec:mack-boot}. We begin by fitting the model to the original data, giving us estimates for $c$, $a_i$ and $b_j$, as well as $\phi$ if we're using \modelref{model:odp}. With the help of a random number generator, we can then use these to generate a new upper triangle. For \modelref{model:poisson}, this means sampling from a Poisson distribution with mean $\widehat{\mu}_{ij} = \exp{( \widehat{c} + \widehat{a}_i + \widehat{b}_j )}$; for \modelref{model:poisson} any distribution satisfying
 \begin{equation}
   \var{X_{ij}} = \widehat{\phi} \, V(\widehat{\mu}_{ij}) = \phi \, \widehat{\mu}_{ij}
 \end{equation}
-will do. The model is then refitted to the simulated triangle to obtain $\widehat{c}^{(k)}$, $\widehat{\alpha}^{(k)}_i$, $\widehat{\beta}^{(k)}_j$ and $\widehat{\phi}^{(k)}$.
+will do. The model is then refitted to the simulated triangle to obtain $\widehat{c}^{(k)}$, $\widehat{a}^{(k)}_i$, $\widehat{b}^{(k)}_j$ and $\widehat{\phi}^{(k)}$.
 
 \begin{algorithm}
   \begin{algorithmic}
