@@ -6,26 +6,22 @@
 \pretitle{\flushleft{Graduation thesis submitted in partial fulfilment of the requirements for the degree of Master of Science in Mathematics}}
 \author{Othman El Hammouchi}
 \date{June~2023}
-\promotors{Promotors: dr.\ Robin Van Oirbeek \and prof.\ dr.\ Tim Verdonck}
-\faculty{Sciences and Bioengineering Sciences}
-
-\makenomenclature
-
-\renewcommand{\nomname}{List of Symbols}
-\renewcommand{\nompreamble}{The next list describes several symbols that will be later used within the body of the document}
+\promotors{Promotors: dr.\ Robin Van Oirbeek \and prof.\ dr.\ Tim Verdonck \and prof.\ dr.\ Mark Sioen}
+\faculty{Sciences and Bioengineering Sciences}%
 
 \begin{document}
-
 \frontmatter
 \maketitle%
-\input{footnotes.tex}%
 
 \title{Gevoeligheidsanalyse van stochastische schadereserveringsmodellen aan de hand van bootstrap-simulaties}
 \pretitle{\flushleft{Proefschrift ingediend met het oog op het behalen van de graad van Master of Science in de Wiskunde}}%
 \date{Juni~2023}%
-\promotors{Promotors: dr.\ Robin Van Oirbeek \and prof.\ dr.\ Tim Verdonck}
+\promotors{Promotors: dr.\ Robin Van Oirbeek \and prof.\ dr.\ Tim Verdonck \and prof.\ dr.\ Mark Sioen}
 \faculty{Wetenschappen en Bio-ingenieurswetenschappen}%
+
 \maketitle%
+
+\input{footnotes.tex}%
 
 \chapter{Abstract}
 
@@ -37,9 +33,7 @@ Your abstract would go here.
 
 \printnomenclature%
 
-\mainmatter%
-
-\chapter{Introduction} \label{chapter:intro}
+\chapter{Introduction} \label{intro}
 
 The most defining characteristic of the insurance industry is the inverted nature of its production cycle. In manufacturing, commerce, transport, etc., payment is usually received only upon delivery of goods or services. By contrast, insurance products are purchased long before the adverse events which they protect against have occured, if they ever do. Insurers therefore face the challenge of forecasting the amount and variability of funds needed to settle outstanding contracts, a process known as \emph{claims reserving}. In this the reserving actuary relies historical data which is most often presented in the form of a \emph{loss} or \emph{run-off triangle} $\mathcal{D}_I$, which consists either of cumulative or incremental amounts of some actuarial variable (payments, number of claims, etc.), respectively denoted by $C_{ij}$ and $X_{ij}$. Here $1 \leq i \leq I$ denotes the \emph{cohort}, \emph{origin year} or \emph {accident year} and $1 \leq j \leq J$ the \emph{development year}, so that
 \begin{equation}
@@ -102,7 +96,7 @@ To illustrate this point, consider \cref{tab:uk-motor}, which contains the datas
     2013   & 6283                    &      &       &       &       &       &       \\
     \bottomrule
   \end{tabularx}
-  \caption{UK Motor claims triangle from \textcite{christofides}}
+  \caption{UK Motor cumulative claims triangle from \textcite{christofides}}
   \label{tab:uk-motor}
 \end{table}
 
@@ -130,6 +124,8 @@ The same diagnostic plots are shown in \cref{fig:diag-plot-perturbed} for the ca
 \end{figure}
 
 Our aim in this chapter is to investigate whether it is possible to use bootstrap simulations to remedy this problem. The chapter is divided as follows. The next section introduces the bootstrap and explains how it can be used for inference on regression models, which is how we will frame the reserving methods under consideration. In the subsequent two sections, we will then apply this theory to two of the most widespread stochastic claims reserving models, \modelref{model:mack} and the (overdispersed) Poisson GLM, in order to study whether it is possible to identify pattern breaks by using the bootstrap. Specifically, we simulate claims triangles which perfectly follow the model assumptions, perturb these, and generate a bootstrap reserve from the resulting dataset. This will allow us to investigate how the simulated reserve is impacted by deviations from the model assumptions.
+
+\mainmatter%
 
 \chapter{The bootstrap method} \label{chapter:boot}
 
@@ -216,7 +212,7 @@ If we want to do predictive inference on a regression model using the bootstrap,
 \end{equation}
 A similar procedure can be outlined for the parametric bootstrap by appropriately adjusting the method of generating bootstrap response replicates. The method cannot be applied to the pairs bootstrap, however, as it lacks a mechanism for simulating new response values by themselves; we must therefore borrow this part from one of the alternative approaches, forsaking part of its parsimony and robustness properties in the process. We can then use \cref{eq:pred-error-boot} for different kinds of inference, e.g. obtaining prediction intervals or estimating the mean squared error of prediction.
 
-While this offers an avenue for incorporating the process variance into bootstrap procedures for predictive inference, it is not the one best suited to our purposes. Recall from \cref{chapter:intro} that we want to study how the reserve is impacted by violations of the assumptions of a given actuarial model which can be framed in terms of regression, as we shall see in \cref{chapter:mack,chapter:poisson}. In other words, we would like to simulate the distribution of the response itself. In \cref{eq:pred-error-boot}, this was done by generating fluctuations around $\widehat{\bm{\beta}}$ through resampling (or in the parametric case, with the help of a random number generator). The trouble with this approach is that it fails to account for the error in our parameter estimates, leading to an underestimation of the prediction uncertainty. Although we will endeavour in this exposition to remain agnostic with respect to philosophical questions about the interpretation of probability, it will be necessary in this case, for reasons which will become apparent shortly, to borrow a concept from Bayesian school of statistics in order to address this problem.
+While this offers an avenue for incorporating the process variance into bootstrap procedures for predictive inference, it is not the one best suited to our purposes. Recall from the \nameref{intro} that we want to study how the reserve is impacted by violations of the assumptions of a given actuarial model which can be framed in terms of regression, as we shall see in \cref{chapter:mack,chapter:poisson}. In other words, we would like to simulate the distribution of the response itself. In \cref{eq:pred-error-boot}, this was done by generating fluctuations around $\widehat{\bm{\beta}}$ through resampling (or in the parametric case, with the help of a random number generator). The trouble with this approach is that it fails to account for the error in our parameter estimates, leading to an underestimation of the prediction uncertainty. Although we will endeavour in this exposition to remain agnostic with respect to philosophical questions about the interpretation of probability, it will be necessary in this case, for reasons which will become apparent shortly, to borrow a concept from Bayesian school of statistics in order to address this problem.
 
 Recall that the Bayesian point of view is premised on the idea that the parameters $\bm{\theta}$ governing a statistical model $p(y \mid \bm{\theta}, x_1, \dots, x_p)$ are themselves random variables. These are assumed to follow a so-called \emph{prior distribution} $p(\theta)$, which is a probabilistic expression of the beliefs we have about them before observing any data\sepfootnote{fn:bayes}. When presented with a sample $D = \{ (\bm{\mathrm{x}_1}, Y_1), \dots, (\bm{\mathrm{x}_n}, Y_n) \}$, we are then led to \emph{update our beliefs}; using the formula
 \begin{equation}
@@ -262,17 +258,17 @@ The predictive and fitted distributions for both the parametric as well as non-p
 In his seminal paper \cite{mack:chain-ladder}, Mack proposed the following model for cumulative claims triangles, which remains among the most influencial in actuarial reserving.
 \begin{model}[Mack chain ladder] \label{model:mack} \leavevmode
   \begin{enumerate}[label=\bf{\textup{(}Mack\arabic*\textup{)}},ref=\textup{(}Mack\arabic*\textup{)}, wide]
-    \item \label{eq:mack-expectation} There exist development factors $f_1, \dots, f_{I - 1}$ such that
+    \item \label{assump:mack-expectation} There exist development factors $f_1, \dots, f_{I - 1}$ such that
           \begin{equation}
             \mathbb{E}[C_{ij} \ \Vert \ C_{i, j - 1}, \dots, C_{i1}] = \mathbb{E}[C_{ij} \ \Vert \ C_{i, j - 1}] = f_{j - 1} C_{i, j - 1}\,
           \end{equation}
           for $1 \leq i \leq I$.
-    \item \label{eq:mack-variance} There exist parameters $\sigma_1, \dots, \sigma_{I - 1}$ such that
+    \item \label{assump:mack-variance} There exist parameters $\sigma_1, \dots, \sigma_{I - 1}$ such that
           \begin{equation}
             \mathrm{Var}[C_{ij} \ \Vert \ C_{i, j - 1}, \dots, C_{i1}] = \mathrm{Var}[C_{ij} \ \Vert \ C_{i, j - 1}] = \sigma_{j - 1}^2 C_{i, j - 1}\,,
           \end{equation}
           for $1 \leq i \leq I$.
-    \item Cumulative claims processes $(C_{ij})_j, (C_{i'j})_j$ are independent for $i \neq i'$.
+    \item \label{assump:mack-independence} Cumulative claims processes $(C_{ij})_j, (C_{i'j})_j$ are independent for $i \neq i'$.
   \end{enumerate}
 \end{model}
 The development factors are estimated by
@@ -368,7 +364,7 @@ corresponding to the two stages of bootstrapping a predictor which we discussed 
 \begin{equation} \label{eq:msep}
   \underset{C_{iI} \, \vert \, \mathcal{D}_I}{\mathrm{MSEP}}(\widehat{C}_{iI}) = (\condexpp*{C_{iI}}{\mathcal{D}_I} - \widehat{C}_{iI})^2 + \condvarr{C_{iI}}{\mathcal{D}_I} \,,
 \end{equation}
-and suppose we are interested in obtaining a closed-form estimator for it. Such an expression can be derived relatively straightforwardly for the process error from the assumptions of \modelref{model:mack} in the following way. We begin by applying the law of total variance in conjunction with \cref{eq:mack-expectation,eq:mack-expectation} to obtain
+and suppose we are interested in obtaining a closed-form estimator for it. Such an expression can be derived relatively straightforwardly for the process error from the assumptions of \modelref{model:mack} in the following way. We begin by applying the law of total variance in conjunction with \cref{assump:mack-expectation,assump:mack-variance} to obtain
 \begin{align}
   \condvarr{C_{iI}}{\mathcal{D}_I} & = \condvarr{C_{iI}}{C_{i, I + 1 - i}}                                                                                             \\
                                    & = \condexpp{\condvarr{C_{iI}}{C_{i, I - 1}}}{C_{i, I + 1 - i}} + \condvarr{\condexpp{C_{iI}}{C_{i, I - 1}}}{C_{i, I + 1 - i}}     \\
@@ -519,13 +515,13 @@ hence
 \end{equation}
 While this does not directly address our present concern, namely of bootstrapping the parameters in \modelref{model:mack}, it suggests that our woes may be remedied through replacement of the Gaussian distribution in \cref{eq:time-series-model} with a different one capable of guaranteeing
 \begin{equation} \label{eq:lower-limit-err}
-  \varepsilon_{i, j + 1} > -\frac{f_j C_{ij}}{\sigma_j} \,.
+  \varepsilon_{i, j + 1} > -\frac{f_j \sqrt{C_{ij}}}{\sigma_j} \,.
 \end{equation}
 Clearly, the support of such a distribution has to be bounded from below, and it must moreover allow for normalisation, so that the resulting residuals can be made interchangeable by an algebraic transformation. The only candidate satisfying these conditions which readily springs to mind is the \emph{shifted lognormal distribution}
 \begin{equation}
   \log(\varepsilon_{i, j + 1} - \xi_{ij}) \sim \mathcal{N}(\mu_{ij}, s_{ij}^2)
 \end{equation}
-for certain parameters $\xi_{ij}$, $\mu_{ij}$ and $s_{ij}$. his has support $(\xi_{ij}, +\infty)$, leading us to choose $\xi_{ij} = -\frac{f_j C_{ij}}{\sigma_j}$, and again we must determine $\mu_{ij}$ and $s_{ij}$ to satisfy
+for certain parameters $\xi_{ij}$, $\mu_{ij}$ and $s_{ij}$. his has support $(\xi_{ij}, +\infty)$, leading us to choose $\xi_{ij} = -\frac{f_j \sqrt{C_{ij}}}{\sigma_j}$, and again we must determine $\mu_{ij}$ and $s_{ij}$ to satisfy
 \begin{equation}
   \begin{cases}
     \displaystyle \condexpp{\varepsilon_{i, j + 1}}{C_{ij}} = \exp \left( \mu_{ij} + \frac{s_{ij}^2}{2} \right) + \xi_{ij} = 0 \\
@@ -534,17 +530,17 @@ for certain parameters $\xi_{ij}$, $\mu_{ij}$ and $s_{ij}$. his has support $(\x
 \end{equation}
 Solving these equations, we obtain
 \begin{equation}
-  s_{ij} = \sqrt{\log \left( 1 - \frac{1}{\xi^2_{ij}} \right)}, \qquad \mu_{ij} = \log(-\xi_{ij}) - \frac{s_{ij}}{2} \,.
+  s_{ij} = \sqrt{\log \left( 1 + \frac{1}{\xi^2_{ij}} \right)}, \qquad \mu_{ij} = \log(-\xi_{ij}) - \frac{s^2_{ij}}{2} \,.
 \end{equation}
 Provided the sampling variability of $\widehat{f}_j$ and $\widehat{\sigma}_j$ is not too severe, this means that the residuals
 \begin{align} \label{eq:log-normal-resids}
   r_{i, j + 1}
-   & \coloneqq \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j C_{ij} / \widehat{\sigma}_j \right) - \widehat{\mu}_{ij}}{\widehat{s}_{ij}}                                                                                                                                                                                           \\
-   & = \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j C_{ij} / \widehat{\sigma}_j \right) - \log(\widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j) + \frac{1}{2} \left( \sqrt{\log \left( 1 + \widehat{\sigma}_j / \widehat{f}_j C_{ij} \right)} \right)}{\sqrt{\log \left( 1 + \widehat{\sigma}_j / \widehat{f}_j C_{ij} \right)}}
+   & \coloneqq \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j \right) - \widehat{\mu}_{ij}}{\widehat{s}_{ij}}                                                                                                                                                                                           \\
+   & = \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j \right) - \log(\widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j) + \frac{1}{2} \log \left( 1 + \widehat{\sigma}^2_j / \widehat{f}^2_j C_{ij} \right)}{\sqrt{\log \left( 1 + \widehat{\sigma}^2_j / \widehat{f}^2_j C_{ij} \right)}}
 \end{align}
 are approximately $\mathcal{N}(0, 1)$-distributed.
 
-After selecting a particular type of residual, the next step is to fit the model and compute the residuals from it. We then resample these to generate bootstrap residuals $r^{(b)}_{ij}$, from which a bootstrap triangle is obtained by inverting the appropriate residuals formula. In the conditional approach, the inversion is based on the original triangle, whereas the unconditional version uses the previously generated bootstrap observations. Finally, the model is refitted to the generated triangle to obtain bootstrap development factor and dispersion parameter estimators $\widehat{\bm{f}}$ and $\widehat{\bm{\sigma}}$. The entire procedure is outlined in \cref{alg:cond-semiparam-mack,alg:uncond-semiparam-mack} for the case of standardised residuals, and the results for the example data from \cref{tab:uk-motor} are given in \cref{tab:semiparam-mack-res}.
+After selecting a particular type of residual, the next step is to fit the model and compute the residuals from it. We then resample these to generate bootstrap residuals $r^{(b)}_{ij}$, from which a bootstrap triangle is obtained by inverting the appropriate residuals formula. In the conditional approach, the inversion is based on the original triangle, whereas the unconditional version uses the previously generated bootstrap observations. Finally, the model is refitted to the generated triangle to obtain bootstrap development factor and dispersion parameter estimators $\widehat{\bm{f}}$ and $\widehat{\bm{\sigma}}$. The entire procedure is outlined in \cref{alg:cond-semiparam-mack,alg:uncond-semiparam-mack} for the case of standardised residuals, and the results for the example data from \cref{tab:uk-motor} are given in \cref{tab:semiparam-mack-res-standard,tab:semiparam-mack-res-student,tab:semiparam-mack-res-lnorm}.
 
 \begin{table}[!htb]
   \centering
@@ -556,7 +552,7 @@ After selecting a particular type of residual, the next step is to fit the model
         head to column names,
       late after line =                                                                                                                    \\
       ]{%
-        ../results/example/mack_semiparam_cond.csv
+        ../results/example/mack_semiparam_cond_standard.csv
       }{}{%
       \idx & \devfacs          & \sigmas                & \reserve          & \prederror
       }\bottomrule
@@ -571,15 +567,87 @@ After selecting a particular type of residual, the next step is to fit the model
         head to column names,
       late after line =                                                                                                                    \\
       ]{%
-        ../results/example/mack_semiparam_uncond.csv
+        ../results/example/mack_semiparam_uncond_standard.csv
       }{}{%
       \idx & \devfacs          & \sigmas                & \reserve          & \prederror
       } \bottomrule
     \end{tabular}
     \subcaption{Unconditional}
   \end{subtable}
-  \caption{Semiparametric bootstrap results}
-  \label{tab:semiparam-mack-res}
+  \caption{Semiparametric bootstrap results for standardised residuals}
+  \label{tab:semiparam-mack-res-standard}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \begin{subtable}{0.45\textwidth}
+    \centering
+    \begin{tabular}{ccccc} \toprule%
+      $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}_j^B$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+      \csvreader[
+        head to column names,
+      late after line =                                                                                                                    \\
+      ]{%
+        ../results/example/mack_semiparam_cond_student.csv
+      }{}{%
+      \idx & \devfacs          & \sigmas                & \reserve          & \prederror
+      }\bottomrule
+    \end{tabular}
+    \subcaption{Conditional}
+  \end{subtable}
+  \begin{subtable}{0.45\textwidth}
+    \centering
+    \begin{tabular}{m{1em} m{2em} m{2em} m{3.5em} m{4em}}\toprule%
+      $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}_j^B$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+      \csvreader[
+        head to column names,
+      late after line =                                                                                                                    \\
+      ]{%
+        ../results/example/mack_semiparam_uncond_student.csv
+      }{}{%
+      \idx & \devfacs          & \sigmas                & \reserve          & \prederror
+      } \bottomrule
+    \end{tabular}
+    \subcaption{Unconditional}
+  \end{subtable}
+  \caption{Semiparametric bootstrap results for studentised residuals}
+  \label{tab:semiparam-mack-res-student}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \begin{subtable}{0.45\textwidth}
+    \centering
+    \begin{tabular}{ccccc} \toprule%
+      $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}_j^B$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+      \csvreader[
+        head to column names,
+      late after line =                                                                                                                    \\
+      ]{%
+        ../results/example/mack_semiparam_cond_log_normal.csv
+      }{}{%
+      \idx & \devfacs          & \sigmas                & \reserve          & \prederror
+      }\bottomrule
+    \end{tabular}
+    \subcaption{Conditional}
+  \end{subtable}
+  \begin{subtable}{0.45\textwidth}
+    \centering
+    \begin{tabular}{m{1em} m{2em} m{2em} m{3.5em} m{4em}}\toprule%
+      $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}_j^B$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+      \csvreader[
+        head to column names,
+      late after line =                                                                                                                    \\
+      ]{%
+        ../results/example/mack_semiparam_uncond_log_normal.csv
+      }{}{%
+      \idx & \devfacs          & \sigmas                & \reserve          & \prederror
+      } \bottomrule
+    \end{tabular}
+    \subcaption{Unconditional}
+  \end{subtable}
+  \caption{Semiparametric bootstrap results for lognormal residuals}
+  \label{tab:semiparam-mack-res-lnorm}
 \end{table}
 
 \begin{figure}[p]
@@ -698,17 +766,35 @@ Hence the only option is to carry out the resampling of each column pairs indepe
 
 \begin{table}[!htb]
   \centering
-  \begin{tabular}{m{5em} m{5em} m{5em} m{5em} m{5em}}\toprule%
-    $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}_j^B$ & \resizebox{5em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
-    \csvreader[
-      head to column names,
-    late after line =                                                                                                                    \\
-    ]{%
-      ../results/example/mack_pairs.csv
-    }{}{%
-    \idx & \devfacs          & \sigmas                & \reserve          & \prederror
-    } \bottomrule%
-  \end{tabular}
+  \begin{subtable}{0.45\linewidth}
+    \begin{tabularx}{\linewidth}{CCCCC}\toprule%
+      $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}_j^B$ & \resizebox{5em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+      \csvreader[
+        head to column names,
+      late after line =                                                                                                                    \\
+      ]{%
+        ../results/example/mack_pairs_param.csv
+      }{}{%
+      \idx & \devfacs          & \sigmas                & \reserve          & \prederror
+      } \bottomrule%
+    \end{tabularx}
+    \subcaption{Parametric}
+  \end{subtable}
+  \hfill
+  \begin{subtable}{0.45\linewidth}
+    \begin{tabularx}{\linewidth}{CCCCC}\toprule%
+      $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}_j^B$ & \resizebox{5em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+      \csvreader[
+        head to column names,
+      late after line =                                                                                                                    \\
+      ]{%
+        ../results/example/mack_pairs_semiparam.csv
+      }{}{%
+      \idx & \devfacs          & \sigmas                & \reserve          & \prederror
+      } \bottomrule%
+    \end{tabularx}
+    \subcaption{Semiparametric}
+  \end{subtable}
   \caption{Pairs bootstrap results}
   \label{tab:pairs-mack-res}
 \end{table}
@@ -777,7 +863,7 @@ Finally, we discuss the parametric bootstrap, in which we simulate directly from
         head to column names,
       late after line =                                                                                                                    \\
       ]{%
-        ../results/example/mack_param_cond.csv
+        ../results/example/mack_param_cond_norm.csv
       }{}{%
       \idx & \devfacs          & \sigmas                & \reserve          & \prederror
       } \bottomrule
@@ -791,15 +877,49 @@ Finally, we discuss the parametric bootstrap, in which we simulate directly from
         head to column names,
       late after line =                                                                                                                    \\
       ]{%
-        ../results/example/mack_param_uncond.csv
+        ../results/example/mack_param_uncond_norm.csv
       }{}{%
       \idx & \devfacs          & \sigmas                & \reserve          & \prederror
       } \bottomrule
     \end{tabular}
     \subcaption{Unconditional}
   \end{subtable}
-  \caption{Parametric bootstrap results}
-  \label{tab:param-mack-res}
+  \caption{Parametric bootstrap results for normal distribution}
+  \label{tab:param-mack-res-norm}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \begin{subtable}{0.45\textwidth}
+    \begin{tabular}{ m{1em} m{2em} m{2em} m{3.5em} m{4em} }\toprule%
+      $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}_j^B$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+      \csvreader[
+        head to column names,
+      late after line =                                                                                                                    \\
+      ]{%
+        ../results/example/mack_param_cond_gamma.csv
+      }{}{%
+      \idx & \devfacs          & \sigmas                & \reserve          & \prederror
+      } \bottomrule
+    \end{tabular}
+    \subcaption{Conditional}
+  \end{subtable}
+  \begin{subtable}{0.45\textwidth}
+    \begin{tabular}{ m{1em} m{2em} m{2em} m{3.5em} m{4em} }\toprule%
+      $j$  & $\widehat{f}^B_j$ & $\widehat{\sigma}^B_j$ & $\widehat{R}_j^B$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+      \csvreader[
+        head to column names,
+      late after line =                                                                                                                    \\
+      ]{%
+        ../results/example/mack_param_uncond_gamma.csv
+      }{}{%
+      \idx & \devfacs          & \sigmas                & \reserve          & \prederror
+      } \bottomrule
+    \end{tabular}
+    \subcaption{Unconditional}
+  \end{subtable}
+  \caption{Parametric bootstrap results for gamma distribution}
+  \label{tab:param-mack-res-gamma}
 \end{table}
 
 \section{Incorporating the process error} \label{sec:mack-proc}
@@ -860,9 +980,9 @@ In the synthetic example we gave in \cref{sec:boot-proc}, not much difference co
   \end{figure}
 \end{landscape}
 
-\chapter{Poisson GLM} \label{chapter:poisson}
+\chapter{Overdispersed Poisson GLM} \label{chapter:poisson}
 
-The (overdispersed) Poisson model (ODP), proposed by Renshaw and Verrall in \cite{renshaw}, belongs to the family of so-called \emph{generalised linear models} (GLM). In contrast to \modelref{model:mack}, it describes the incremental claims $X_{ij}$. As the concept of overdispersion is explained in \cref{sec:glm}, we only state the assumptions of the ordinary variant at this point.
+The overdispersed Poisson model (ODP), proposed by Renshaw and Verrall in \cite{renshaw}, belongs to the family of so-called \emph{generalised linear models} (GLM). In contrast to \modelref{model:mack}, it describes the incremental claims $X_{ij}$, and is non-recursive: the diffferent observations in the triangle are modelled independently from each other. To ease the exposition, we will only state the assumptions for the ordinary Poisson model (i.e. without overdispersion) at this point; after this concept has been introduced in \cref{subsec:quasi}, we will then adjust the model accordingly.
 
 \begin{model}[Poisson GLM] \leavevmode \label{model:poisson}
   \begin{enumerate}[label=\bf{\textup{(}Pois\arabic*\textup{)}},ref=\textup{(}Pois\arabic*\textup{)}, wide]
@@ -882,13 +1002,13 @@ The (overdispersed) Poisson model (ODP), proposed by Renshaw and Verrall in \cit
   \end{enumerate}
 \end{model}
 
-The condition $a_1 = b_1 = 0$ is necessary to obtain an identifiable model. Without it, any set of parameters $c, a_1, \dots, a_I, b_1, \dots, b_I$ satisfying the assumptions would yield an infinite number of alternatives $c + a_0 + b_0, a_1 - a_0, \dots, a_I - a_0, b_1 - b_0, \dots, b_I - b_0$ for $a_0, b_0 \in \mathbb{R}$. We can therefore see that we have two superfluous degrees of freedom, which we can get rid of by imposing two conditions on the parameters.
+The condition $a_1 = b_1 = 0$ is necessary to obtain an identifiable model. Without it, we could obtainm, from any set of parameters $c, a_1, \dots, a_I, b_1, \dots, b_I$ satisfying the assumptions, an infinite number of alternatives $c + a_0 + b_0, a_1 - a_0, \dots, a_I - a_0, b_1 - b_0, \dots, b_I - b_0$ for $a_0, b_0 \in \mathbb{R}$. We therefore have two superfluous degrees of freedom, which can be eliminated by imposing the same number of conditions on the parameters.
 
-By defining $\xi_i \coloneqq e^{c + a_i}$ and $\gamma_j \coloneqq e^{b_j}$, we can obtain a different parametrisation of the model with a multiplicative structure for the mean,
+By defining $\xi_i \coloneqq e^{c + a_i}$ and $\gamma_j \coloneqq e^{b_j}$, we can obtain a different parametrisation of the model which has a multiplicative structure for the mean, i.e.
 \begin{equation}
-  \expect{X_{ij}} = \xi_i \gamma_j \,,
+  \expect{X_{ij}} = \xi_i \gamma_j \,.
 \end{equation}
-which is often preferred to the previous one for reasons of interpretability. Indeed, it is clear that the multiplicative form has one fewer degree of freedom than the linear one, and if we remove it by imposing the constraint
+This is sometimes preferred to the additive one for reasons of interpretability. Indeed, it is clear that the multiplicative form has one fewer degree of freedom than the linear one, and if we remove it by imposing the constraint
 \begin{equation}
   \sum_{j = 1}^I \gamma_j = 1
 \end{equation}
@@ -917,6 +1037,8 @@ The Gaussian distribution $\mathcal{N}(\mu, \sigma^2)$ can be seen to belong to 
                                                                                                             & = \exp \left \{ \frac{y \mu - \mu^2 / 2}{\sigma^2} - \frac{y^2}{2 \sigma^2} - \log(\sqrt{2 \pi} \sigma) \right \} \,,
 \end{align}
 which is of the form \cref{eq:exp-disp-fam} with $\theta = \mu$, $b(\theta) = \frac{\theta^2}{2}$, $\phi = \sigma^2$, $a(\phi) = \phi$ and $c(y, \sigma) = -\frac{y^2}{2 \sigma^2} - \log(\sqrt{2 \pi} \sigma)$. Thus, the familiar normal linear model can be obtained from the GLM framework with response distribution $\mathcal{N}(\mu, \sigma^2)$ and identity link $g(\mu) = \mu$.
+
+\subsection{Estimation}
 
 The EDM family has a number of properties which greatly facilitate the computations involved in estimation. Recall from likelihood theory that $l(\theta \mid y, \phi) \coloneqq \log p(y \mid \theta, \phi)$ satisfies
 \begin{equation} \label{eq:exp-var-likelihood}
@@ -980,7 +1102,23 @@ with $\mathbf{\tilde{z}}_i = (y_i - \mu_i) \left( \pdv{\eta_i}{\mu_i} \right)$. 
 \end{align}
 with $\mathbf{z} = \mathbf{X} \bm{\widehat{\beta}}^{(k)} + \mathbf{\tilde{z}}$ and all quantities evaluated at the current estimate $\bm{\beta}^{(k)}$ of the parameter vector. In other words, the Fisher scoring is equivalent to a series of weighted least squares problems, where the new parameter estimates are obtained by regressing the vector $\mathbf{z}$ on the original covariates $\bm{\mathrm{x}_1}, \dots, \bm{\mathrm{x}_N}$ using weight matrix $\mathbf{W}$, and $\mathbf{z}$ and $\mathbf{W}$ are determined by the current estimate $\bm{\beta}^{(k)}$---hence why the algorithm is called \emph{iteratively reweighted least squares} (IRWLS).
 
-This procedure can be specialised to the particular case of \cref{model:poisson} in the following way. First, in order to obtain the matrix-vector form used above, we must flatten the tabular response (using, for example, the colexicographical ordering $(i, j) \mapsto j I + i$, i.e.\ column-major order). If we define the parameter vector
+This procedure can be specialised to the particular case of \modelref{model:poisson} in the following way. First, in order to obtain the matrix-vector form used above, we must flatten the tabular response (using, for example, the colexicographical ordering $(i, j) \mapsto j I + i$, i.e.\ column-major order). This gives us a triangle in long format, as illustrated in \cref{tab:uk-motor-long} for the incremental form of the UK Motor dataset from \textcite{christofides}.
+\begin{table}[!htb]
+  \centering
+  \begin{tabularx}{0.3 \linewidth}{CCC}\toprule%
+    origin  & dev  & value  \\ \midrule
+    \csvreader[
+    late after line =       \\
+    ]{%
+      ../results/example/UKMotor_long.csv
+    }{origin=\Origin, dev=\Dev, value=\Value}{%
+    \Origin & \Dev & \Value
+    }\bottomrule%
+  \end{tabularx}
+  \caption{UK Motor incremental claims triangle in long format}
+  \label{tab:uk-motor-long}
+\end{table}
+If we define the parameter vector
 \begin{equation}
   \bm{\beta} \coloneqq \begin{bmatrix} c & a_2 & \cdots & a_I & b_2 & \cdots & b_I \end{bmatrix}^T \,,
 \end{equation}
@@ -1056,6 +1194,8 @@ giving us all the components of the IRWLS algorithm. \cref{fig:glm-mat-eq} shows
   \label{fig:glm-mat-eq}
 \end{figure}
 
+\subsection{Quasi-likelihood methods} \label{subsec:quasi}
+
 We have assumed up to this point that a GLM requires us to specify an exact distribution for the response variable. In many practical situations, however, this is either infeasible or leads to unrealistic models. An example which is particularly common with count data is a phenomenon known as \emph{overdispersion}, where the variability of the data is greater than would be suggested by e.g.\ the Poisson or binomial distribution. Recall that the variance of a $\mathrm{Pois}(\lambda)$ distribution is $\lambda$, and that of a $B(n, p)$ distribution is $np(1 - p)$; in both cases, it is fully determined by the mean, and we have no degree of freedom with which to adjust it in order to obtain a better fit to the data, as would be the case with the normal distribution, for example.
 
 To remedy this, an extension can be made to the GLM framework, which only relies on the specification of a relation between mean and variance. Recall from above that the MLE works by setting the score equal to $0$. If we write the likelihood in terms of $\bm{\mu}$, this will have components
@@ -1070,33 +1210,9 @@ and estimate $\bm{\mu}$ (and therefore $\bm{\beta}$) by minimising
 \begin{equation}
   Q(\bm{\mu} \mid \mathbf{y}, \phi) \coloneqq \sum_{i = 1}^N Q_i(\mu_i \mid y_i, \phi) \,.
 \end{equation}
-It must be stressed that $Q$ has no probabilistic significance: it does not, in general, correspond to the log-likelihood of any distribution. Rather, it functions a device to obtain estimates of the desired parameters, fulfilling in this a similar role to that of the log-likelihood, which is why we refer to it as a \emph{quasi-likelihood function}\sepfootnote{fn:quasi-likelihood}. This extension of the classical GLM framework allows for more flexibility in our modelling, since we only have to assume a particular mean-variance relation for the response, not a distribution. It is usual to identify quasi-likelihood models derived from specific distributions (i.e.\ using the corresponding variance function) by prefixing 'quasi' to the name of said distribution, e.g.\ quasi-Poisson or quasi-binomial. The derived quasi-model yields the same parameter estimates as the classical GLM if the data follow the original distribution. This is the case for the data in \cref{tab:uk-motor}, as it consists of positive integers, hence the estimates shown in \cref{tab:pois-bench} apply to both models, with the exception of the dispersion parameter (which is always equal to $1$ for \modelref{model:poisson}).
+It must be stressed that $Q$ has no probabilistic significance: it does not, in general, correspond to the log-likelihood of any distribution. Rather, it functions a device to obtain estimates of the desired parameters, fulfilling in this a similar role to that of the log-likelihood, which is why we refer to it as a \emph{quasi-likelihood function}\sepfootnote{fn:quasi-likelihood}. This extension of the classical GLM framework allows for more flexibility in our modelling, since we only have to assume a particular mean-variance relation for the response, not a distribution. This finally allows us to state the main model of this chapter.
 
-\begin{table}[!htb]
-  \centering
-  \begin{tabularx}{0.5\linewidth}{CCC \mcol{4em} C}\toprule
-    $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
-    \csvreader[
-      head to column names,
-    late after line =                                                                                                                \\
-    ]{%
-      ../results/example/pois_bench_table.csv
-    }{}{%
-    \idx  & \a                & \b                & \reserve          & \prederror
-    } \midrule
-  \end{tabularx} \\
-  \begin{tabularx}{0.5\linewidth}{LR}
-    \csvreader[
-      head to column names
-    ]{../results/example/pois_bench_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-  \end{tabularx}
-  \caption{Poisson GLM results for UK Motor triangle}
-  \label{tab:pois-bench}
-\end{table}
-
-We are now finally in a position to describe the overdispersed variant of \modelref{model:poisson}.
-
-\begin{model}[Overdispersed quasi-Poisson] \leavevmode \label{model:odp}
+\begin{model}[Overdispersed Poisson GLM] \leavevmode \label{model:odp}
   \begin{enumerate}[label=\bf{\textup{(}ODP\arabic*\textup{)}},ref=\textup{(}ODP\arabic*\textup{)}, wide]
     \item The incremental claims are independent from each other.
     \item There exist parameters $c$, $a_1, \dots, a_I$ and $b_1, \dots, b_I$ such that
@@ -1111,17 +1227,61 @@ We are now finally in a position to describe the overdispersed variant of \model
   \end{enumerate}
 \end{model}
 
+It is usual to identify quasi-likelihood models derived from specific distributions (i.e.\ using the corresponding variance function) by prefixing 'quasi' to the name of said distribution, e.g.\ quasi-Poisson or quasi-binomial. The derived quasi-model yields the same estimates for the parameters as the ordinary variant but significantly different ones for the variance and error.
+
 When the data consists entirely of positive integers (e.g. a triangle of claims counts), it follows from the previous remark that this model yields the same predictions as the chain ladder. More generally, the CL results will be reproduced as long as the additional condition
 \begin{equation}
   \sum_{i = 1}^I X_{ij} \geq 0
 \end{equation}
 is satisfied for $j \in \{ 1, \dots, I \}$ (see \cite[Section 2]{renshaw}). The quasi-Poisson is therefore robust to the presence of a limited number of negative claim amounts, which is sometimes observed in practice. Moreover, it lifts the unrealistic restriction that the response values must be integers, and gives us a way of accounting for overdispersion, which is a feature of many claims triangles. The absence of a likelihood also poses some difficulties, however, notably in the area of inference and diagnostics.
 
+This is the case for the data in \cref{tab:uk-motor}, as it consists of positive integers, hence the estimates shown in \cref{tab:pois-bench} apply to both models, with the exception of the dispersion parameter (which is always equal to $1$ for \modelref{model:poisson}).
+
+\begin{table}[!htb]
+  \centering
+  \begin{tabularx}{0.7\linewidth}{CCC \mcol{4em} CC}\toprule
+    \multirow{2}{*}{$i/j$} & \multirow{2}{*}{$\widehat{a}_i$} & \multirow{2}{*}{$\widehat{b}_j$} & \multirow{2}{*}{$\widehat{R}_j$} & \multicolumn{2}{c}{\resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$}}                   \\ \cmidrule{5-6}
+                           &                                  &                                  &                                  & Poisson                                                                          & ODP             \\ \midrule
+    \csvreader[
+      head to column names,
+    late after line =                                                                                                                                                                                                                    \\
+    ]{%
+      ../results/example/pois_bench_table.csv
+    }{}{%
+    \idx                   & \a                               & \b                               & \reserve                         & \prederrorpois                                                                   & \prederrorquasi
+    } \midrule
+  \end{tabularx} \\
+  \begin{tabularx}{0.7\linewidth}{LR}
+    \csvreader[
+      head to column names
+    ]{../results/example/pois_bench_point.csv}{}{$\widehat{c}$ & \intercept \\ $\widehat{\phi}$ &\disp} \\ \bottomrule
+  \end{tabularx}
+  \caption{Poisson GLM results for UK Motor triangle}
+  \label{tab:pois-bench}
+\end{table}
+
 \section{Bootstrap methodology}
 
 Developing a bootstrap procedure for the Poisson and quasi-Poisson models is in some respects easier than for \modelref{model:mack}. The absence of a recursive structure makes it more straightforward to reason about resampling. Furthermore, bootstrap methods for claims triangle GLMs have seen more discussion in the literature (see e.g.\ \cite{pinheiro} and \cite{england:dist}), and so we can draw upon this material for our exposition.
 
-As with Mack's model, we shall take \cref{sec:boot-reg} as our starting point. We distinguished there between nonparametric, semiparametric and parametric approaches to bootstrapping. Of these, the nonparametric bootstrap, which involves resampling predictor-response pairs from the original data, is difficult to apply to \modelref{model:poisson}. To understand why, recall from \cref{eq:irwls-iter} that the IRWLS algorithm fits a linear model at each step of the iteration in order to obtain a new estimate of the parameters, which requires the matrix on the left-hand side to have full rank. This implies that we cannot estimate a parameter if there are no observations for it, which is especially likely.
+As with Mack's model, we shall take \cref{sec:boot-reg} as our starting point. We distinguished there between nonparametric, semiparametric and parametric approaches to bootstrapping. Of these, the nonparametric bootstrap, which involves resampling predictor-response pairs from the original data, is the most difficult to apply to \modelref{model:poisson}. Because the size of claims triangles is typically quite limited, resampling observations can quite easily result in a situation where there are no observations for a given row or column, which means ; this is especially likely for the lower left and upper right corner points, which are the only observations in the final row and column respectively. In order to avoid this difficulty, we therefore need to find a way of guaranteeing that every row and column contains at least one observation. The crudest option would be to simply discard any resampled triangles which are defective, but this is quite inefficient; the same result can be achieved at far lower computational cost by constructing resampled triangles directly in such a way as to satisfy the desired property. We experimented with three ways of doing this: preserving the corner points, preserving the first row and column, and randomly selecting an observation in every row and column to preserve. However, none of these turn out to be satisfactory, as seen from the comparison with the analytic approximation (which is repeated here for reference). We will therefore exclude the pairs bootstrap from consideration. 
+
+\begin{table}
+  \centering
+  \begin{tabularx}{0.5 \linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
+    Randomised  & First row \& column & Corners \\ \midrule
+    \csvreader[
+    late after line =                                                                                                                      \\
+    ]{%
+      ../results/example/pois_pairs_table.csv
+    }{randomised = \bib, rowcol = \bob, corners = \bab}{%
+      \bib & \bob           & \bab
+    } \bottomrule
+  \end{tabularx}
+  \caption{Results for semiparameteric bootstrap with deviance residuals}
+  \label{tab:semiparam-pois-dev-res}
+\end{table}
+
 
 For the semiparameteric bootstrap, the essential step is to find a satisfactory definition for the residuals such that they are i.i.d, exactly as in \cref{sec:mack-boot}. Things are more complicated here than for Mack's model, as there generally exists no natural seperation of the response into mean and additive error for a non-Gaussian response (this problem was recognised early on in the literature on GLM bootstrapping, see \cite{moulton}). Consequently, a multitude of different residual types are available. We will consider three of these in particular.
 
@@ -1194,119 +1354,71 @@ which, except in the case of the Pearson residuals, yields a set of nontrivial e
 
 \cref{tab:semiparam-pois-dev-res,tab:semiparam-pois-pears-res,tab:semiparam-pois-quant-res} show the results of applying the poisson and quasi-poisson semiparameteric bootstraps with the different residuals to the data in \cref{tab:uk-motor}. It can be seen that they all yield similar results, in comparison to each other as well as \cref{tab:pois-bench}, lending empirical support to these efficacy of these methods.
 
-\begin{figure}[p]
-  \begin{table}[H]
-    \centering
-    \begin{subtable}{0.45\linewidth}
-      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
-        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
-        \csvreader[
-          head to column names,
-        late after line =                                                                                                                \\
-        ]{%
-          ../results/example/pois_semiparam_dev_table.csv
-        }{}{%
-        \idx  & \a                & \b                & \reserve          & \prederror
-        } \midrule
-      \end{tabularx} \\
-      \begin{tabularx}{\linewidth}{LR}
-        \csvreader[
-          head to column names
-        ]{../results/example/pois_semiparam_dev_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-      \end{tabularx}
-      \subcaption{Poisson}
-    \end{subtable}
-    \hfill
-    \begin{subtable}{0.45\linewidth}
-      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
-        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
-        \csvreader[
-          head to column names,
-        late after line =                                                                                                                \\
-        ]{%
-          ../results/example/quasipois_semiparam_dev_table.csv
-        }{}{%
-        \idx  & \a                & \b                & \reserve          & \prederror
-        } \midrule
-      \end{tabularx} \\
-      \begin{tabularx}{\linewidth}{LR}
-        \csvreader[
-          head to column names
-        ]{../results/example/quasipois_semiparam_dev_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-      \end{tabularx}
-      \subcaption{Quasi-poisson}
-    \end{subtable}
-    \caption{Results for semiparameteric bootstrap with deviance residuals}
-    \label{tab:semiparam-pois-dev-res}
-  \end{table}
+\begin{table}
+  \centering
+  \begin{tabularx}{0.5 \linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
+    $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+    \csvreader[
+      head to column names,
+    late after line =                                                                                                                \\
+    ]{%
+      ../results/example/pois_semiparam_dev_table.csv
+    }{}{%
+    \idx  & \a                & \b                & \reserve          & \prederror
+    } \midrule
+  \end{tabularx} \\
+  \begin{tabularx}{0.5 \linewidth}{LR}
+    \csvreader[
+      head to column names
+    ]{../results/example/pois_semiparam_dev_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+  \end{tabularx}
+  \caption{Results for semiparameteric bootstrap with deviance residuals}
+  \label{tab:semiparam-pois-dev-res}
+\end{table}
 
-  \begin{table}[H]
-    \centering
-    \begin{subtable}{0.45\linewidth}
-      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
-        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
-        \csvreader[
-          head to column names,
-        late after line =                                                                                                                \\
-        ]{%
-          ../results/example/pois_semiparam_pears_table.csv
-        }{}{%
-        \idx  & \a                & \b                & \reserve          & \prederror
-        } \midrule
-      \end{tabularx} \\
-      \begin{tabularx}{\linewidth}{LR}
-        \csvreader[
-          head to column names
-        ]{../results/example/pois_semiparam_pears_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-      \end{tabularx}
-      \subcaption{Poisson}
-    \end{subtable}
-    \hfill
-    \begin{subtable}{0.45\linewidth}
-      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
-        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
-        \csvreader[
-          head to column names,
-        late after line =                                                                                                                \\
-        ]{%
-          ../results/example/quasipois_semiparam_pears_table.csv
-        }{}{%
-        \idx  & \a                & \b                & \reserve          & \prederror
-        } \midrule
-      \end{tabularx} \\
-      \begin{tabularx}{\linewidth}{LR}
-        \csvreader[
-          head to column names
-        ]{../results/example/quasipois_semiparam_pears_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-      \end{tabularx}
-      \subcaption{Quasi-poisson}
-    \end{subtable}
-    \caption{Results for semiparameteric bootstrap with Pearson residuals}
-    \label{tab:semiparam-pois-pears-res}
-  \end{table}
+\begin{table}
+  \centering
+  \begin{tabularx}{0.5 \linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
+    $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+    \csvreader[
+      head to column names,
+    late after line =                                                                                                                \\
+    ]{%
+      ../results/example/pois_semiparam_pears_table.csv
+    }{}{%
+    \idx  & \a                & \b                & \reserve          & \prederror
+    } \midrule
+  \end{tabularx} \\
+  \begin{tabularx}{0.5 \linewidth}{LR}
+    \csvreader[
+      head to column names
+    ]{../results/example/pois_semiparam_pears_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+  \end{tabularx}
+  \caption{Results for semiparameteric bootstrap with Pearson residuals}
+  \label{tab:semiparam-pois-pears-res}
+\end{table}
 
-  \begin{table}[H]
-    \centering
-    \begin{tabularx}{0.5\textwidth}{CCCCC}\toprule
-      $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
-      \csvreader[
-        head to column names,
-      late after line =                                                                                                                \\
-      ]{%
-        ../results/example/pois_semiparam_quant_table.csv
-      }{}{%
-      \idx  & \a                & \b                & \reserve          & \prederror
-      } \midrule
-    \end{tabularx} \\
-    \begin{tabularx}{0.5\textwidth}{LR}
-      \csvreader[
-        head to column names
-      ]{../results/example/pois_semiparam_quant_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-    \end{tabularx}
-    \caption{Results for semiparameteric bootstrap with quantile residuals}
-    \label{tab:semiparam-pois-quant-res}
-  \end{table}
-\end{figure}
+\begin{table}[H]
+  \centering
+  \begin{tabularx}{0.5\textwidth}{CCCCC}\toprule
+    $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+    \csvreader[
+      head to column names,
+    late after line =                                                                                                                \\
+    ]{%
+      ../results/example/pois_semiparam_quant_table.csv
+    }{}{%
+    \idx  & \a                & \b                & \reserve          & \prederror
+    } \midrule
+  \end{tabularx} \\
+  \begin{tabularx}{0.5\textwidth}{LR}
+    \csvreader[
+      head to column names
+    ]{../results/example/pois_semiparam_quant_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+  \end{tabularx}
+  \caption{Results for semiparameteric bootstrap with quantile residuals}
+  \label{tab:semiparam-pois-quant-res}
+\end{table}
 
 Finally, we consider the parametric bootstrap. Here again, the development proceeds in a very similar way to \cref{sec:mack-boot}. We begin by fitting the model to the original data, giving us estimates for $c$, $a_i$ and $b_j$, as well as $\phi$ if we're using \modelref{model:odp}. With the help of a random number generator, we can then use these to generate a new upper triangle. For \modelref{model:poisson}, this means sampling from a Poisson distribution with mean $\widehat{\mu}_{ij} = \exp{( \widehat{c} + \widehat{a}_i + \widehat{b}_j )}$; for \modelref{model:poisson} any distribution satisfying
 \begin{equation}
@@ -1336,6 +1448,72 @@ will do. The model is then refitted to the simulated triangle to obtain $\wideha
   \label{alg:param-pois}
 \end{algorithm}
 
+\begin{figure}[p]
+  \begin{table}[H]
+    \centering
+    \begin{subtable}{0.3\linewidth}
+      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
+        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+        \csvreader[
+          head to column names,
+        late after line =                                                                                                                \\
+        ]{%
+          ../results/example/pois_param_norm_table.csv
+        }{}{%
+        \idx  & \a                & \b                & \reserve          & \prederror
+        } \midrule
+      \end{tabularx} \\
+      \begin{tabularx}{\linewidth}{LR}
+        \csvreader[
+          head to column names
+        ]{../results/example/pois_param_norm_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+      \end{tabularx}
+      \subcaption{Normal}
+    \end{subtable}
+    \hfill
+    \begin{subtable}{0.3\linewidth}
+      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
+        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+        \csvreader[
+          head to column names,
+        late after line =                                                                                                                \\
+        ]{%
+          ../results/example/pois_param_gamma_table.csv
+        }{}{%
+        \idx  & \a                & \b                & \reserve          & \prederror
+        } \midrule
+      \end{tabularx} \\
+      \begin{tabularx}{\linewidth}{LR}
+        \csvreader[
+          head to column names
+        ]{../results/example/pois_param_gamma_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+      \end{tabularx}
+      \subcaption{Gamma}
+    \end{subtable}
+    \begin{subtable}{0.3\linewidth}
+      \begin{tabularx}{\linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
+        $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+        \csvreader[
+          head to column names,
+        late after line =                                                                                                                \\
+        ]{%
+          ../results/example/pois_param_pois_table.csv
+        }{}{%
+        \idx  & \a                & \b                & \reserve          & \prederror
+        } \midrule
+      \end{tabularx} \\
+      \begin{tabularx}{\linewidth}{LR}
+        \csvreader[
+          head to column names
+        ]{../results/example/pois_param_pois_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+      \end{tabularx}
+      \subcaption{Poisson}
+    \end{subtable}
+    \caption{Results for parametric bootstrap}
+    \label{tab:semiparam-pois-dev-res}
+  \end{table}
+\end{figure}
+
 \section{Incorporating the process error}
 
 The only question that remains is how to incorporate the intrinsic variability of the response in our bootstrap simulations. Just as in \cref{sec:boot-proc} and \cref{sec:mack-proc}, we will use the concept of the predictive distribution to achieve this. Depending on the type of bootstrap under consideration, this will result in different procedures. For the semiparametric bootstrap, we resample the residuals a second time and invert the appropriate formula to obtain bootstrap responses.
@@ -1348,18 +1526,20 @@ The only question that remains is how to incorporate the intrinsic variability o
   \label{fig:pred-semiparam}
 \end{figure}
 
+\newgeometry{bottom=0.1cm}
+
 \chapter{Simulation study}
 
-As explained in \cref{chapter:intro,sec:boot-proc}, we want to investigate the effect of deviations from the model assumptions on the predictive distribution of the total outstanding claims. To this end, we simulate a large number of run-off triangles which conform perfectly to these assumptions, perturb them in a number of ways, and use the bootstrap methods described in \cref{chapter:mack,chapter:poisson} to compute resulting distribution. We broadly follow the methodology outlined in \cite{schiegl}, adapted, of course, to the models under consideration.
+As explained in the \nameref{intro} and \cref{sec:boot-proc}, we want to investigate the effect of deviations from the model assumptions on the predictive distribution of the total outstanding claims. To this end, we simulate a large number of run-off triangles which conform perfectly to these assumptions, perturb them in a number of ways, and use the bootstrap methods described in \cref{chapter:mack,chapter:poisson} to compute resulting distribution. We broadly follow the methodology outlined in \cite{schiegl}, adapted, of course, to the models under consideration.
 
 \section{Mack's model}
 
-Recall from \cref{sec:mack-intro} that \modelref{model:mack} is recursive in nature, with the cumulative claim amounts in the next development determined by the observations in the previous one. \Modelref{model:mack} therefore requires the first column of the triangle to be given. We can either define a seperate model for it and simulate from that, or simply take the. We also require a set of development factors $f_1, \dots, f_{I - 1}$ and dispersion parameters $\sigma_1, \dots, \sigma_{I - 1}$. Starting from the initial column, we can then use a data-generating process satisfying.
+Recall from \cref{sec:mack-intro} that \modelref{model:mack} is recursive in nature, with the cumulative claim amounts in the next development determined by the observations in the previous one, and therefore requires that the first column of the triangle already be given in some way. We could use a seperate model to generate this, but we choose here to simply take the one from the UK Motor dataset in \cref{tab:uk-motor}. Likewise, we will use as development factors $f_1, \dots, f_{I - 1}$ and dispersion parameters $\sigma_1, \dots, \sigma_{I - 1}$ the fitted ones for this triangle. To generate a triangle which perfectly satisfies \cref{assump:mack-expectation,assump:mack-variance,assump:mack-independence}, we can then start from the initial column and use any suitable data-generating process (such as \cref{eq:time-series-model}) to recursively simulate the following columns of the triangle, as outline in \cref{alg:clean-mack-triangle}.
 
 \begin{algorithm}[!htb]
   \begin{algorithmic}
     \Require{Development factors $f_1, \dots, f_{I - 1}$, dispersion parameters $\sigma_1, \dots, \sigma_{I - 1}$}
-    \ForAll{$1 \leq i, j \leq I$}
+    \ForAll{$1 \leq i \leq I$, $2 \leq j \leq I$}
       \State $C_{ij} \gets 0$
     \EndFor
     \For{$i \gets 1, I$}
@@ -1371,11 +1551,16 @@ Recall from \cref{sec:mack-intro} that \modelref{model:mack} is recursive in nat
     \State \Return{$(C^*_{ij})_{1 \leq i,j \leq I}$}
   \end{algorithmic}
   \caption{Simulating a clean triangle conforming to \modelref{model:mack}}
+  \label{alg:clean-mack-triangle}
 \end{algorithm}
+
+\restoregeometry
+
+This immediately suggests a way of producing triangles where the assumptions have been perturbed for a single point $(i^*, j^*)$ with $i^* + j^* \leq I + 1$ and $j^* > 1$. In the contaminated row, we start from the first column and recursively simulate observations until we arrive at column $j^*$. Using perturbation factors $c_\mu$ and $c_\sigma$ for the mean and variance, we then draw an observation from the perturbed distribution $\mathcal{N}(c_\mu f_{j^* - 1} C^*_{i^*, j^* - 1}, c_\sigma \sigma^2_{j^* - 1} C^*_{i^*, j^* - 1})$. The non-contaminated rows are then obtained with the same procedure as in \cref{alg:clean-mack-triangle}.
 
 \begin{algorithm}[!htb]
   \begin{algorithmic}
-    \Require{Development factors $f_1, \dots, f_I$, dispersion parameters $\sigma_1, \dots, \sigma_I$, perturbed point $(i^*, j^*)$, perturbation factors $c_\mu$, $c_\sigma$}
+    \Require{Development factors $f_1, \dots, f_{I - 1}$, dispersion parameters $\sigma_1, \dots, \sigma_{I - 1}$, perturbed point $(i^*, j^*)$ with $i^* + j^* \leq I + 1$ and $j^* > 1$, perturbation factors $c_\mu$, $c_\sigma$}
     \ForAll{$1 \leq i, j \leq I$}
       \State $C_{ij} \gets 0$
     \EndFor
@@ -1397,31 +1582,61 @@ Recall from \cref{sec:mack-intro} that \modelref{model:mack} is recursive in nat
     \EndFor
     \State \Return{$(C^*_{ij})_{1 \leq i,j \leq I}$}
   \end{algorithmic}
-  \caption{Simulating triangle with single perturbed point}
+  \caption{Simulating triangle with single perturbed point for \modelref{model:mack}}
 \end{algorithm}
 
-\section{Poisson GLM}
+We can obtain algorithms for simulating triangles where an entire origin or calendar period has been perturbed in a similar way.
 
-\begin{algorithm}[!htb]
+\section{Overdispersed Poisson GLM}
+
+Simulating triangles conforming to \modelref{model:odp} is significantly easier than for \modelref{model:mack}, as we don't have to deal with recursion. Using the fitted parameters from \cref{tab:uk-motor-long} for $\phi$, $c$, $a_1, \dots, a_I$ and $b_1, \dots, b_I$, we generate an observation for every cell $(i, j)$ in the upper triangle by drawing from an appropriate distribution, as shown in \cref{alg:clean-odp-triangle}.
+
+\begin{algorithm}[H]
   \begin{algorithmic}
     \Require{Intercept $c$, development period parameters $a_2, \dots, a_I$, origin period parameters $b_2, \dots, b_I$, dispersion parameter $\phi$}
+    \State $a_1 \gets 0$, $b_1 \gets 0$
     \ForAll{$1 \leq i, j \leq I$}
+      \State $\mu_{ij} \gets \exp(c + a_i + b_j)$
       \State $X_{ij} \gets 0$
     \EndFor
     \For{$i \gets 1, I$}
-      \For{$j \gets 2, I + 1 - i$}
-        \State $C^*_{ij} \gets \mathcal{N}(f_j C^*_{i, j - 1}, \sigma_j^2 C^*_{i, j - 1})$
+      \For{$j \gets 1, I + 1 - i$}
+        \State $X^*_{ij} \gets \mathcal{N}(\mu_{ij}, \sqrt{\phi \mu_{ij}})$
       \EndFor
     \EndFor
-    \State \Return{$(C^*_{ij})_{1 \leq i,j \leq I}$}
+    \State \Return{$(X^*_{ij})_{1 \leq i,j \leq I}$}
   \end{algorithmic}
-  \caption{Simulating a clean triangle conforming to \cref{model:poisson}}
+  \caption{Simulating a clean triangle conforming to \modelref{model:odp}}
+  \label{alg:clean-odp-triangle}
 \end{algorithm}
+
+Triangles with a single perturbed point can then be obtained straightforwardly from this.
+
+\begin{algorithm}[H]
+  \begin{algorithmic}
+    \Require{Intercept $c$, development period parameters $a_2, \dots, a_I$, origin period parameters $b_2, \dots, b_I$, dispersion parameter $\phi$}
+    \State $a_1 \gets 0$, $b_1 \gets 0$
+    \ForAll{$1 \leq i, j \leq I$}
+      \State $\mu_{ij} \gets \exp(c + a_i + b_j)$
+      \State $X_{ij} \gets 0$
+    \EndFor
+    \For{$i \gets 1, I$}
+      \For{$j \gets 1, I + 1 - i$}
+        \State $X^*_{ij} \gets \mathcal{N}(\mu_{ij}, \sqrt{\phi \mu_{ij}})$
+      \EndFor
+    \EndFor
+    \State \Return{$(X^*_{ij})_{1 \leq i,j \leq I}$}
+  \end{algorithmic}
+  \caption{Simulating triangle with single perturbed point for \modelref{model:odp}}
+\end{algorithm}
+
+Again, similar algorithms can be used for perturbed origin or calendar periods.
 
 \section{Results}
 
 \backmatter%
-\chapter{Conclusion}
+
+\chapter{Conclusion} \label{conclusion}
 
 \printbibliography%
 

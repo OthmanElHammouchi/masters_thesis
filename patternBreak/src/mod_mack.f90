@@ -416,47 +416,12 @@ contains
         resampled_resids = sample(resids, resids_mask)
       end if
 
-      call resample(triangle, dev_facs_boot, sigmas_boot, status)
+      call boot_params(triangle, dev_facs_boot, sigmas_boot, status)
       if (status == FAILURE) cycle main_loop
 
       ! Simulate process error
-      triangle_boot = triangle
-
-      if (proc_dist == NORMAL) then
-        do i_diag = 1, n_dev - 1
-          do i = i_diag + 1, n_dev
-            j = n_dev + i_diag + 1 - i
-            mean = dev_facs_boot(j - 1) * triangle_boot(i, j - 1)
-            sd = sigmas_boot(j - 1) * sqrt(triangle_boot(i, j - 1))
-            triangle_boot(i, j) = rnorm_par(rng, i_thread, mean, sd)
-            if (triangle_boot(i, j) <= 0) cycle main_loop
-          end do
-        end do
-
-        do j = 1, n_dev
-          latest(j) = triangle_boot(n_dev + 1 - j, j)
-        end do
-
-        reserve(i_boot) = sum(triangle_boot(:, n_dev)) - sum(latest)
-        i_boot = i_boot + 1
-
-      else if (proc_dist == GAMMA) then
-        do i_diag = 1, n_dev - 1
-          do i = i_diag + 1, n_dev
-            j = n_dev + i_diag + 1 - i
-            shape = (dev_facs_boot(j - 1)**2 * triangle_boot(i, j - 1)) / sigmas_boot(j - 1) **2
-            scale = sigmas_boot(j - 1) ** 2 / dev_facs_boot(j - 1)
-            triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
-          end do
-        end do
-
-        do j = 1, n_dev
-          latest(j) = triangle_boot(n_dev + 1 - j, j)
-        end do
-
-        reserve(i_boot) = sum(triangle_boot(:, n_dev)) - sum(latest)
-        i_boot = i_boot + 1
-      end if
+      reserve(i_boot) = sim_res(triangle, dev_facs_boot, sigmas_boot, resids_mask)
+      i_boot = i_boot + 1
     end do main_loop
   end subroutine boot
 
@@ -517,7 +482,6 @@ contains
         scale_facs(1, n_dev - 1) = 1
       end if
 
-      n_resids = (n_dev ** 2 - n_dev) / 2 - 1
       resids = 0
       select case (resids_type)
        case (STANDARDISED)
@@ -525,14 +489,6 @@ contains
           n_rows = n_dev - j
           do i = 1, n_rows
             resids(i, j) = (indiv_dev_facs(i, j) - dev_facs(j)) * sqrt(triangle(i, j)) / (sigmas(j) * scale_facs(i, j))
-          end do
-        end do
-
-       case (MODIFIED)
-        do j = 1, n_dev - 1
-          n_rows = n_dev - j
-          do i = 1, n_rows
-            resids(i, j) = (indiv_dev_facs(i, j) - dev_facs(j)) * sqrt(triangle(i, j)) / scale_facs(i, j)
           end do
         end do
 
@@ -572,28 +528,28 @@ contains
       end select
 
       resids(1, n_dev - 1) = 0
+      resids(:, ndev - 2) = 0
+      n_resids = (n_dev ** 2 - n_dev) / 2 - 3
 
-      if (resids_type /= STUDENTISED) then
-        resids_mean = 0
-        do i = 1, n_dev - 1
-          do j = 1, n_dev - i
-            resids_mean = resids_mean + resids(i, j)
-          end do
+      resids_mean = 0
+      do i = 1, n_dev - 1
+        do j = 1, n_dev - i
+          resids_mean = resids_mean + resids(i, j)
         end do
-        resids_mean = resids_mean / n_resids
-        do i = 1, n_dev - 1
-          do j = 1, n_dev - i
-            resids(i, j) = resids(i, j) - resids_mean
-          end do
+      end do
+      resids_mean = resids_mean / n_resids
+      do i = 1, n_dev - 1
+        do j = 1, n_dev - i
+          resids(i, j) = resids(i, j) - resids_mean
         end do
-      end if
+      end do
     end if
 
     deallocate(indiv_dev_facs)
   end subroutine fit
 
-  ! Return simulated development factors and dispersion parameters.
-  subroutine resample(triangle, dev_facs_boot, sigmas_boot, status)
+  ! Compute bootstrap development factors and dispersion parameters.
+  subroutine boot_params(triangle, dev_facs_boot, sigmas_boot, status)
     real(c_double), intent(in) :: triangle(:, :)
     real(c_double), intent(out) :: dev_facs_boot(:), sigmas_boot(:)
     integer(c_int), intent(out) :: status
@@ -667,9 +623,6 @@ contains
             if (resids_type == STANDARDISED) then
               resampled_triangle(i, j + 1) = dev_facs(j) * triangle(i, j) + &
                 sigmas(j) * scale_facs(i, j) * sqrt(triangle(i, j)) * resampled_resids(i, j)
-            else if (resids_type == MODIFIED) then
-              resampled_triangle(i, j + 1) = dev_facs(j) * triangle(i, j) + &
-                scale_facs(i, j) * sqrt(triangle(i, j)) * resampled_resids(i, j)
             else if (resids_type == STUDENTISED) then
               resampled_triangle(i, j + 1) = dev_facs(j) * triangle(i, j) + &
                 sigmas_jack(i, j) * scale_facs(i, j) * sqrt(triangle(i, j)) * resampled_resids(i, j)
@@ -690,9 +643,6 @@ contains
             if (resids_type == STANDARDISED) then
               resampled_triangle(i, j + 1) = dev_facs(j) * resampled_triangle(i, j) + &
                 sigmas(j) * scale_facs(i, j) * sqrt(resampled_triangle(i, j)) * resampled_resids(i, j)
-            else if (resids_type == MODIFIED) then
-              resampled_triangle(i, j + 1) = dev_facs(j) * resampled_triangle(i, j) + &
-                scale_facs(i, j) * sqrt(resampled_triangle(i, j)) * resampled_resids(i, j)
             else if (resids_type == STUDENTISED) then
               resampled_triangle(i, j + 1) = dev_facs(j) * resampled_triangle(i, j) + &
                 sigmas_jack(i, j) * scale_facs(i, j) * sqrt(resampled_triangle(i, j)) * resampled_resids(i, j)
@@ -743,7 +693,68 @@ contains
         end if
       end do
     end select
-  end subroutine resample
+  end subroutine boot_params
+
+  function sim_res(triangle, dev_facs_boot, sigmas_boot, resids_mask) result(reserve)
+    real(c_double), intent(in) :: triangle(:, :)
+    real(c_double), intent(in) :: dev_facs_boot(:), sigmas_boot(:)
+    logical(c_bool) :: resids_mask(:, :)
+
+    real(c_double), allocatable :: resids_sim(:)
+    integer(c_int) :: ndev, nresids
+    integer(c_int) :: i, j, i_diag
+    real(c_double) :: mean, sd
+
+    ndev = size(triangle, 1)
+    resampled_resids = sample(resids, resids_mask)
+    nresids = size(resampled_resids, 1)
+    resids_sim = pack(resampled_resids)
+    triangle_boot = triangle
+
+    if (boot_type == PARAMETRIC) then
+      if (proc_dist == NORMAL) then
+        do i_diag = 1, n_dev - 1
+          do i = i_diag + 1, n_dev
+            j = n_dev + i_diag + 1 - i
+            mean = dev_facs_boot(j - 1) * triangle_boot(i, j - 1)
+            sd = sigmas_boot(j - 1) * sqrt(triangle_boot(i, j - 1))
+            triangle_boot(i, j) = rnorm_par(rng, i_thread, mean, sd)
+            if (triangle_boot(i, j) <= 0) cycle main_loop
+          end do
+        end do
+
+      else if (proc_dist == GAMMA) then
+        do i_diag = 1, n_dev - 1
+          do i = i_diag + 1, n_dev
+            j = n_dev + i_diag + 1 - i
+            shape = (dev_facs_boot(j - 1)**2 * triangle_boot(i, j - 1)) / sigmas_boot(j - 1) **2
+            scale = sigmas_boot(j - 1) ** 2 / dev_facs_boot(j - 1)
+            triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
+          end do
+        end do
+      end if
+
+      else if (boot_type == RESID)
+      if (resids_type == LOGNORMAL) then
+      else
+        k = 1
+        do i_diag = 1, n_dev
+          do i = i_diag + 1, n_dev
+            j = n_dev + i_diag + 1 - i
+            mean = triangle_boot(i, j - 1) * dev_facs_boot(j - 1)
+            sd = sigmas_boot(j - 1) * sqrt(triangle_boot(i, j - 1))
+            triangle_boot(i, j) = mean + sd * resampled_resids(i, j - 1)
+          end do
+        end do
+      end if
+    end if
+
+    do j = 1, n_dev
+      latest(j) = triangle_boot(n_dev + 1 - j, j)
+    end do
+
+    reserve = sum(triangle_boot(:, n_dev)) - sum(latest)
+  end function sim_res
 
   pure real(c_double) function extrapolate_sigma(sigmas, col)
     real(c_double), intent(in) :: sigmas(:)

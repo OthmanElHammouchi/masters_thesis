@@ -17,9 +17,8 @@ module mod_global
 
   ! Residual types
   integer(c_int), parameter :: STANDARDISED = 1
-  integer(c_int), parameter :: MODIFIED = 2
-  integer(c_int), parameter :: STUDENTISED = 3
-  integer(c_int), parameter :: LOGNORMAL = 4
+  integer(c_int), parameter :: STUDENTISED = 2
+  integer(c_int), parameter :: LOGNORMAL = 3
 
   ! Simulation types
   integer(c_int), parameter :: SINGLE = 1

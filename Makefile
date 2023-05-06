@@ -25,23 +25,20 @@ clean:
 	-rm -f $(DOC:.tex=.pdf)
 	-rm -f $(TEXTDIR)/*.{aux,dvi,log,bbl,blg,brf,fls,toc,thm,out,fdb_latexmk}
 
-EXAMPLEDIR = $(wildcard scripts/example/*.r)
+EXAMPLEDIR = scripts/example
 
-example:
-	for file in $(EXAMPLEDIR); do\
-			$${file} -r --nboot 1000 --nsim 100;\
-	done
+example-clean:
+	rm results/example/*
+	rm plots/example/*
+
+example: example-clean
+	$(EXAMPLEDIR)/main.r -r --nboot 1000 --nsim 100
 
 example-plots:
-	-rm -f plots/example/*
-	for file in $(EXAMPLEDIR); do\
-			$${file};\
-	done
-
+	$(EXAMPLEDIR)/main.r
+	
 example-test:
-	for file in $(EXAMPLEDIR); do\
-			$${file} -r --nboot 10 --nsim 10;\
-	done
+	$(EXAMPLEDIR)/main.r -r --nboot 10 --nsim 10
 
 simulations:
 	Rscript scripts/simulations.r
