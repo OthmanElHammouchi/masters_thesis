@@ -1,16 +1,19 @@
 #include <algorithm>
-#include <vector>
+#include <numeric>
 #include <string>
+#include <vector>
 
-#include "helpers.h"
 #include "constants.h"
+#include "helpers.h"
 
 extern "C" {
-  void mack_boot_(int n_dev, double* triangle, int boot_type, int process_dist, bool conditional, int resids_type, int n_boot, double* reserve, int seed);
+void mack_boot_(int n_dev, double *triangle, int boot_type, int process_dist,
+                bool conditional, int resids_type, int n_boot, double *reserve,
+                int seed);
 
-  void mack_sim_(int n_dev, double* triangle, int sim_type, int n_boot, int n_res, int m_res, double* results, bool show_progress, int seed);
-
-  void init_config_(int sim_type, int n_dev, int n_boot, int n_factors, double* factors, int n_boot_types, int* boot_types, int n_proc_dists, int* proc_dists, int n_conds, bool* conds, int n_resids_types, int* resids_types, int* n_res, int* m_res);
+void mack_sim_(int n_dev, double *triangle, int sim_type, int boot_type,
+               int sim_dist, int n_boot, int n_conf, int m_conf, double *conf,
+               double *res, bool show_progress, int seed);
 }
 
 //' Simulate Mack CL reserve.
@@ -18,29 +21,33 @@ extern "C" {
 //' @param triangle Cumulative claims triangle
 //' @param n_boot Number of bootstrap simulations
 //' @param boot_type Type of bootstrap: `"parametric"`, `"residuals"`, or `"pairs"`
-//' @param proc_dist Distribution of process error: `"normal"` or `"gamma"`
+//' @param proc_dist Distribution of process error: `"normal"`or `"gamma"`
 //' @param conditional Specified whether the bootstrap should be conditional or unconditional. Default is `TRUE`.
 //' @export
 // [[Rcpp::export]]
-Rcpp::NumericVector mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::String boot_type, Rcpp::String proc_dist, bool conditional, Rcpp::Nullable<Rcpp::String> resids_type = R_NilValue, int seed = 42) {
+Rcpp::NumericVector
+mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::String boot_types,
+         Rcpp::String proc_dist, bool conditional,
+         Rcpp::Nullable<Rcpp::String> resids_type = R_NilValue, int seed = 42) {
   int n_dev = triangle.rows();
   triangle = na_to_zero(triangle);
 
   Rcpp::String resids_type_ = "";
   if (resids_type.isNotNull()) {
     resids_type_ = Rcpp::String(resids_type);
-    if (boot_type != "residuals") {
+    if (boot_types != "residuals") {
       Rcpp::stop("Argument 'resids_type' only valid for residuals bootstrap.");
-      }
     }
+  }
 
-  if (boot_type == "pairs" && !conditional) {
+  if (boot_types == "pairs" && !conditional) {
     Rcpp::stop("Unconditional method invalid for pairs bootstrap.");
   }
 
   Rcpp::NumericVector reserve(n_boot);
-  mack_boot_(n_dev, triangle.begin(), key[boot_type], key[proc_dist], conditional, key[resids_type_], n_boot, reserve.begin(), seed);
-  return(reserve);
+  mack_boot_(n_dev, triangle.begin(), key[boot_types], key[proc_dist],
+             conditional, key[resids_type_], n_boot, reserve.begin(), seed);
+  return (reserve);
 };
 
 //' Simulate Mack CL reserve for different perturbed and excluded points.
@@ -53,128 +60,44 @@ Rcpp::NumericVector mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::Str
 //' @param proc_dist Distribution of process error: `"normal"` or `"gamma"`
 //' @param cond Specified whether the bootstrap should be conditional or unconditional. Default is `TRUE`.
 //'
-//' @details
-//' The simulation configuration inputs `sim_type`, `factor`, `boot_type`, `proc_dist` and `conditional` can be
-//' either strings or character vectors. In the latter case, the simulation is computed for all feasible combinations.
+//' @details The simulation configuration inputs `sim_type`, `factor`, `boot_type`, `proc_dist` and `conditional` can be either strings or character vectors. In the latter case, the simulation is computed for all feasible combinations.
 //' @export
 // [[Rcpp::export]]
-Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector factor, Rcpp::CharacterVector boot_type, Rcpp::CharacterVector proc_dists, Rcpp::LogicalVector conds, Rcpp::Nullable<Rcpp::CharacterVector> resids_type = R_NilValue, bool show_progress = true, int seed = 42) {
+Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type,
+                        int n_boot, Rcpp::NumericVector mean_factors,
+                        Rcpp::NumericVector sd_factors,
+                        Rcpp::CharacterVector boot_types,
+                        Rcpp::String sim_dist = "normal",
+                        bool show_progress = true, int seed = 42) {
 
   int n_dev = triangle.rows();
   triangle = na_to_zero(triangle);
+  int n_pts = (pow(n_dev, 2) + n_dev) / 2;
 
-  Rcpp::CharacterVector resids_types__;
-  if (resids_type.isNotNull()) {
-    if (!contains_str(boot_type, "residuals")) {
-      Rcpp::stop("Argument 'resids_type' only valid for residuals bootstrap.");
-    }
-    resids_types__ = resids_type;
-  } else {
-    resids_types__ = "none";
+  Rcpp::Environment pkg = Rcpp::Environment::namespace_env("patternBreak");
+  Rcpp::Function mackConfig = pkg["mackConfig"];
+  Rcpp::Function mackPost = pkg["mackPost"];
+
+  Rcpp::List res_list(boot_types.length());
+  for (Rcpp::CharacterVector::iterator i = boot_types.begin();
+       i != boot_types.end(); ++i) {
+    Rcpp::String boot_type = *i;
+    Rcpp::NumericMatrix conf =
+        mackConfig(n_dev, mean_factors, sd_factors, sim_type, boot_type);
+
+    int sim_type_ = key[sim_type];
+    int boot_type_ = key[boot_type];
+    int sim_dist_ = key[sim_dist];
+
+    // Call Fortran simulation routine.
+    int n_conf = conf.nrow();
+    int m_conf = conf.ncol();
+    Rcpp::NumericMatrix fort_res(n_boot * n_conf, m_conf + 1);
+    mack_sim_(n_dev, triangle.begin(), sim_type_, boot_type_, sim_dist_, n_boot,
+              n_conf, m_conf, conf.begin(), fort_res.begin(), show_progress,
+              seed);
+    res_list[boot_type_ - 1] = fort_res;
   }
-
-  if (boot_type.length() == 1 && boot_type(0) == "pairs") {
-    if (conds.length() == 1 && !conds(0)) {
-      Rcpp::stop("Unconditional method invalid for pairs bootstrap.");
-    }
-  }
-
-  // Prepare arguments to be passed to Fortran.
-  int n_factors = factor.length();
-  int n_boot_types = boot_type.length();
-  int n_proc_dists = proc_dists.length();
-  int n_conds = conds.length();
-  int n_resids_types = resids_types__.length();
-
-  int sim_type_;
-  if (sim_type == "single") {
-    sim_type_ = SINGLE;
-  } else if (sim_type == "calendar") {
-    sim_type_ = CALENDAR;
-  } else {
-    sim_type_ = ORIGIN;
-  }
-
-  int boot_types_[n_boot_types];
-  for (int i = 0; i < n_boot_types; i++) {
-    if (boot_type(i) == "parametric") {
-      boot_types_[i] = PARAMETRIC;
-    } else if (boot_type(i) == "residuals") {
-      boot_types_[i] = RESID;
-    } else {
-      boot_types_[i] = PAIRS;
-    }
-  }
-
-  int proc_dists_[n_proc_dists];
-  for (int i = 0; i < n_proc_dists; i++) {
-    if (proc_dists(i) == "normal") {
-      proc_dists_[i] = NORMAL;
-    } else if (proc_dists(i) == "gamma") {
-      proc_dists_[i] = GAMMA;
-    }
-  }
-
-  bool conds_[n_conds];
-  for (int i = 0; i < n_conds; i++) {
-    if (conds(i)) {
-      conds_[i] = true;
-    } else {
-      conds_[i] = false;
-    }
-  }
-
-  int resids_types_[n_resids_types];
-  for (int i = 0; i < n_resids_types; i++) {
-    if (resids_types__(i) == "standardised") {
-      resids_types_[i] = STANDARDISED;
-    } else if (resids_types__(i) == "modified") {
-      resids_types_[i] = MODIFIED;
-    } else if (resids_types__(i) == "studentised") {
-      resids_types_[i] = STUDENTISED;
-    } else {
-      resids_types_[i] = LOGNORMAL;
-    }
-  }
-  
-  // Call Fortran simulation routine.
-  int n_res, m_res;
-  init_config_(sim_type_, n_dev, n_boot, n_factors, factor.begin(), n_boot_types, boot_types_, n_proc_dists, proc_dists_, n_conds, conds_, n_resids_types, resids_types_, &n_res, &m_res);
-
-  Rcpp::NumericMatrix res_(n_res, m_res);
-  mack_sim_(n_dev, triangle.begin(), sim_type_, n_boot, n_res, m_res, res_.begin(), show_progress, seed);
-
-  // Convert result to dataframe with proper column names and descriptive elements.
-  Rcpp::Function asDataFrame("as.data.frame");
-  Rcpp::DataFrame res = asDataFrame(res_);
-  if (sim_type == "single") {
-    res.attr("names") = Rcpp::CharacterVector({"outlier.rowidx", "outlier.colidx", "factor", "excl.rowidx", "excl.colidx", "boot.type", "proc.dist", "cond", "resids.type", "reserve"});
-  } else if (sim_type == "calendar") {
-      res.attr("names") = Rcpp::CharacterVector({"outlier.diagidx", "factor", "excl.diagidx", "boot.type", "proc.dist", "cond", "resids.type", "reserve"});    
-  } else if (sim_type == "origin") {
-    res.attr("names") = Rcpp::CharacterVector({"outlier.rowidx", "factor", "excl.rowidx", "boot.type", "proc.dist", "cond", "resids.type", "reserve"});
-  }
-
-  Rcpp::CharacterVector boot_col = Rcpp::as<Rcpp::CharacterVector>(res["boot.type"]);
-  std::replace(boot_col.begin(), boot_col.end(), std::string("1"), std::string("parametric"));
-  std::replace(boot_col.begin(), boot_col.end(), std::string("2"), std::string("residuals"));
-  std::replace(boot_col.begin(), boot_col.end(), std::string("3"), std::string("pairs"));
-  res["boot.type"] = Rcpp::CharacterVector(boot_col.begin(), boot_col.end());
-
-  Rcpp::CharacterVector proc_col = Rcpp::as<Rcpp::CharacterVector>(res["proc.dist"]);
-  std::replace(proc_col.begin(), proc_col.end(), std::string("1"), std::string("normal"));
-  std::replace(proc_col.begin(), proc_col.end(), std::string("2"), std::string("gamma"));
-  res["proc.dist"] = Rcpp::CharacterVector(proc_col.begin(), proc_col.end());
-
-  res["cond"] = Rcpp::as<Rcpp::LogicalVector>(res["cond"]);
-
-  Rcpp::CharacterVector resids_col = Rcpp::as<Rcpp::CharacterVector>(res["resids.type"]);
-  std::replace(resids_col.begin(), resids_col.end(), std::string("0"), std::string(Rcpp::String(NA_STRING)));
-  std::replace(resids_col.begin(), resids_col.end(), std::string("1"), std::string("standardised"));
-  std::replace(resids_col.begin(), resids_col.end(), std::string("2"), std::string("modified"));
-  std::replace(resids_col.begin(), resids_col.end(), std::string("3"), std::string("studentised"));
-  std::replace(resids_col.begin(), resids_col.end(), std::string("4"), std::string("log-normal"));
-  res["resids.type"] = Rcpp::CharacterVector(resids_col.begin(), resids_col.end());
-
-  return(res);
+  Rcpp::DataFrame res = mackPost(res_list, boot_types, sim_type);
+  return (res);
 };

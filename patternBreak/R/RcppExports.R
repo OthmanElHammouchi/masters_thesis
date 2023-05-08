@@ -27,34 +27,12 @@ glm_sim <- function(triangle, n_boot, config, type) {
     .Call('_patternBreak_glm_sim', PACKAGE = 'patternBreak', triangle, n_boot, config, type)
 }
 
-#' Simulate Mack CL reserve.
-#'
-#' @param triangle Cumulative claims triangle
-#' @param n_boot Number of bootstrap simulations
-#' @param boot_type Type of bootstrap: `"parametric"`, `"residuals"`, or `"pairs"`
-#' @param proc_dist Distribution of process error: `"normal"` or `"gamma"`
-#' @param conditional Specified whether the bootstrap should be conditional or unconditional. Default is `TRUE`.
-#' @export
-mackBoot <- function(triangle, n_boot, boot_type, proc_dist, conditional, resids_type = NULL, seed = 42L) {
-    .Call('_patternBreak_mackBoot', PACKAGE = 'patternBreak', triangle, n_boot, boot_type, proc_dist, conditional, resids_type, seed)
+mackBoot <- function(triangle, n_boot, boot_types, proc_dist, conditional, resids_type = NULL, seed = 42L) {
+    .Call('_patternBreak_mackBoot', PACKAGE = 'patternBreak', triangle, n_boot, boot_types, proc_dist, conditional, resids_type, seed)
 }
 
-#' Simulate Mack CL reserve for different perturbed and excluded points.
-#'
-#' @param triangle Cumulative claims triangle
-#' @param sim_type Simulation type: `"single"` (the default), `"calender"`, or `"origin"`
-#' @param n_boot Number of bootstrap simulations
-#' @param factor Perturbation factor
-#' @param boot_type Type of bootstrap: `"parametric"`, `"residuals"`, or `"pairs"`
-#' @param proc_dist Distribution of process error: `"normal"` or `"gamma"`
-#' @param cond Specified whether the bootstrap should be conditional or unconditional. Default is `TRUE`.
-#'
-#' @details
-#' The simulation configuration inputs `sim_type`, `factor`, `boot_type`, `proc_dist` and `conditional` can be
-#' either strings or character vectors. In the latter case, the simulation is computed for all feasible combinations.
-#' @export
-mackSim <- function(triangle, sim_type, n_boot, factor, boot_type, proc_dists, conds, resids_type = NULL, show_progress = TRUE, seed = 42L) {
-    .Call('_patternBreak_mackSim', PACKAGE = 'patternBreak', triangle, sim_type, n_boot, factor, boot_type, proc_dists, conds, resids_type, show_progress, seed)
+mackSim <- function(triangle, sim_type, n_boot, mean_factors, sd_factors, boot_types, sim_dist = "normal", show_progress = TRUE, seed = 42L) {
+    .Call('_patternBreak_mackSim', PACKAGE = 'patternBreak', triangle, sim_type, n_boot, mean_factors, sd_factors, boot_types, sim_dist, show_progress, seed)
 }
 
 test_pois <- function(n, lambda) {

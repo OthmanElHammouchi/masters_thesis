@@ -13,10 +13,12 @@ setPackageName("patternBreak", .global)
     origin = 3L,
     normal = 1L,
     gamma = 2L,
+    parametric = 1L,
+    residuals = 2L,
+    pairs = 3L,
     standardised = 1L,
-    modified = 2L,
-    parametric = 3L,
-    studentised = 4L,
+    studentised = 2L,
+    lognormal = 3L,
     conditional = 1L,
     unconditional = 2L
 )

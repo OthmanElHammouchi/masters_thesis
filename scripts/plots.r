@@ -1,281 +1,193 @@
 library(ggplot2)
+library(ggforce)
 library(patternBreak)
 library(data.table)
 suppressPackageStartupMessages(library(ChainLadder))
 
 triangle <- UKMotor
-ndev <- nrow(triangle)
+ndev <- ncol(triangle)
 
-load("results/single.rda")
-load("results/calendar.rda")
-load("results/origin.rda")
+# Single outlier
+single.res <- as.data.table(readRDS("results/single.RDS"))
+mean.factors <- unique(single.res$mean.factor)
+sd.factors <- unique(single.res$sd.factor)
+boot.types <- unique(single.res$boot.type)
 
-single.res <- as.data.table(single.res)
-calendar.res <- as.data.table(calendar.res)
-origin.res <- as.data.table(origin.res)
+# in mm
+width <- 418
+height <- 591
 
-factor <- seq(0.5, 1.5, by = 0.25)
-boot.type <- c("parametric", "residuals", "pairs")
-proc.dist <- c("normal", "gamma")
-cond <- c(TRUE, FALSE)
-resids.type <- c("standardised", "modified", "studentised", "log-normal")
+mm.per.pt <- 0.3528
+width.mm <- mm.per.pt * width
+height.mm <- mm.per.pt * height
 
-contaminated  <- calendar.res[
-  outlier.diagidx == 1 &
-  factor == 1.5 &
-  excl.diagidx != outlier.diagidx &
-  boot.type == "residuals" &
-  proc.dist == "normal" &
-  cond == TRUE &
-  resids.type == "standardised"
-]
+theme_set(theme_bw())
 
-uncontaminated <- calendar.res[
-  outlier.diagidx == 1 &
-  factor == 1.5 &
-  excl.diagidx == outlier.diagidx &
-  boot.type == "residuals" &
-  proc.dist == "normal" &
-  cond == TRUE &
-  resids.type == "standardised"
-]
+plot.dir <- "plots"
 
-ggplot() +
-  geom_density(mapping = aes(reserve, group = factor(excl.diagidx)), data = contaminated) +
-  geom_density(mapping = aes(reserve), data = uncontaminated, colour = "red")
+theme_update(
+  legend.position = "top",
+  axis.title = element_text(size = 8),
+  axis.text = element_text(size = 6),
+  legend.text = element_text(size = 8),
+  legend.key.size = unit(0.6, "cm")
+)
 
-benchmark <- MackChainLadder(triangle)
-bench.smry <- summary(benchmark)
+# for (boot.type in c("residuals")) {
+#   opts <- unique(single.res[boot.type == boot.type]$opt)
 
-# meanPlot <- function(contaminated, uncontaminated) {
+#   for (opt in opts) {
+#     # Conditional
+#     contaminated <- single.res[
+#       boot.type == boot.type &
+#         excl.rowidx != outlier.rowidx &
+#         excl.colidx != outlier.colidx
+#     ]
 
-#     labels <- paste(rep("Outlier Row:"), 1:ndev)
-#     names(labels) <- 1:ndev
+#     uncontaminated <- single.res[
+#       boot.type == boot.type &
+#         excl.rowidx == outlier.rowidx &
+#         excl.colidx == outlier.colidx
+#     ]
+
+#     contaminated <- contaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
+#     uncontaminated <- uncontaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
 
 #     p <- ggplot() +
-#         geom_violin(
-#             data = contaminated,
-#             aes(x = as.factor(outlier.rowidx), y = reserve.mean)
-#         ) +
-#         geom_point(
-#             data = uncontaminated,
-#             aes(x = as.factor(outlier.rowidx), y = reserve.mean),
-#             colour = "red"
-#         ) +
-#         facet_wrap(vars(outlier.colidx),
-#             scales = "free",
-#             labeller = as_labeller(labels)
-#         ) +
-#         labs(
-#             title = "Reserve mean for different outlier points",
-#             subtitle = sprintf("Perturbation factor: %.2f", factor),
-#             x = "Outlier Column",
-#             y = "Reserve Mean"
-#         ) +
-#         theme(
-#             axis.text.y = element_blank(),
-#             strip.text.x = element_text(size = 12)
-#         )
+#       geom_density(aes(reserve, group = interaction(outlier.colidx, outlier.rowidx)), contaminated[cond == TRUE]) +
+#       geom_density(mapping = aes(reserve), uncontaminated[cond == TRUE], colour = "red", linewidth = 1.25) +
+#       facet_grid(rows = vars(factor(mean.factor)), cols = vars(factor(sd.factor)), scales = "free")
 
-#     return(p)
+#     ggsave(
+#       file.path(plot.dir, paste0("mack_sim_densities_cond_", boot.type, opt, ".eps")),
+#       p,
+#       units = "mm",
+#       height = width.mm, # landscape
+#       width = height.mm
+#     )
+
+#     # Unconditional
+#     p <- ggplot() +
+#       geom_density(aes(reserve, group = interaction(outlier.colidx, outlier.rowidx)), contaminated[cond == FALSE]) +
+#       geom_density(mapping = aes(reserve), uncontaminated[cond == FALSE], colour = "red", linewidth = 1.25) +
+#       facet_grid(rows = vars(factor(mean.factor)), cols = vars(factor(sd.factor)), scales = "free")
+
+#     ggsave(
+#       file.path(plot.dir, paste0("mack_sim_densities_uncond_", boot.type, opt, ".eps")),
+#       p,
+#       units = "mm",
+#       height = width.mm, # landscape
+#       width = height.mm
+#     )
+
+#   }
 # }
 
-progress.bar <- txtProgressBar(min = 0, max = nconfig, initial = 0, style = 3)
+# calendar.res <- as.data.table(readRDS("results/calendar.RDS"))
+# origin.res <- as.data.table(readRDS("results/origin.RDS"))
 
-for (rowidx in seq_len(nconfig)) {
+###################
 
-    setTxtProgressBar(progress.bar, rowidx)
+theme_update(
+  legend.position = "top",
+  axis.title = element_text(size = 8),
+  axis.text = element_text(size = 6),
+  legend.text = element_text(size = 8),
+  legend.key.size = unit(0.6, "cm"),
+  strip.text.x = element_text(size = 6)
+)
 
-    #density plots
-    # contaminated <- single.outlier.results[
-    #         resids.type == plot.config$resids.type[rowidx] &
-    #         boot.type == plot.config$boot.type[rowidx] &
-    #         dist == plot.config$dist[rowidx] &
-    #         factor == plot.config$factor[rowidx] &
-    #         outlier.colidx != excl.colidx &
-    #         outlier.rowidx != excl.rowidx]
+width <- 410
+height <- 630
 
-    # uncontaminated <- single.outlier.results[
-    #     resids.type == plot.config$resids.type[rowidx] &
-    #     boot.type == plot.config$boot.type[rowidx] &
-    #     dist == plot.config$dist[rowidx] &
-    #     factor == plot.config$factor[rowidx] &
-    #     outlier.colidx == excl.colidx &
-    #     outlier.rowidx == excl.rowidx]
+mm.per.pt <- 0.3528
+width.mm <- mm.per.pt * width
+height.mm <- mm.per.pt * height
 
-    # row.labels <- paste(rep("Outlier row:"), 1:ndev)
-    # names(row.labels) <- 1:ndev
-    # col.labels <- paste(rep("Outlier column:"), 1:ndev)
-    # names(col.labels) <- 1:ndev
+mf <- 0.75
+sf <- 0.75
 
+for (bt in c("residuals", "parametric")) {
+  opts <- unique(single.res[boot.type == bt]$opt)
 
-    # p <- ggplot() +
-    #     geom_density(
-    #         data = contaminated,
-    #         aes(reserve, group = interaction(excl.colidx, excl.rowidx))) +
-    #     geom_density(
-    #         data = uncontaminated,
-    #         aes(reserve),
-    #         colour = "red") +
-    #     facet_wrap(vars(outlier.rowidx, outlier.colidx),
-    #         scales = "free_x",
-    #         labeller = labeller(
-    #             outlier.rowidx = as_labeller(row.labels),
-    #             outlier.colidx = as_labeller(col.labels))
-    #       )  +
-    #     labs(
-    #         title = "Reserve distributions for different outlier points",
-    #         subtitle = sprintf("Perturbation factor: %.2f", plot.config$factor[rowidx]),
-    #         x = "Reserve",
-    #         y = "Density")
+  for (o in opts) {
 
-    # suppressMessages(
-    #     ggsave(
-    #         sprintf(
-    #             "results/graphs/single_outlier/densities_%s_%s_%s_factor_%.2f.svg",
-    #             plot.config$resids.type[rowidx],
-    #             plot.config$boot.type[rowidx],
-    #             plot.config$dist[rowidx],
-    #             plot.config$factor[rowidx]
-    #         ),
-    #         plot = p
-    #     )
-    # )
+    contaminated <- single.res[
+      boot.type == bt &
+      opt == o &
+        (excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) &
+        mean.factor == mf &
+        sd.factor == sf
+    ]
 
-    contaminated <- calendar.res[
-        resids.type == plot.config$resids.type[rowidx] &
-        boot.type == plot.config$boot.type[rowidx] &
-        dist == plot.config$dist[rowidx] &
-        factor == plot.config$factor[rowidx] &
-        outlier.diagidx != excl.diagidx]
+    uncontaminated <- single.res[
+      boot.type == boot.type &
+      opt == opt &
+        excl.rowidx == outlier.rowidx &
+        excl.colidx == outlier.colidx &
+        mean.factor == mf &
+        sd.factor == sf
+    ]
 
-    uncontaminated <- calendar.res[
-        resids.type == plot.config$resids.type[rowidx] &
-        boot.type == plot.config$boot.type[rowidx] &
-        dist == plot.config$dist[rowidx] &
-        factor == plot.config$factor[rowidx] &
-        outlier.diagidx == excl.diagidx]
+    contaminated <- contaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
+    uncontaminated <- uncontaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
 
-    labels <- paste(rep("Outlier diag:"), 1:(ndev - 1))
-    names(labels) <- 1:(ndev - 1)
+    for (i_page in 1:2) {
 
-    p <- ggplot() +
-        geom_density(
-            data = contaminated,
-            aes(reserve, group = excl.diagidx)) +
-        geom_density(
-            data = uncontaminated,
-            aes(reserve),
-            colour = "red") +
-        facet_wrap(vars(outlier.diagidx),
-            scales = "free_x",
-            labeller = as_labeller(labels)
-          )  +
-        labs(
-            title = "Reserve distributions for different outlier points",
-            subtitle = sprintf("Perturbation factor: %.2f", plot.config$factor[rowidx]),
-            x = "Reserve",
-            y = "Density")
+      p <- ggplot() +
+        geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated[cond == TRUE]) +
+        geom_density(mapping = aes(reserve), uncontaminated[cond == TRUE], colour = "red") +
+        facet_wrap_paginate(
+          vars(i = factor(outlier.rowidx), j = factor(outlier.colidx)),
+          scales = "free",
+          labeller = label_wrap_gen(multi_line = FALSE),
+          ncol = 4,
+          nrow = 3,
+          page = i_page
+        ) +
+        xlab("Reserve") +
+        ylab("Density")
 
+      path <- file.path(plot.dir, paste0(paste(
+        "mack_sim_densities_cond", bt, o, i_page, sep = "_"),
+        ".eps")
+      )
 
-    suppressMessages(
-        ggsave(
-            sprintf(
-                "results/graphs/calendar_outlier/calendar_outlier_densities_%s_%s_%s_factor_%.2f.svg",
-                plot.config$resids.type[rowidx],
-                plot.config$boot.type[rowidx],
-                plot.config$dist[rowidx],
-                plot.config$factor[rowidx]
-            ),
-            plot = p
-        )
-    )
+      ggsave(
+        path,
+        p,
+        units = "mm",
+        height = width.mm, # landscape
+        width = height.mm
+      )
 
+      p <- ggplot() +
+        geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated[cond == FALSE]) +
+        geom_density(mapping = aes(reserve), uncontaminated[cond == FALSE], colour = "red") +
+        facet_wrap_paginate(
+          vars(i = factor(outlier.rowidx), j = factor(outlier.colidx)),
+          scales = "free",
+          labeller = label_wrap_gen(multi_line = FALSE),
+          ncol = 4,
+          nrow = 3,
+          page = i_page
+        ) +
+        xlab("Reserve") +
+        ylab("Density")
 
-    # contaminated <- origin.outlier.results[
-    #         resids.type == plot.config$resids.type[rowidx] &
-    #         boot.type == plot.config$boot.type[rowidx] &
-    #         dist == plot.config$dist[rowidx] &
-    #         factor == plot.config$factor[rowidx] &
-    #         outlier.rowidx != excl.rowidx]
+      path <- file.path(plot.dir, paste0(paste(
+        "mack_sim_densities_uncond", bt, o, i_page, sep = "_"),
+        ".eps")
+      )
 
-    # uncontaminated <- origin.outlier.results[
-    #     resids.type == plot.config$resids.type[rowidx] &
-    #     boot.type == plot.config$boot.type[rowidx] &
-    #     dist == plot.config$dist[rowidx] &
-    #     factor == plot.config$factor[rowidx] &
-    #     outlier.rowidx == excl.rowidx]
+      ggsave(
+        path,
+        p,
+        units = "mm",
+        height = width.mm, # landscape
+        width = height.mm
+      )
 
-    # labels <- paste(rep("Outlier row:"), 1:ndev)
-    # names(labels) <- 1:ndev
-
-    # p <- ggplot() +
-    #     geom_density(
-    #         data = contaminated,
-    #         aes(reserve, group = excl.rowidx)) +
-    #     geom_density(
-    #         data = uncontaminated,
-    #         aes(reserve),
-    #         colour = "red") +
-    #     facet_wrap(vars(outlier.rowidx),
-    #         scales = "free_x",
-    #         labeller = as_labeller(labels)
-    #       )  +
-    #     labs(
-    #         title = "Reserve distributions for different outlier points",
-    #         subtitle = sprintf("Perturbation factor: %.2f", plot.config$factor[rowidx]),
-    #         x = "Reserve",
-    #         y = "Density")
-
-    # suppressMessages(
-    #     ggsave(
-    #         sprintf(
-    #             "results/graphs/origin_outlier/origin_outlier_densities_%s_%s_%s_factor_%.2f.svg",
-    #             plot.config$resids.type[rowidx],
-    #             plot.config$boot.type[rowidx],
-    #             plot.config$dist[rowidx],
-    #             plot.config$factor[rowidx]
-    #         ),
-    #         plot = p
-    #     )
-    # )
-
-    #mean plots
-    # contaminated.mean <- results[
-    #         resids.type == plot.config$resids.type[rowidx] &
-    #         boot.type == plot.config$boot.type[rowidx] &
-    #         dist == plot.config$dist[rowidx] &
-    #         factor == plot.config$factor[rowidx] &
-    #         outlier.colidx != excl.colidx &
-    #         outlier.rowidx != excl.rowidx,
-    #         .(reserve.mean = mean(reserve)),
-    #         by = .(outlier.rowidx, outlier.colidx, excl.rowidx, excl.colidx)]
-
-    # uncontaminated.mean <- results[
-    #     resids.type == plot.config$resids.type[rowidx] &
-    #     boot.type == plot.config$boot.type[rowidx] &
-    #     dist == plot.config$dist[rowidx] &
-    #     factor == plot.config$factor[rowidx] &
-    #     outlier.colidx == excl.colidx &
-    #     outlier.rowidx == excl.rowidx,
-    #     .(reserve.mean = mean(reserve)),
-    #     by = .(outlier.rowidx, outlier.colidx, excl.rowidx, excl.colidx)]
-
-    # p <- meanPlot(contaminated.mean, uncontaminated.mean)
-
-    # suppressMessages(
-    #     ggsave(
-    #         sprintf(
-    #             "results/graphs/single_outlier/means_%s_%s_%s_factor_%.2f.svg",
-    #             plot.config$resids.type[rowidx],
-    #             plot.config$boot.type[rowidx],
-    #             plot.config$dist[rowidx],
-    #             plot.config$factor[rowidx]
-    #         ),
-    #     plot = p
-    #     )
-    # )
-
+    }
+  }
 }
-
-close(progress.bar)

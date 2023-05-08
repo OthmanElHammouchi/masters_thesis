@@ -28,10 +28,10 @@ clean:
 EXAMPLEDIR = scripts/example
 
 example-clean:
-	rm results/example/*
-	rm plots/example/*
+	-rm results/example/*
+	-rm plots/example/*
 
-example: example-clean
+example:
 	$(EXAMPLEDIR)/main.r -r --nboot 1000 --nsim 100
 
 example-plots:

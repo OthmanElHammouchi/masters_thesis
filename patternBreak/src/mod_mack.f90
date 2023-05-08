@@ -2,52 +2,56 @@ module mod_mack
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: omp_lib
+  use, intrinsic :: ieee_arithmetic
   use mod_global
   use mod_helpers
   use mod_interface
 
   implicit none
 
+  real(c_double) :: nan 
+  
   ! Simulation configuration
-  integer(c_int) :: boot_type, proc_dist, resids_type
+  integer(c_int) :: boot_type, dist, resids_type
   logical(c_bool) :: cond
-  !$omp threadprivate(boot_type, resids_type, proc_dist, cond)
+  !$omp threadprivate(boot_type, resids_type, dist, cond)
 
   ! Shared variables
   real(c_double), allocatable :: scale_facs(:, :), sigmas_jack(:, :)
-  real(c_double), allocatable :: ln_means(:), ln_sigmas(:)
-  real(c_double), allocatable :: ln_shifts(:)
+  real(c_double), allocatable :: ln_means(:, :), ln_sigmas(:, :)
+  real(c_double), allocatable :: ln_shifts(:, :)
   real(c_double), allocatable :: dev_facs(:), sigmas(:)
   real(c_double), allocatable :: resids(:, :), resampled_resids(:, :)
-  logical(c_bool), allocatable :: mask(:, :)
-  real(c_double), allocatable :: sim_table(:, :)
+  logical(c_bool), allocatable :: mask(:, :), resids_mask(:, :)
   !$omp threadprivate(scale_facs, sigmas_jack, ln_means, ln_sigmas, &
-  !$omp& ln_shifts, dev_facs, sigmas, resids, resampled_resids, mask, sim_table)
+  !$omp& ln_shifts, dev_facs, sigmas, resids, resampled_resids, mask, resids_mask)
 
 contains
 
-  subroutine mack_sim(n_dev, triangle, sim_type, n_boot, n_res, m_res, res, show_progress, seed) bind(c, name="mack_sim_")
-    integer(c_int), intent(in), value :: n_dev, n_boot, sim_type
-    integer(c_int), intent(in), value :: n_res, m_res
+  subroutine mack_sim(n_dev, triangle, sim_type, boot_type_, sim_dist, n_boot, &
+    n_conf, m_conf, conf, res, show_progress, seed) bind(c, name="mack_sim_")
+    integer(c_int), intent(in), value :: n_dev, n_boot
+    integer(c_int), intent(in), value :: n_conf, m_conf
+    integer(c_int), intent(in), value :: sim_type, boot_type_, sim_dist
     logical(c_bool), intent(in), value :: show_progress
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
-    real(c_double), intent(out) :: res(n_res, m_res)
+    real(c_double), intent(in) :: conf(n_conf, m_conf)
+    real(c_double), intent(out) :: res(n_boot * n_conf, m_conf + 1)
     integer(c_int), intent(in), value :: seed
 
-    integer(c_int) :: i, j, k, l, i_sim, n_rows
-    integer(c_int) :: n_outliers, n_excl, n_sim
+    integer(c_int) :: i, j, i_sim
+    integer(c_int) :: n_excl, n_sim
     integer(c_int) :: excl_diagidx, excl_rowidx, excl_colidx
     integer(c_int) :: outlier_rowidx, outlier_colidx, outlier_diagidx
-    real(c_double) :: factor
+    real(c_double) :: mean_factor, sd_factor
     real(c_double) :: dev_facs_original(n_dev - 1), sigmas_original(n_dev - 1)
     real(c_double) :: triangle_sim(n_dev, n_dev)
-    integer(c_int), allocatable :: excl(:, :), outliers(:, :)
     real(c_double), allocatable :: reserve(:)
     type(c_ptr) :: pgbar
 
-    logical :: test
     integer(c_int) :: status
-    logical(c_bool) :: resids_mask(n_dev - 1, n_dev - 1)
+    
+    nan = ieee_value(nan, ieee_quiet_nan)
 
     call fit(triangle, dev_facs_original, sigmas_original, use_mask=.false., compute_resids=.false.)
 
@@ -57,32 +61,35 @@ contains
       first_call = .false._c_bool
     end if
 
-    n_sim = size(sim_table, 1)
+    n_sim = n_conf
     pgbar = pgbar_create(n_sim, 1)
 
     !$omp parallel num_threads(n_threads) &
-    !$omp& copyin(rng, boot_type, proc_dist, cond, resids_type, sim_table) &
-    !$omp& private(reserve, i_sim, outlier_rowidx, outlier_colidx, test, status, resids_mask, &
-    !$omp& outlier_diagidx, excl_rowidx, excl_diagidx, factor, triangle_sim) &
+    !$omp& copyin(rng, boot_type, dist, cond, resids_type) &
+    !$omp& private(reserve, i_sim, outlier_rowidx, outlier_colidx, test, status, &
+    !$omp& outlier_diagidx, excl_rowidx, excl_diagidx, mean_factor, sd_factor, triangle_sim) &
     !$omp& firstprivate(n_boot, n_dev, dev_facs_original, sigmas_original, &
-    !$omp& m_res, n_sim) &
-    !$omp& shared(res, pgbar)
+    !$omp& n_conf, m_conf, n_sim, sim_dist, sim_type) &
+    !$omp& shared(conf, pgbar)
 
     ! Allocate shared containers
     allocate(dev_facs(n_dev - 1), source=0._c_double)
     allocate(sigmas(n_dev - 1), source=0._c_double)
     allocate(scale_facs(n_dev - 1, n_dev - 1), source=0._c_double)
     allocate(sigmas_jack(n_dev - 1, n_dev - 1), source=0._c_double)
-    allocate(ln_shifts(n_dev - 1), source=0._c_double)
-    allocate(ln_means(n_dev - 1), source=0._c_double)
-    allocate(ln_sigmas(n_dev - 1), source=0._c_double)
+    allocate(ln_shifts(n_dev - 1, n_dev - 1), source=0._c_double)
+    allocate(ln_means(n_dev - 1, n_dev - 1), source=0._c_double)
+    allocate(ln_sigmas(n_dev - 1, n_dev - 1), source=0._c_double)
     allocate(resids(n_dev - 1, n_dev - 1), source=0._c_double)
     allocate(resampled_resids(n_dev - 1, n_dev - 1), source=0._c_double)
 
     allocate(mask(n_dev, n_dev))
+    allocate(resids_mask(n_dev - 1, n_dev - 1))
     allocate(reserve(n_boot), source=0._c_double)
 
     i_thread = omp_get_thread_num()
+
+    boot_type = boot_type_
 
     reserve = 0
     select case (sim_type)
@@ -91,18 +98,22 @@ contains
       do i_sim = 1, n_sim
         if (show_progress) call pgbar_incr(pgbar)
 
-        ! Set simulation variables
-        boot_type = int(sim_table(i_sim, 6))
-        proc_dist = int(sim_table(i_sim, 7))
-        cond = int(sim_table(i_sim, 8))
-        resids_type = int(sim_table(i_sim, 9))
+        outlier_rowidx = int(conf(i_sim, 1))
+        outlier_colidx = int(conf(i_sim, 2))
+        mean_factor = conf(i_sim, 3)
+        sd_factor = conf(i_sim, 4)
+        excl_rowidx = int(conf(i_sim, 5))
+        excl_colidx = int(conf(i_sim, 6))
 
-        factor = sim_table(i_sim, 3)
-        outlier_rowidx = int(sim_table(i_sim, 1))
-        outlier_colidx = int(sim_table(i_sim, 2))
+        if (boot_type /= PAIRS) then
+          if (boot_type == RESID) then
+            resids_type = int(conf(i_sim, 7))
+          else if (boot_type == PARAMETRIC) then
+            dist = int(conf(i_sim, 7))
+          end if
+          cond = int(conf(i_sim, 8))
+        end if
 
-        excl_rowidx = sim_table(i_sim, 4)
-        excl_colidx = sim_table(i_sim, 5)
         mask = .true.
         do j = 1, n_dev
           do i = n_dev + 2 - j, n_dev
@@ -112,11 +123,16 @@ contains
         mask(excl_rowidx, excl_colidx) = .false.
         if (boot_type == PARAMETRIC) mask(1, n_dev) = .true.
 
-        triangle_sim = single_outlier(triangle, dev_facs_original, sigmas_original, outlier_rowidx, outlier_colidx, factor)
+        resids_mask = mask(1:(n_dev - 1), 2:n_dev)
+        resids_mask(:, n_dev - 1) = .false.
+        resids_mask(:, n_dev - 2) = .false.
+
+        triangle_sim = single_outlier(triangle, dev_facs_original, sigmas_original, &
+          outlier_rowidx, outlier_colidx, mean_factor, sd_factor, sim_dist)
         call boot(n_dev, triangle_sim, n_boot, reserve, mask)
 
-        res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_res) = spread(sim_table(i_sim, 1:(m_res - 1)), 1, n_boot)
-        res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), m_res) = reserve
+        res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
+        res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), m_conf + 1) = reserve
       end do
       !$omp end do
 
@@ -124,16 +140,19 @@ contains
       !$omp do schedule(dynamic, 25)
       do i_sim = 1, n_sim
         if (show_progress) call pgbar_incr(pgbar)
+        outlier_diagidx = int(conf(i_sim, 1))
+        mean_factor = conf(i_sim, 2)
+        sd_factor = conf(i_sim, 3)
+        excl_diagidx = int(conf(i_sim, 4))
 
-        ! Set simulation variables
-        boot_type = int(sim_table(i_sim, 4))
-        proc_dist = int(sim_table(i_sim, 5))
-        cond = int(sim_table(i_sim, 6))
-        resids_type = int(sim_table(i_sim, 7))
-
-        factor = sim_table(i_sim, 2)
-        outlier_diagidx = int(sim_table(i_sim, 1))
-        excl_diagidx = int(sim_table(i_sim, 3))
+        if (boot_type /= PAIRS) then
+          if (boot_type == RESID) then
+            resids_type = int(conf(i_sim, 5))
+          else if (boot_type == PARAMETRIC) then
+            dist = int(conf(i_sim, 5))
+          end if
+          cond = int(conf(i_sim, 6))
+        end if
 
         mask = .true.
         do j = 1, n_dev
@@ -148,12 +167,17 @@ contains
         end do
         if (boot_type == PARAMETRIC) mask(1, n_dev) = .true.
 
-        triangle_sim = calendar_outlier(triangle, dev_facs_original, sigmas_original, outlier_diagidx, factor)
+        resids_mask = mask(1:(n_dev - 1), 2:n_dev)
+        resids_mask(:, n_dev - 1) = .false.
+        resids_mask(:, n_dev - 2) = .false.
+
+        triangle_sim = calendar_outlier(triangle, dev_facs_original, sigmas_original, outlier_diagidx, &
+          mean_factor, sd_factor, sim_dist)
 
         call boot(n_dev, triangle_sim, n_boot, reserve, mask)
 
-        res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_res) = spread(sim_table(i_sim, 1:(m_res - 1)), 1, n_boot)
-        res(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_res) = reserve
+        res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
+        res(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_conf + 1) = reserve
       end do
       !$omp end do
 
@@ -162,28 +186,41 @@ contains
       do i_sim = 1, n_sim
         if (show_progress) call pgbar_incr(pgbar)
 
-        ! Set simulation variables
-        boot_type = int(sim_table(i_sim, 4))
-        proc_dist = int(sim_table(i_sim, 5))
-        cond = int(sim_table(i_sim, 6))
-        resids_type = int(sim_table(i_sim, 7))
+        outlier_rowidx = int(conf(i_sim, 1))
+        mean_factor = conf(i_sim, 2)
+        sd_factor = conf(i_sim, 3)
+        excl_rowidx = int(conf(i_sim, 4))
 
-
-        factor = sim_table(i_sim, 2)
-        outlier_rowidx = int(sim_table(i_sim, 1))
-        excl_rowidx = int(sim_table(i_sim, 3))
+        if (boot_type /= PAIRS) then
+          if (boot_type == RESID) then
+            resids_type = int(conf(i_sim, 5))
+          else if (boot_type == PARAMETRIC) then
+            dist = int(conf(i_sim, 5))
+          end if
+          cond = int(conf(i_sim, 6))
+        end if
 
         mask = .true.
+        do j = 1, n_dev
+          do i = n_dev + 2 - j, n_dev
+            mask(i, j) = .false.
+          end do
+        end do
         do j = 2, n_dev + 1 - excl_rowidx
           mask(excl_rowidx, j) = .false.
         end do
-        if (boot_type == PARAMETRIC) mask(1, n_dev) = .true.
+        if (boot_type == PARAMETRIC) mask(1, n_dev) = .true. ! avoid 0/0
 
-        triangle_sim = origin_outlier(triangle, dev_facs_original, sigmas_original, outlier_rowidx, factor)
+        resids_mask = mask(1:(n_dev - 1), 2:n_dev)
+        resids_mask(:, n_dev - 1) = .false.
+        resids_mask(:, n_dev - 2) = .false.
+
+        triangle_sim = origin_outlier(triangle, dev_facs_original, sigmas_original, outlier_rowidx, &
+          mean_factor, sd_factor, sim_dist)
         call boot(n_dev, triangle_sim, n_boot, reserve, mask)
 
-        res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_res) = spread(sim_table(i_sim, 1:(m_res - 1)), 1, n_boot)
-        res(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_res) = reserve
+        res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
+        res(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_conf + 1) = reserve
       end do
       !$omp end do
     end select
@@ -199,208 +236,26 @@ contains
     deallocate(resids)
     deallocate(resampled_resids)
     deallocate(mask)
+    deallocate(resids_mask)
     deallocate(reserve)
     !$omp end parallel
-    deallocate(sim_table)
   end subroutine mack_sim
-
-  subroutine init_config(sim_type, n_dev, n_boot, n_factors, factors, &
-    n_boot_types, boot_types, n_proc_dists, proc_dists, n_conds, conds, &
-    n_resids_types, resids_types, n_res, m_res) bind(c, name="init_config_")
-    integer(c_int), intent(in), value :: sim_type
-    integer(c_int), intent(in), value :: n_dev, n_boot, n_factors, n_boot_types
-    integer(c_int), intent(in), value :: n_proc_dists, n_conds, n_resids_types
-    integer(c_int), intent(out) :: n_res, m_res
-    real(c_double), intent(in) :: factors(n_factors)
-    integer(c_int), intent(in) :: boot_types(n_boot_types), proc_dists(n_proc_dists)
-    integer(c_int), intent(in) :: resids_types(n_resids_types)
-    logical(c_bool), intent(in) :: conds(n_conds)
-
-    integer(c_int) :: n_sim, m_sim, n_sim_, m_sim_, n_outliers, n_excl
-    integer(c_int) :: i, j, k, i1, i2, i3, i4, i5, i6, i7
-    integer(c_int) :: n_rows
-    integer(c_int), allocatable :: outliers(:, :), excl(:, :)
-    real(c_double), allocatable :: sim_table_(:, :)
-
-    select case (sim_type)
-     case (SINGLE)
-      n_outliers = (n_dev ** 2 - n_dev) / 2 - 1
-      n_excl = n_outliers
-      n_sim_ = n_outliers * n_excl * n_factors * n_boot_types * n_proc_dists * n_conds * n_resids_types
-      m_sim_ = 9
-
-      allocate(outliers(n_outliers, 2), source=0)
-      allocate(excl(n_excl, 2), source=0)
-      allocate(sim_table_(n_sim_, m_sim_), source=0._c_double)
-
-      k = 1
-      do j = 2, n_dev - 1
-        n_rows = n_dev + 1 - j
-        do i = 1, n_rows
-          outliers(k, :) = [i, j]
-          k = k + 1
-        end do
-      end do
-      excl = outliers
-
-      k = 1
-      do i1 = 1, n_outliers
-        do i2 = 1, n_factors
-          do i3 = 1, n_excl
-            do i4 = 1, n_boot_types
-              proc_loop_single: do i5 = 1, n_proc_dists
-                cond_loop_single: do i6 = 1, n_conds
-                  do i7 = 1, n_resids_types
-                    sim_table_(k, 1:2) = outliers(i1, :)
-                    sim_table_(k, 3) = factors(i2)
-                    sim_table_(k, 4:5) = excl(i3, :)
-                    sim_table_(k, 6) = boot_types(i4)
-                    sim_table_(k, 7) = proc_dists(i5)
-
-                    if (sim_table_(k, 6) == PAIRS) then
-                      sim_table_(k, 8) = NONE
-                      sim_table_(k, 9) = NONE
-                      k = k + 1
-                      cycle proc_loop_single
-
-                    else if (sim_table_(k, 6) == PARAMETRIC) then
-                      sim_table_(k, 8) = merge(1._c_double, 0._c_double, conds(i6))
-                      sim_table_(k, 9) = NONE
-                      k = k + 1
-                      cycle cond_loop_single
-                    else
-                      sim_table_(k, 8) = merge(1._c_double, 0._c_double, conds(i6))
-                      sim_table_(k, 9) = resids_types(i7)
-                      k = k + 1
-                    end if
-                  end do
-                end do cond_loop_single
-              end do proc_loop_single
-            end do
-          end do
-        end do
-      end do
-
-     case (CALENDAR)
-      n_outliers = n_dev - 1
-      n_excl = n_outliers
-      n_sim_ = n_outliers * n_excl * n_factors * n_boot_types * n_proc_dists * n_conds * n_resids_types
-      m_sim_ = 7
-
-      allocate(sim_table_(n_sim_, m_sim_), source=0._c_double)
-
-      k = 1
-      do i1 = 1, n_outliers
-        do i2 = 1, n_factors
-          do i3 = 1, n_excl
-            do i4 = 1, n_boot_types
-              proc_loop_cal: do i5 = 1, n_proc_dists
-                cond_loop_cal: do i6 = 1, n_conds
-                  do i7 = 1, n_resids_types
-                    sim_table_(k, 1) = i1
-                    sim_table_(k, 2) = factors(i2)
-                    sim_table_(k, 3) = i3
-                    sim_table_(k, 4) = boot_types(i4)
-                    sim_table_(k, 5) = proc_dists(i5)
-
-                    if (sim_table_(k, 4) == PAIRS) then
-                      sim_table_(k, 6) = NONE
-                      sim_table_(k, 7) = NONE
-                      k = k + 1
-                      cycle proc_loop_cal
-
-                    else if (sim_table_(k, 4) == PARAMETRIC) then
-                      sim_table_(k, 6) = merge(1._c_double, 0._c_double, conds(i6))
-                      sim_table_(k, 7) = NONE
-                      k = k + 1
-                      cycle cond_loop_cal
-
-                    else
-                      sim_table_(k, 6) = merge(1._c_double, 0._c_double, conds(i6))
-                      sim_table_(k, 7) = resids_types(i7)
-                      k = k + 1
-                    end if
-                  end do
-                end do cond_loop_cal
-              end do proc_loop_cal
-            end do
-          end do
-        end do
-      end do
-
-     case (ORIGIN)
-      n_outliers = n_dev
-      n_excl = n_outliers
-      n_sim_ = n_outliers * n_excl * n_factors * n_boot_types * n_proc_dists * n_conds * n_resids_types
-      m_sim_ = 7
-
-      allocate(sim_table_(n_sim_, m_sim_), source=0._c_double)
-
-      k = 1
-      do i1 = 1, n_outliers
-        do i2 = 1, n_factors
-          do i3 = 1, n_excl
-            do i4 = 1, n_boot_types
-              proc_loop_origin: do i5 = 1, n_proc_dists
-                cond_loop_origin: do i6 = 1, n_conds
-                  do i7 = 1, n_resids_types
-                    sim_table_(k, 1) = i1
-                    sim_table_(k, 2) = factors(i2)
-                    sim_table_(k, 3) = i3
-                    sim_table_(k, 4) = boot_types(i4)
-                    sim_table_(k, 5) = proc_dists(i5)
-
-                    if (sim_table_(k, 4) == PAIRS) then
-                      sim_table_(k, 6) = NONE
-                      sim_table_(k, 7) = NONE
-                      k = k + 1
-                      cycle proc_loop_origin
-
-                    else if (sim_table_(k, 4) == PARAMETRIC) then
-                      sim_table_(k, 6) = merge(1._c_double, 0._c_double, conds(i6))
-                      sim_table_(k, 7) = NONE
-                      k = k + 1
-                      cycle cond_loop_origin
-
-                    else
-                      sim_table_(k, 6) = merge(1._c_double, 0._c_double, conds(i6))
-                      sim_table_(k, 7) = resids_types(i7)
-                      k = k + 1
-                    end if
-                  end do
-                end do cond_loop_origin
-              end do proc_loop_origin
-            end do
-          end do
-        end do
-      end do
-    end select
-
-    n_sim = k - 1
-    m_sim = m_sim_
-
-    allocate(sim_table(n_sim, m_sim))
-    sim_table = sim_table_(1:n_sim, :)
-    deallocate(sim_table_)
-
-    n_res = n_boot * n_sim
-    m_res = m_sim + 1
-  end subroutine init_config
 
   subroutine boot(n_dev, triangle, n_boot, reserve, mask)
     integer(c_int), intent(in) :: n_boot, n_dev
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     logical(c_bool), intent(in) :: mask(:, :)
+    real(c_double), intent(inout) :: reserve(n_boot)
+    
+    real(c_double) :: res
 
-    real(c_double) :: reserve(n_boot)
-
-    integer(c_int) :: i, j, i_diag, i_boot, n_resids, n_excl_resids
+    integer(c_int) :: i_boot, n_resids, n_excl_resids, n_fails
     real(c_double) :: dev_facs_boot(n_dev - 1), sigmas_boot(n_dev - 1)
-    logical(c_bool) :: resids_mask(n_dev - 1, n_dev - 1)
-    real(c_double) :: triangle_boot(n_dev, n_dev)
-    real(c_double) :: latest(n_dev)
-    real(c_double) :: mean, sd, shape, scale
+    real(c_double) :: ln_means_boot(n_dev - 1, n_dev - 1), ln_sigmas_boot(n_dev - 1, n_dev - 1)
+    real(c_double) :: ln_shifts_boot(n_dev - 1, n_dev - 1)
     integer(c_int) :: status
+
+    n_resids = count(mask) - n_dev
 
     if (boot_type == PARAMETRIC) then
       call fit(triangle, dev_facs, sigmas, use_mask=.true., compute_resids=.false.)
@@ -408,19 +263,36 @@ contains
       call fit(triangle, dev_facs, sigmas, use_mask=.false., compute_resids=.true.)
     end if
 
+    n_fails = 0
     i_boot = 1
     main_loop: do while (i_boot <= n_boot)
-      ! Simulate new parameters
-      if (boot_type == RESID) then
-        resids_mask = mask(1:(n_dev - 1), 2:n_dev)
-        resampled_resids = sample(resids, resids_mask)
+      if (n_fails == 50) then ! bad triangle
+        reserve = nan
+        return
       end if
 
-      call boot_params(triangle, dev_facs_boot, sigmas_boot, status)
-      if (status == FAILURE) cycle main_loop
+      ! Simulate new parameters
+      if (boot_type == RESID) then
+        call sample_resids("boot", ln_shifts_boot, ln_means_boot, ln_sigmas_boot)
+      end if
+
+      call boot_params(triangle, dev_facs_boot, sigmas_boot, ln_shifts_boot, ln_means_boot, ln_sigmas_boot, status)
+      if (status == FAILURE) then
+        n_fails = n_fails + 1
+        cycle main_loop
+      end if
 
       ! Simulate process error
-      reserve(i_boot) = sim_res(triangle, dev_facs_boot, sigmas_boot, resids_mask)
+      if (boot_type == RESID) then
+        call sample_resids("sim", ln_shifts_boot, ln_means_boot, ln_sigmas_boot)
+      end if
+      res = sim_res(triangle, dev_facs_boot, sigmas_boot, ln_shifts_boot, ln_means_boot, ln_sigmas_boot, status)
+      if (status == FAILURE) then
+        n_fails = n_fails + 1
+        cycle main_loop
+      end if
+
+      reserve(i_boot) = res
       i_boot = i_boot + 1
     end do main_loop
   end subroutine boot
@@ -518,43 +390,48 @@ contains
         do j = 1, n_dev
           n_rows = n_dev - j
           do i = 1, n_rows
-            ln_shifts(i) = dev_facs(j) * sqrt(triangle(i, j)) / sigmas(j)
-            ln_sigmas(i) = sqrt(log(1 + 1 / ln_shifts(i) ** 2))
-            ln_means(i) = log(ln_shifts(i)) - ln_sigmas(i) ** 2 / 2
+            ln_shifts(i, j) = dev_facs(j) * sqrt(triangle(i, j)) / sigmas(j)
+            ln_sigmas(i, j) = sqrt(log(1 + 1 / ln_shifts(i, j) ** 2))
+            ln_means(i, j) = log(ln_shifts(i, j)) - ln_sigmas(i, j) ** 2 / 2
             resids(i, j) = (triangle(i, j + 1) - dev_facs(j) * triangle(i, j)) / (sigmas(j) * sqrt(triangle(i, j)))
-            resids(i, j) = (log(resids(i, j) + ln_shifts(i)) - ln_means(i)) / ln_sigmas(i)
+            resids(i, j) = (log(resids(i, j) + ln_shifts(i, j)) - ln_means(i, j)) / ln_sigmas(i, j)
           end do
         end do
       end select
 
       resids(1, n_dev - 1) = 0
-      resids(:, ndev - 2) = 0
+      resids(:, n_dev - 2) = 0
       n_resids = (n_dev ** 2 - n_dev) / 2 - 3
 
-      resids_mean = 0
-      do i = 1, n_dev - 1
-        do j = 1, n_dev - i
-          resids_mean = resids_mean + resids(i, j)
+      if (resids_type /= STUDENTISED) then
+        resids_mean = 0
+        do i = 1, n_dev - 1
+          do j = 1, n_dev - i
+            resids_mean = resids_mean + resids(i, j)
+          end do
         end do
-      end do
-      resids_mean = resids_mean / n_resids
-      do i = 1, n_dev - 1
-        do j = 1, n_dev - i
-          resids(i, j) = resids(i, j) - resids_mean
+        resids_mean = resids_mean / n_resids
+        do i = 1, n_dev - 1
+          do j = 1, n_dev - i
+            resids(i, j) = resids(i, j) - resids_mean
+          end do
         end do
-      end do
+      end if
     end if
 
     deallocate(indiv_dev_facs)
   end subroutine fit
 
   ! Compute bootstrap development factors and dispersion parameters.
-  subroutine boot_params(triangle, dev_facs_boot, sigmas_boot, status)
+  subroutine boot_params(triangle, dev_facs_boot, sigmas_boot, ln_shifts_boot, &
+    ln_means_boot, ln_sigmas_boot, status)
     real(c_double), intent(in) :: triangle(:, :)
     real(c_double), intent(out) :: dev_facs_boot(:), sigmas_boot(:)
+    real(c_double), intent(in) :: ln_means_boot(:, :), ln_sigmas_boot(:, :)
+    real(c_double), intent(in) :: ln_shifts_boot(:, :)
     integer(c_int), intent(out) :: status
 
-    real(c_double), allocatable :: resampled_triangle(:, :)
+    real(c_double), allocatable :: triangle_boot(:, :)
     integer(c_int) :: i, j, n_rows, n_dev
     real(c_double) :: mean, sd, shape, scale
 
@@ -562,111 +439,107 @@ contains
     integer(c_int), allocatable :: pair_indices(:), resampled_pair_indices(:)
 
     n_dev = size(triangle, 1)
-    allocate(resampled_triangle(n_dev, n_dev), source=0._c_double)
+    allocate(triangle_boot(n_dev, n_dev), source=0._c_double)
 
     status = SUCCESS
     select case (boot_type)
      case (PARAMETRIC)
       if(cond) then
-        resampled_triangle(:, 1) = triangle(:, 1)
+        triangle_boot(:, 1) = triangle(:, 1)
         do j = 2, n_dev
           n_rows = n_dev + 1 - j
           do i = 1, n_rows
-            if (proc_dist == NORMAL) then
+            if (dist == NORMAL) then
               mean = dev_facs(j - 1) * triangle(i, j - 1)
               sd = sigmas(j - 1) * sqrt(triangle(i, j - 1))
-              resampled_triangle(i, j) = rnorm_par(rng, i_thread, mean, sd)
-            else if (proc_dist == GAMMA) then
+              triangle_boot(i, j) = rnorm_par(rng, i_thread, mean, sd)
+              if (triangle_boot(i, j) <= 0) then
+                status = FAILURE
+                return
+              end if
+
+            else if (dist == GAMMA) then
               shape = (dev_facs(j - 1)**2 * triangle(i, j - 1)) / sigmas(j - 1) **2
               scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
-              resampled_triangle(i, j) = rgamma_par(rng, i_thread, shape, scale)
+              triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
             end if
           end do
         end do
 
       else
-        resampled_triangle(:, 1) = triangle(:, 1)
+        triangle_boot(:, 1) = triangle(:, 1)
         do j = 2, n_dev
           n_rows = n_dev + 1 - j
           do i = 1, n_rows
-            if (proc_dist == NORMAL) then
-              mean = dev_facs(j - 1) * resampled_triangle(i, j - 1)
-              sd = sigmas(j - 1) * sqrt(resampled_triangle(i, j - 1))
-              resampled_triangle(i, j) = rnorm_par(rng, i_thread, mean, sd)
-            else if (proc_dist == GAMMA) then
-              shape = (dev_facs(j - 1)**2 * resampled_triangle(i, j - 1)) / sigmas(j - 1) **2
+            if (dist == NORMAL) then
+              mean = dev_facs(j - 1) * triangle_boot(i, j - 1)
+              sd = sigmas(j - 1) * sqrt(triangle_boot(i, j - 1))
+              triangle_boot(i, j) = rnorm_par(rng, i_thread, mean, sd)
+              if (triangle_boot(i, j) <= 0) then
+                status = FAILURE
+                return
+              end if
+
+            else if (dist == GAMMA) then
+              shape = (dev_facs(j - 1)**2 * triangle_boot(i, j - 1)) / sigmas(j - 1) **2
               scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
-              resampled_triangle(i, j) = rgamma_par(rng, i_thread, shape, scale)
+              triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
             end if
           end do
         end do
       end if
 
-      do j = 1, n_dev
-        n_rows = n_dev + 1 - j
-        do i = 1, n_rows
-          if (resampled_triangle(i, j) <= 0) then
-            status = FAILURE
-            return
-          end if
-        end do
-      end do
-
-      call fit(resampled_triangle, dev_facs_boot, sigmas_boot, use_mask=.false., compute_resids=.false.)
+      call fit(triangle_boot, dev_facs_boot, sigmas_boot, use_mask=.false., compute_resids=.false.)
 
      case (RESID)
       if (cond) then
-        resampled_triangle(:, 1) = triangle(:, 1)
+        triangle_boot(:, 1) = triangle(:, 1)
         do j = 1, n_dev - 1
           n_rows = n_dev - j
           do i = 1, n_rows
-            if (resids_type == STANDARDISED) then
-              resampled_triangle(i, j + 1) = dev_facs(j) * triangle(i, j) + &
-                sigmas(j) * scale_facs(i, j) * sqrt(triangle(i, j)) * resampled_resids(i, j)
-            else if (resids_type == STUDENTISED) then
-              resampled_triangle(i, j + 1) = dev_facs(j) * triangle(i, j) + &
-                sigmas_jack(i, j) * scale_facs(i, j) * sqrt(triangle(i, j)) * resampled_resids(i, j)
-            else if (resids_type == LOGNORMAL) then
-              resampled_triangle(i, j + 1) = exp(resampled_resids(i, j) * ln_sigmas(i) + &
-                ln_means(i)) - ln_shifts(i)
-              resampled_triangle(i, j + 1) = dev_facs(j) * triangle(i, j) + &
-                sigmas(j) * sqrt(triangle(i, j)) * resampled_triangle(i, j + 1)
+            if (resids_type == LOGNORMAL) then
+              triangle_boot(i, j + 1) = exp(resampled_resids(i, j) * ln_sigmas(i, j) + &
+                ln_means(i, j)) - ln_shifts(i, j)
+              triangle_boot(i, j + 1) = dev_facs(j) * triangle(i, j) + &
+                sigmas(j) * sqrt(triangle(i, j)) * triangle_boot(i, j + 1)
+
+            else
+              mean = dev_facs(j) * triangle(i, j)
+              sd = sigmas(j) * sqrt(triangle(i, j))
+              triangle_boot(i, j + 1) = mean + sd * resampled_resids(i, j)
+            end if
+            if (triangle_boot(i, j + 1) <= 0) then
+              status = FAILURE
+              return
             end if
           end do
         end do
 
       else
-        resampled_triangle(:, 1) = triangle(:, 1)
+        triangle_boot(:, 1) = triangle(:, 1)
         do j = 1, n_dev - 1
           n_rows = n_dev - j
           do i = 1, n_rows
-            if (resids_type == STANDARDISED) then
-              resampled_triangle(i, j + 1) = dev_facs(j) * resampled_triangle(i, j) + &
-                sigmas(j) * scale_facs(i, j) * sqrt(resampled_triangle(i, j)) * resampled_resids(i, j)
-            else if (resids_type == STUDENTISED) then
-              resampled_triangle(i, j + 1) = dev_facs(j) * resampled_triangle(i, j) + &
-                sigmas_jack(i, j) * scale_facs(i, j) * sqrt(resampled_triangle(i, j)) * resampled_resids(i, j)
-            else if (resids_type == LOGNORMAL) then
-              resampled_triangle(i, j + 1) = exp(resampled_resids(i, j) * ln_sigmas(i) + &
-                ln_means(i)) - ln_shifts(i)
-              resampled_triangle(i, j + 1) = dev_facs(j) * resampled_triangle(i, j) + &
-                sigmas(j) * sqrt(resampled_triangle(i, j)) * resampled_triangle(i, j + 1)
+            if (resids_type == LOGNORMAL) then
+              triangle_boot(i, j + 1) = exp(resampled_resids(i, j) * ln_sigmas_boot(i, j) + &
+                ln_means_boot(i, j)) - ln_shifts_boot(i, j)
+              triangle_boot(i, j + 1) = dev_facs(j) * triangle_boot(i, j) + &
+                sigmas(j) * sqrt(triangle_boot(i, j)) * triangle_boot(i, j + 1)
+
+            else
+              mean = dev_facs(j) * triangle_boot(i, j)
+              sd = sigmas(j) * sqrt(triangle_boot(i, j))
+              triangle_boot(i, j + 1) = mean + sd * resampled_resids(i, j)
+            end if
+            if (triangle_boot(i, j + 1) <= 0) then
+              status = FAILURE
+              return
             end if
           end do
         end do
       end if
 
-      do j = 1, n_dev
-        n_rows = n_dev + 1 - j
-        do i = 1, n_rows
-          if (resampled_triangle(i, j) <= 0) then
-            status = FAILURE
-            return
-          end if
-        end do
-      end do
-
-      call fit(resampled_triangle, dev_facs_boot, sigmas_boot, use_mask=.false., compute_resids=.false.)
+      call fit(triangle_boot, dev_facs_boot, sigmas_boot, use_mask=.false., compute_resids=.false.)
 
      case (PAIRS)
       allocate(resampled_pairs(n_dev - 1, 2), source=0._c_double)
@@ -695,66 +568,134 @@ contains
     end select
   end subroutine boot_params
 
-  function sim_res(triangle, dev_facs_boot, sigmas_boot, resids_mask) result(reserve)
+  ! Simulate predictive distribution of reserve.
+  function sim_res(triangle, dev_facs_boot, sigmas_boot, ln_shifts_sim, &
+    ln_means_sim, ln_sigmas_sim, status) result(reserve)
     real(c_double), intent(in) :: triangle(:, :)
     real(c_double), intent(in) :: dev_facs_boot(:), sigmas_boot(:)
-    logical(c_bool) :: resids_mask(:, :)
+    real(c_double), intent(in) :: ln_means_sim(:, :), ln_sigmas_sim(:, :)
+    real(c_double), intent(in) :: ln_shifts_sim(:, :)
+    integer(c_int), intent(inout) :: status
 
-    real(c_double), allocatable :: resids_sim(:)
-    integer(c_int) :: ndev, nresids
+    integer(c_int) :: n_dev
     integer(c_int) :: i, j, i_diag
-    real(c_double) :: mean, sd
+    real(c_double) :: mean, sd, shape, scale
+    real(c_double) :: reserve
+    real(c_double), allocatable :: triangle_sim(:, :), latest(:)
 
-    ndev = size(triangle, 1)
-    resampled_resids = sample(resids, resids_mask)
-    nresids = size(resampled_resids, 1)
-    resids_sim = pack(resampled_resids)
-    triangle_boot = triangle
+    n_dev = size(triangle, 1)
+    allocate(triangle_sim(n_dev, n_dev))
 
+    status = SUCCESS
+    triangle_sim = triangle
     if (boot_type == PARAMETRIC) then
-      if (proc_dist == NORMAL) then
+      if (dist == NORMAL) then
         do i_diag = 1, n_dev - 1
           do i = i_diag + 1, n_dev
             j = n_dev + i_diag + 1 - i
-            mean = dev_facs_boot(j - 1) * triangle_boot(i, j - 1)
-            sd = sigmas_boot(j - 1) * sqrt(triangle_boot(i, j - 1))
-            triangle_boot(i, j) = rnorm_par(rng, i_thread, mean, sd)
-            if (triangle_boot(i, j) <= 0) cycle main_loop
+
+            mean = dev_facs_boot(j - 1) * triangle_sim(i, j - 1)
+            sd = sigmas_boot(j - 1) * sqrt(triangle_sim(i, j - 1))
+            triangle_sim(i, j) = rnorm_par(rng, i_thread, mean, sd)
+            if (triangle_sim(i, j) <= 0) then
+              status = FAILURE
+              return
+            end if
           end do
         end do
 
-      else if (proc_dist == GAMMA) then
+      else if (dist == GAMMA) then
         do i_diag = 1, n_dev - 1
           do i = i_diag + 1, n_dev
             j = n_dev + i_diag + 1 - i
-            shape = (dev_facs_boot(j - 1)**2 * triangle_boot(i, j - 1)) / sigmas_boot(j - 1) **2
+            shape = (dev_facs_boot(j - 1)**2 * triangle_sim(i, j - 1)) / sigmas_boot(j - 1) **2
             scale = sigmas_boot(j - 1) ** 2 / dev_facs_boot(j - 1)
-            triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
+            triangle_sim(i, j) = rgamma_par(rng, i_thread, shape, scale)
           end do
         end do
       end if
 
-      else if (boot_type == RESID)
-      if (resids_type == LOGNORMAL) then
-      else
-        k = 1
-        do i_diag = 1, n_dev
-          do i = i_diag + 1, n_dev
-            j = n_dev + i_diag + 1 - i
-            mean = triangle_boot(i, j - 1) * dev_facs_boot(j - 1)
-            sd = sigmas_boot(j - 1) * sqrt(triangle_boot(i, j - 1))
-            triangle_boot(i, j) = mean + sd * resampled_resids(i, j - 1)
-          end do
+    else if (boot_type == RESID) then
+      do i_diag = 1, n_dev
+        do i = i_diag + 1, n_dev
+          j = n_dev + i_diag + 1 - i
+          if (resids_type == LOGNORMAL) then
+            triangle_sim(i, j) = exp(resampled_resids(i - 1, j - 1) * ln_sigmas_sim(i - 1, j - 1) + &
+              ln_means_sim(i - 1, j - 1)) - ln_shifts_sim(i - 1, j - 1)
+            triangle_sim(i, j) = dev_facs_boot(j - 1) * triangle_sim(i, j) + &
+              sigmas_boot(j - 1) * sqrt(triangle_sim(i, j)) * triangle_sim(i, j)
+          else
+            mean = triangle_sim(i, j - 1) * dev_facs_boot(j - 1)
+            sd = sigmas_boot(j - 1) * sqrt(triangle_sim(i, j - 1))
+            triangle_sim(i, j) = mean + sd * resampled_resids(i - 1, j - 1)
+          end if
+          if (triangle_sim(i, j) <= 0 .or. isnan(triangle_sim(i, j))) then
+            status = FAILURE
+            return
+          end if
         end do
-      end if
+      end do
     end if
 
+    allocate(latest(n_dev))
     do j = 1, n_dev
-      latest(j) = triangle_boot(n_dev + 1 - j, j)
+      latest(j) = triangle_sim(n_dev + 1 - j, j)
     end do
 
-    reserve = sum(triangle_boot(:, n_dev)) - sum(latest)
+    reserve = sum(triangle_sim(:, n_dev)) - sum(latest)
   end function sim_res
+
+  subroutine sample_resids(which, ln_shifts_boot, ln_means_boot, ln_sigmas_boot)
+    character(*, kind=c_char), intent(in) :: which
+
+    integer(c_int) :: i, j, k, n_dev, n_resids, n_rows
+    integer(c_int) :: rand_idxs(1, 2)
+    real(c_double) :: ln_means_boot(:, :), ln_sigmas_boot(:, :)
+    real(c_double) :: ln_shifts_boot(:, :)
+    integer(c_int), allocatable :: idxs(:, :)
+
+    n_dev = size(resids, 1) + 1
+    n_resids = count(resids_mask)
+
+    allocate(idxs(n_resids, 2), source=0)
+
+    k = 1
+    do j = 2, n_dev
+      n_rows = n_dev + 1 - j
+      do i = 1, n_rows
+        if (resids_mask(i, j - 1)) then
+          idxs(k, :) = [i, j - 1]
+          k = k + 1
+        end if
+      end do
+    end do
+
+    if (which == "boot") then
+      do j = 2, n_dev
+        n_rows = n_dev + 1 - j
+        do i = 1, n_rows
+          rand_idxs(1, :) = idxs(1 + int(n_resids * runif_par(rng, i_thread)), :)
+          resampled_resids(i, j - 1) = resids(rand_idxs(1, 1), rand_idxs(1, 2))
+          ln_sigmas_boot(i, j - 1) =  ln_sigmas(rand_idxs(1, 1), rand_idxs(1, 2))
+          ln_means_boot(i, j - 1) = ln_means(rand_idxs(1, 1), rand_idxs(1, 2))
+          ln_shifts_boot(i, j - 1) = ln_shifts(rand_idxs(1, 1), rand_idxs(1, 2))
+        end do
+      end do
+
+    else if (which == "sim") then
+      do j = 2, n_dev
+        n_rows = n_dev + 1 - j
+        do i = n_rows + 1, n_dev
+          rand_idxs(1, :) = idxs(1 + int(n_resids * runif_par(rng, i_thread)), :)
+          resampled_resids(i - 1, j - 1) = resids(rand_idxs(1, 1), rand_idxs(1, 2))
+          ln_sigmas_boot(i - 1, j - 1) =  ln_sigmas(rand_idxs(1, 1), rand_idxs(1, 2))
+          ln_means_boot(i - 1, j - 1) = ln_means(rand_idxs(1, 1), rand_idxs(1, 2))
+          ln_shifts_boot(i - 1, j - 1) = ln_shifts(rand_idxs(1, 1), rand_idxs(1, 2))
+        end do
+      end do
+    end if
+
+  end subroutine sample_resids
 
   pure real(c_double) function extrapolate_sigma(sigmas, col)
     real(c_double), intent(in) :: sigmas(:)
@@ -775,13 +716,13 @@ contains
     allocate(sigmas(n_dev - 1), source=0._c_double)
     allocate(scale_facs(n_dev, n_dev), source=0._c_double)
     allocate(sigmas_jack(n_dev - 1, n_dev - 1), source=0._c_double)
-    allocate(ln_shifts(n_dev - 1), source=0._c_double)
-    allocate(ln_means(n_dev - 1), source=0._c_double)
-    allocate(ln_sigmas(n_dev - 1), source=0._c_double)
+    allocate(ln_shifts(n_dev - 1, n_dev - 1), source=0._c_double)
+    allocate(ln_means(n_dev - 1, n_dev - 1), source=0._c_double)
+    allocate(ln_sigmas(n_dev - 1, n_dev - 1), source=0._c_double)
     allocate(resids(n_dev - 1, n_dev - 1), source=0._c_double)
 
     boot_type = boot_type_
-    proc_dist = proc_dist_
+    dist = proc_dist_
     cond = cond_
     resids_type = resids_type_
 
@@ -808,17 +749,18 @@ contains
     deallocate(mask)
   end subroutine boot_cpp
 
-  function single_outlier(triangle, dev_facs, sigmas, outlier_rowidx, outlier_colidx, factor)
+  function single_outlier(triangle, dev_facs, sigmas, outlier_rowidx, outlier_colidx, mean_factor, sd_factor, sim_dist)
     integer(c_int), intent(in):: outlier_rowidx, outlier_colidx
     real(c_double), intent(in) :: triangle(:, :)
     real(c_double), intent(in):: dev_facs(:), sigmas(:)
+    integer(c_int), intent(in) :: sim_dist
 
-    real(c_double) :: factor
+    real(c_double) :: mean_factor, sd_factor
     real(c_double), allocatable:: single_outlier(:, :)
     real(c_double) :: shape, scale, mean, sd
     integer(c_int) :: n_dev, i, j
 
-    if (factor == 1) then
+    if (mean_factor == 1) then
       single_outlier = triangle
       return
     end if
@@ -827,7 +769,7 @@ contains
     allocate(single_outlier(n_dev, n_dev), source=0._c_double)
     single_outlier(:, 1) = triangle(:, 1)
 
-    if (proc_dist == NORMAL) then
+    if (sim_dist == NORMAL) then
       do j = 2, n_dev
         do i = 1, n_dev + 1 - j
           if (i == outlier_rowidx) cycle
@@ -845,8 +787,8 @@ contains
         end do
       end if
 
-      mean = factor * dev_facs(outlier_colidx - 1) * single_outlier(outlier_rowidx, outlier_colidx - 1)
-      sd = sigmas(outlier_colidx - 1) * sqrt(single_outlier(outlier_rowidx, outlier_colidx - 1))
+      mean = mean_factor * dev_facs(outlier_colidx - 1) * single_outlier(outlier_rowidx, outlier_colidx - 1)
+      sd = sd_factor * sigmas(outlier_colidx - 1) * sqrt(single_outlier(outlier_rowidx, outlier_colidx - 1))
       single_outlier(outlier_rowidx, outlier_colidx) = rnorm_par(rng, i_thread, mean, sd)
 
       if (outlier_colidx < n_dev) then
@@ -857,7 +799,7 @@ contains
         end do
       end if
 
-    else if (proc_dist == GAMMA) then
+    else if (sim_dist == GAMMA) then
       do j = 2, n_dev
         do i = 1, n_dev + 1 - j
           if (i == outlier_rowidx) cycle
@@ -875,9 +817,9 @@ contains
         end do
       end if
 
-      shape = dev_facs(outlier_colidx - 1)**2 * single_outlier(outlier_rowidx, outlier_colidx - 1) / &
-        sigmas(outlier_colidx - 1)**2
-      scale = sigmas(outlier_colidx - 1)**2 / dev_facs(outlier_colidx - 1)
+      shape = (mean_factor * dev_facs(outlier_colidx - 1))**2 * single_outlier(outlier_rowidx, outlier_colidx - 1) / &
+        (sd_factor * sigmas(outlier_colidx - 1))**2
+      scale = (sd_factor * sigmas(outlier_colidx - 1))**2 / (mean_factor * dev_facs(outlier_colidx - 1))
       single_outlier(outlier_rowidx, outlier_colidx) = rgamma_par(rng, i_thread, shape, scale)
 
       if (outlier_colidx < n_dev) then
@@ -890,17 +832,18 @@ contains
     end if
   end function single_outlier
 
-  function calendar_outlier(triangle, dev_facs, sigmas, outlier_diagidx, factor)
+  function calendar_outlier(triangle, dev_facs, sigmas, outlier_diagidx, mean_factor, sd_factor, sim_dist)
     integer(c_int), intent(in) :: outlier_diagidx
-    real(c_double), intent(in):: factor
+    real(c_double), intent(in):: mean_factor, sd_factor
     real(c_double), intent(in) :: triangle(:, :)
     real(c_double), intent(in):: dev_facs(:), sigmas(:)
+    integer(c_int), intent(in) :: sim_dist
 
     integer(c_int) :: i, j, n_dev, n_cols
     real(c_double), allocatable :: calendar_outlier(:, :)
     real(c_double) :: shape, scale, mean, sd
 
-    if (factor == 1) then
+    if (mean_factor == 1) then
       calendar_outlier = triangle
       return
     end if
@@ -921,9 +864,9 @@ contains
           calendar_outlier(i, j) = triangle(i, j)
         end do
 
-        if (proc_dist == NORMAL) then
-          mean = factor * dev_facs(n_cols - 1) * calendar_outlier(i, n_cols - 1)
-          sd = sigmas(n_cols - 1) * sqrt(calendar_outlier(i, n_cols - 1))
+        if (sim_dist == NORMAL) then
+          mean = mean_factor * dev_facs(n_cols - 1) * calendar_outlier(i, n_cols - 1)
+          sd = sd_factor * sigmas(n_cols - 1) * sqrt(calendar_outlier(i, n_cols - 1))
           calendar_outlier(i, n_cols) = rnorm_par(rng, i_thread, mean, sd)
           do j = n_cols + 1, n_dev + 1 - i
             mean = dev_facs(j - 1) * calendar_outlier(i, j - 1)
@@ -931,9 +874,9 @@ contains
             calendar_outlier(i, j) = rnorm_par(rng, i_thread, mean, sd)
           end do
 
-        else if (proc_dist == GAMMA) then
-          shape = factor * dev_facs(n_cols - 1)**2 * calendar_outlier(i, n_cols - 1) / sigmas(n_cols - 1)**2
-          scale = sigmas(n_cols - 1)**2 / factor * dev_facs(n_cols - 1)
+        else if (sim_dist == GAMMA) then
+          shape = (mean_factor * dev_facs(n_cols - 1))**2 * calendar_outlier(i, n_cols - 1) / (sd_factor * sigmas(n_cols - 1))**2
+          scale = (sd_factor * sigmas(n_cols - 1))**2 / (mean_factor * dev_facs(n_cols - 1))
           calendar_outlier(i, n_cols) = rgamma_par(rng, i_thread, shape, scale)
           do j = n_cols + 1, n_dev + 1 - i
             shape = dev_facs(j - 1)**2 * calendar_outlier(i, j - 1) / sigmas(j - 1)**2
@@ -945,17 +888,18 @@ contains
     end do
   end function calendar_outlier
 
-  function origin_outlier(triangle, dev_facs, sigmas, outlier_rowidx, factor)
+  function origin_outlier(triangle, dev_facs, sigmas, outlier_rowidx, mean_factor, sd_factor, sim_dist)
     integer(c_int), intent(in):: outlier_rowidx
     real(c_double), intent(in) :: triangle(:, :)
-    real(c_double), intent(in) :: factor
+    real(c_double), intent(in) :: mean_factor, sd_factor
     real(c_double), intent(in):: dev_facs(:), sigmas(:)
+    integer(c_int), intent(in) :: sim_dist
 
     real(c_double) :: shape, scale, mean, sd
     real(c_double), allocatable:: origin_outlier(:, :)
     integer(c_int) :: n_dev, j
 
-    if (factor == 1) then
+    if (mean_factor == 1) then
       origin_outlier = triangle
       return
     end if
@@ -964,14 +908,14 @@ contains
     origin_outlier = triangle
 
     do j = 2, n_dev + 1 - outlier_rowidx
-      if (proc_dist == NORMAL) then
-        mean = factor * dev_facs(j - 1) * origin_outlier(outlier_rowidx, j - 1)
-        sd = sigmas(j - 1) * sqrt(origin_outlier(outlier_rowidx, j - 1))
+      if (sim_dist == NORMAL) then
+        mean = mean_factor * dev_facs(j - 1) * origin_outlier(outlier_rowidx, j - 1)
+        sd = sd_factor * sigmas(j - 1) * sqrt(origin_outlier(outlier_rowidx, j - 1))
         origin_outlier(outlier_rowidx, j) = rnorm_par(rng, i_thread, mean, sd)
 
-      else if (proc_dist == GAMMA) then
-        shape = factor * dev_facs(j - 1)**2 * origin_outlier(outlier_rowidx, j - 1) / sigmas(j - 1)**2
-        scale = sigmas(j - 1)**2 / factor * dev_facs(j - 1)
+      else if (sim_dist == GAMMA) then
+        shape = (mean_factor * dev_facs(j - 1))**2 * origin_outlier(outlier_rowidx, j - 1) / (sd_factor * sigmas(j - 1))**2
+        scale = (sd_factor * sigmas(j - 1))**2 / (mean_factor * dev_facs(j - 1))
         origin_outlier(outlier_rowidx, j) = rgamma_par(rng, i_thread, shape, scale)
       end if
     end do

@@ -535,7 +535,7 @@ Solving these equations, we obtain
 Provided the sampling variability of $\widehat{f}_j$ and $\widehat{\sigma}_j$ is not too severe, this means that the residuals
 \begin{align} \label{eq:log-normal-resids}
   r_{i, j + 1}
-   & \coloneqq \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j \right) - \widehat{\mu}_{ij}}{\widehat{s}_{ij}}                                                                                                                                                                                           \\
+   & \coloneqq \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j \right) - \widehat{\mu}_{ij}}{\widehat{s}_{ij}}                                                                                                                                                                             \\
    & = \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j \right) - \log(\widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j) + \frac{1}{2} \log \left( 1 + \widehat{\sigma}^2_j / \widehat{f}^2_j C_{ij} \right)}{\sqrt{\log \left( 1 + \widehat{\sigma}^2_j / \widehat{f}^2_j C_{ij} \right)}}
 \end{align}
 are approximately $\mathcal{N}(0, 1)$-distributed.
@@ -952,15 +952,41 @@ In the synthetic example we gave in \cref{sec:boot-proc}, not much difference co
 
 \begin{figure}[!htb]
   \begin{subfigure}{0.45 \textwidth}
-    \includegraphics{mack_semiparam_cond}
+    \includegraphics{mack_semiparam_cond_standard}
     \subcaption{Conditional}
   \end{subfigure}
   \begin{subfigure}{0.45 \textwidth}
-    \includegraphics{mack_semiparam_uncond}
+    \includegraphics{mack_semiparam_uncond_standard}
     \subcaption{Unconditional}
   \end{subfigure}
   \caption{Comparison of the fitted and predictive distribution for the semiparametric bootstrap}
-  \label{fig:fit-pred-semiparam}
+  \label{fig:fit-pred-semiparam-standard}
+\end{figure}
+
+\begin{figure}[!htb]
+  \begin{subfigure}{0.45 \textwidth}
+    \includegraphics{mack_semiparam_cond_student}
+    \subcaption{Conditional}
+  \end{subfigure}
+  \begin{subfigure}{0.45 \textwidth}
+    \includegraphics{mack_semiparam_uncond_student}
+    \subcaption{Unconditional}
+  \end{subfigure}
+  \caption{Comparison of the fitted and predictive distribution for the semiparametric bootstrap}
+  \label{fig:fit-pred-semiparam-student}
+\end{figure}
+
+\begin{figure}[!htb]
+  \begin{subfigure}{0.45 \textwidth}
+    \includegraphics{mack_semiparam_cond_log_normal}
+    \subcaption{Conditional}
+  \end{subfigure}
+  \begin{subfigure}{0.45 \textwidth}
+    \includegraphics{mack_semiparam_uncond_log_normal}
+    \subcaption{Unconditional}
+  \end{subfigure}
+  \caption{Comparison of the fitted and predictive distribution for the semiparametric bootstrap}
+  \label{fig:fit-pred-semiparam-lognromal}
 \end{figure}
 
 \restoregeometry
@@ -1264,18 +1290,18 @@ This is the case for the data in \cref{tab:uk-motor}, as it consists of positive
 
 Developing a bootstrap procedure for the Poisson and quasi-Poisson models is in some respects easier than for \modelref{model:mack}. The absence of a recursive structure makes it more straightforward to reason about resampling. Furthermore, bootstrap methods for claims triangle GLMs have seen more discussion in the literature (see e.g.\ \cite{pinheiro} and \cite{england:dist}), and so we can draw upon this material for our exposition.
 
-As with Mack's model, we shall take \cref{sec:boot-reg} as our starting point. We distinguished there between nonparametric, semiparametric and parametric approaches to bootstrapping. Of these, the nonparametric bootstrap, which involves resampling predictor-response pairs from the original data, is the most difficult to apply to \modelref{model:poisson}. Because the size of claims triangles is typically quite limited, resampling observations can quite easily result in a situation where there are no observations for a given row or column, which means ; this is especially likely for the lower left and upper right corner points, which are the only observations in the final row and column respectively. In order to avoid this difficulty, we therefore need to find a way of guaranteeing that every row and column contains at least one observation. The crudest option would be to simply discard any resampled triangles which are defective, but this is quite inefficient; the same result can be achieved at far lower computational cost by constructing resampled triangles directly in such a way as to satisfy the desired property. We experimented with three ways of doing this: preserving the corner points, preserving the first row and column, and randomly selecting an observation in every row and column to preserve. However, none of these turn out to be satisfactory, as seen from the comparison with the analytic approximation (which is repeated here for reference). We will therefore exclude the pairs bootstrap from consideration. 
+As with Mack's model, we shall take \cref{sec:boot-reg} as our starting point. We distinguished there between nonparametric, semiparametric and parametric approaches to bootstrapping. Of these, the nonparametric bootstrap, which involves resampling predictor-response pairs from the original data, is the most difficult to apply to \modelref{model:poisson}. Because the size of claims triangles is typically quite limited, resampling observations can quite easily result in a situation where there are no observations for a given row or column, which means ; this is especially likely for the lower left and upper right corner points, which are the only observations in the final row and column respectively. In order to avoid this difficulty, we therefore need to find a way of guaranteeing that every row and column contains at least one observation. The crudest option would be to simply discard any resampled triangles which are defective, but this is quite inefficient; the same result can be achieved at far lower computational cost by constructing resampled triangles directly in such a way as to satisfy the desired property. We experimented with three ways of doing this: preserving the corner points, preserving the first row and column, and randomly selecting an observation in every row and column to preserve. However, none of these turn out to be satisfactory, as seen from the comparison with the analytic approximation (which is repeated here for reference). We will therefore exclude the pairs bootstrap from consideration.
 
 \begin{table}
   \centering
   \begin{tabularx}{0.5 \linewidth}{CC \mcol{3em} \mcol{3em} \mcol{4em}}\toprule
-    Randomised  & First row \& column & Corners \\ \midrule
+    Randomised & First row \& column & Corners \\ \midrule
     \csvreader[
-    late after line =                                                                                                                      \\
+    late after line =                          \\
     ]{%
       ../results/example/pois_pairs_table.csv
     }{randomised = \bib, rowcol = \bob, corners = \bab}{%
-      \bib & \bob           & \bab
+    \bib       & \bob                & \bab
     } \bottomrule
   \end{tabularx}
   \caption{Results for semiparameteric bootstrap with deviance residuals}
@@ -1398,27 +1424,27 @@ which, except in the case of the Pearson residuals, yields a set of nontrivial e
   \label{tab:semiparam-pois-pears-res}
 \end{table}
 
-\begin{table}[H]
-  \centering
-  \begin{tabularx}{0.5\textwidth}{CCCCC}\toprule
-    $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
-    \csvreader[
-      head to column names,
-    late after line =                                                                                                                \\
-    ]{%
-      ../results/example/pois_semiparam_quant_table.csv
-    }{}{%
-    \idx  & \a                & \b                & \reserve          & \prederror
-    } \midrule
-  \end{tabularx} \\
-  \begin{tabularx}{0.5\textwidth}{LR}
-    \csvreader[
-      head to column names
-    ]{../results/example/pois_semiparam_quant_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
-  \end{tabularx}
-  \caption{Results for semiparameteric bootstrap with quantile residuals}
-  \label{tab:semiparam-pois-quant-res}
-\end{table}
+% \begin{table}[H]
+%   \centering
+%   \begin{tabularx}{0.5\textwidth}{CCCCC}\toprule
+%     $i/j$ & $\widehat{a}^B_i$ & $\widehat{b}^B_j$ & $\widehat{R}^B_j$ & \resizebox{4em}{!}{$\widehat{\mathrm{MSEP}}(\widehat{R}_j)$} \\ \midrule
+%     \csvreader[
+%       head to column names,
+%     late after line =                                                                                                                \\
+%     ]{%
+%       ../results/example/pois_semiparam_quant_table.csv
+%     }{}{%
+%     \idx  & \a                & \b                & \reserve          & \prederror
+%     } \midrule
+%   \end{tabularx} \\
+%   \begin{tabularx}{0.5\textwidth}{LR}
+%     \csvreader[
+%       head to column names
+%     ]{../results/example/pois_semiparam_quant_point.csv}{}{$\widehat{c}^B$ & \intercept \\ $\widehat{\phi}^B$ &\disp} \\ \bottomrule
+%   \end{tabularx}
+%   \caption{Results for semiparameteric bootstrap with quantile residuals}
+%   \label{tab:semiparam-pois-quant-res}
+% \end{table}
 
 Finally, we consider the parametric bootstrap. Here again, the development proceeds in a very similar way to \cref{sec:mack-boot}. We begin by fitting the model to the original data, giving us estimates for $c$, $a_i$ and $b_j$, as well as $\phi$ if we're using \modelref{model:odp}. With the help of a random number generator, we can then use these to generate a new upper triangle. For \modelref{model:poisson}, this means sampling from a Poisson distribution with mean $\widehat{\mu}_{ij} = \exp{( \widehat{c} + \widehat{a}_i + \widehat{b}_j )}$; for \modelref{model:poisson} any distribution satisfying
 \begin{equation}
@@ -1530,6 +1556,8 @@ The only question that remains is how to incorporate the intrinsic variability o
 
 \chapter{Simulation study}
 
+\epstopdfsetup{outdir=/home/othman/repos/masters_thesis/plots/}
+
 As explained in the \nameref{intro} and \cref{sec:boot-proc}, we want to investigate the effect of deviations from the model assumptions on the predictive distribution of the total outstanding claims. To this end, we simulate a large number of run-off triangles which conform perfectly to these assumptions, perturb them in a number of ways, and use the bootstrap methods described in \cref{chapter:mack,chapter:poisson} to compute resulting distribution. We broadly follow the methodology outlined in \cite{schiegl}, adapted, of course, to the models under consideration.
 
 \section{Mack's model}
@@ -1633,6 +1661,94 @@ Triangles with a single perturbed point can then be obtained straightforwardly f
 Again, similar algorithms can be used for perturbed origin or calendar periods.
 
 \section{Results}
+
+\newgeometry{bottom=0cm}
+
+% residuals cond standardised
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{mack_sim_densities_cond_residuals_standardised_1}
+    \caption{Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals}
+    \label{fig:sim-res}
+  \end{figure}
+\end{landscape}
+
+\begin{landscape}
+  \begin{figure}
+    \ContinuedFloat
+    \captionsetup{list=off,format=cont}
+    \centering
+    \includegraphics{mack_sim_densities_cond_residuals_standardised_2}
+    \caption{Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals}
+    \label{fig:sim-res}
+  \end{figure}
+\end{landscape}
+
+% residuals cond studentised
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{mack_sim_densities_cond_residuals_studentised_1}
+    \caption{Mack model simulation results for the conditional semiparametric bootstrap with studentised residuals}
+    \label{fig:sim-res}
+  \end{figure}
+\end{landscape}
+
+\begin{landscape}
+  \begin{figure}
+    \ContinuedFloat
+    \captionsetup{list=off,format=cont}
+    \centering
+    \includegraphics{mack_sim_densities_cond_residuals_studentised_2}
+    \caption{Mack model simulation results for the conditional semiparametric bootstrap with studentised residuals}
+    \label{fig:sim-res}
+  \end{figure}
+\end{landscape}
+
+% residuals uncond standardised
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{mack_sim_densities_uncond_residuals_standardised_1}
+    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals}
+    \label{fig:sim-res}
+  \end{figure}
+\end{landscape}
+
+\begin{landscape}
+  \begin{figure}
+    \ContinuedFloat
+    \captionsetup{list=off,format=cont}
+    \centering
+    \includegraphics{mack_sim_densities_uncond_residuals_standardised_2}
+    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals}
+    \label{fig:sim-res}
+  \end{figure}
+\end{landscape}
+
+% residuals uncond studentised
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{mack_sim_densities_uncond_residuals_studentised_1}
+    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals}
+    \label{fig:sim-res}
+  \end{figure}
+\end{landscape}
+
+\begin{landscape}
+  \begin{figure}
+    \ContinuedFloat
+    \captionsetup{list=off,format=cont}
+    \centering
+    \includegraphics{mack_sim_densities_uncond_residuals_studentised_2}
+    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals}
+    \label{fig:sim-res}
+  \end{figure}
+\end{landscape}
+
+\restoregeometry
 
 \backmatter%
 

@@ -22,32 +22,9 @@ contains
       n_threads = min(omp_get_thread_limit(), n_threads)
       n_threads = min(omp_get_max_threads(), n_threads)
     end if
+    call omp_set_num_threads(1)
+    n_threads = 1
   end function init_omp
-
-  function sample(array, mask) result(res)
-    real(c_double), intent(in) :: array(:, :)
-    logical(c_bool), intent(in) :: mask(:, :)
-
-    real(c_double), allocatable :: res(:, :)
-    real(c_double), allocatable :: flat(:)
-
-    integer(c_int) :: i, j, n, m, n_flat
-
-    n = size(array, 1)
-    m = size(array, 2)
-
-    flat = pack(array, mask)
-    n_flat = size(flat)
-
-    allocate(res, mold=array)
-
-    do j = 1, m
-      do i = 1, n
-        res(i, j) = flat(1 + int(n_flat * runif_par(rng, i_thread)))
-      end do
-    end do
-
-  end function sample
 
   function validate_rng(n_samples) result(res) bind(c, name="validate_rng_")
     integer(c_int), intent(in), value :: n_samples
@@ -95,7 +72,7 @@ contains
     real(c_double), intent(in) :: triangle(:, :)
     integer :: i, n_dev
     character(len=999, kind=c_char) :: str, str_
-    
+
     n_dev = size(triangle, 1)
 
     write(str, '(*(f9.2))') triangle(1, :)
@@ -107,57 +84,57 @@ contains
 
     call rprint_par(str)
     call r_flush_console()
-    end subroutine print_triangle
+  end subroutine print_triangle
 
-    subroutine print_vector(vector)
-      real(c_double), intent(in) :: vector(:)
-      character(len=999, kind=c_char) :: str
+  subroutine print_vector(vector)
+    real(c_double), intent(in) :: vector(:)
+    character(len=999, kind=c_char) :: str
 
-      write(str, '(*(f9.2))') vector
-      str = c_new_line // trim(str) // c_new_line
-      call rprint_par(str)
-      call r_flush_console()
-    end subroutine print_vector
+    write(str, '(*(f9.2))') vector
+    str = c_new_line // trim(str) // c_new_line
+    call rprint_par(str)
+    call r_flush_console()
+  end subroutine print_vector
 
-    ! subroutine progress_bar(counter, max, inc)
+  ! subroutine progress_bar(counter, max, inc)
 
-    !    integer(c_int), intent(in) :: counter
-    !    integer(c_int), intent(in) :: max
-    !    integer(c_int), intent(in) :: inc
+  !    integer(c_int), intent(in) :: counter
+  !    integer(c_int), intent(in) :: max
+  !    integer(c_int), intent(in) :: inc
 
-    !    character(len=999) :: buf
-    !    character(kind=c_char, len=999) :: progress_str
-    !    integer :: cols
-    !    real(c_double) :: progress
-    !    real(c_double) :: pct_progress
+  !    character(len=999) :: buf
+  !    character(kind=c_char, len=999) :: progress_str
+  !    integer :: cols
+  !    real(c_double) :: progress
+  !    real(c_double) :: pct_progress
 
-    !    if (mod(counter, inc) == 0) then
+  !    if (mod(counter, inc) == 0) then
 
-    !       progress = real(counter, kind=c_double) / real(max, kind=c_double)
-    !       pct_progress = 100*progress
+  !       progress = real(counter, kind=c_double) / real(max, kind=c_double)
+  !       pct_progress = 100*progress
 
-    !       call get_environment_variable("COLUMNS", buf)
-    !       read(buf, *) cols
+  !       call get_environment_variable("COLUMNS", buf)
+  !       read(buf, *) cols
 
-    !       write(progress_str, "('Progress: ', f6.2)") pct_progress
-    !       call Rprintf(achar(13) // c_null_char)
-    !       call Rprintf(repeat(" ", cols) // c_null_char)
-    !       call Rprintf(achar(13) // c_null_char)
-    !       call Rprintf(trim(progress_str) // c_null_char )
-    !       call Rprintf(achar(13) // c_null_char)
-    !       call R_FlushConsole()
+  !       write(progress_str, "('Progress: ', f6.2)") pct_progress
+  !       call Rprintf(achar(13) // c_null_char)
+  !       call Rprintf(repeat(" ", cols) // c_null_char)
+  !       call Rprintf(achar(13) // c_null_char)
+  !       call Rprintf(trim(progress_str) // c_null_char )
+  !       call Rprintf(achar(13) // c_null_char)
+  !       call R_FlushConsole()
 
-    !    end if
+  !    end if
 
-    !    if (counter == max) then
+  !    if (counter == max) then
 
-    !       call get_environment_variable("COLUMNS", buf)
-    !       read(buf, *) cols
+  !       call get_environment_variable("COLUMNS", buf)
+  !       read(buf, *) cols
 
-    !       call Rprintf(repeat(" ", cols) // c_null_char)
+  !       call Rprintf(repeat(" ", cols) // c_null_char)
 
-    !    end if
+  !    end if
 
-    ! end subroutine progress_bar
+  ! end subroutine progress_bar
 
-  end module mod_helpers
+end module mod_helpers

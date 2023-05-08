@@ -38,39 +38,38 @@ BEGIN_RCPP
 END_RCPP
 }
 // mackBoot
-Rcpp::NumericVector mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::String boot_type, Rcpp::String proc_dist, bool conditional, Rcpp::Nullable<Rcpp::String> resids_type, int seed);
-RcppExport SEXP _patternBreak_mackBoot(SEXP triangleSEXP, SEXP n_bootSEXP, SEXP boot_typeSEXP, SEXP proc_distSEXP, SEXP conditionalSEXP, SEXP resids_typeSEXP, SEXP seedSEXP) {
+Rcpp::NumericVector mackBoot(Rcpp::NumericMatrix triangle, int n_boot, Rcpp::String boot_types, Rcpp::String proc_dist, bool conditional, Rcpp::Nullable<Rcpp::String> resids_type, int seed);
+RcppExport SEXP _patternBreak_mackBoot(SEXP triangleSEXP, SEXP n_bootSEXP, SEXP boot_typesSEXP, SEXP proc_distSEXP, SEXP conditionalSEXP, SEXP resids_typeSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type triangle(triangleSEXP);
     Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
-    Rcpp::traits::input_parameter< Rcpp::String >::type boot_type(boot_typeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::String >::type boot_types(boot_typesSEXP);
     Rcpp::traits::input_parameter< Rcpp::String >::type proc_dist(proc_distSEXP);
     Rcpp::traits::input_parameter< bool >::type conditional(conditionalSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::String> >::type resids_type(resids_typeSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(mackBoot(triangle, n_boot, boot_type, proc_dist, conditional, resids_type, seed));
+    rcpp_result_gen = Rcpp::wrap(mackBoot(triangle, n_boot, boot_types, proc_dist, conditional, resids_type, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // mackSim
-Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector factor, Rcpp::CharacterVector boot_type, Rcpp::CharacterVector proc_dists, Rcpp::LogicalVector conds, Rcpp::Nullable<Rcpp::CharacterVector> resids_type, bool show_progress, int seed);
-RcppExport SEXP _patternBreak_mackSim(SEXP triangleSEXP, SEXP sim_typeSEXP, SEXP n_bootSEXP, SEXP factorSEXP, SEXP boot_typeSEXP, SEXP proc_distsSEXP, SEXP condsSEXP, SEXP resids_typeSEXP, SEXP show_progressSEXP, SEXP seedSEXP) {
+Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type, int n_boot, Rcpp::NumericVector mean_factors, Rcpp::NumericVector sd_factors, Rcpp::CharacterVector boot_types, Rcpp::String sim_dist, bool show_progress, int seed);
+RcppExport SEXP _patternBreak_mackSim(SEXP triangleSEXP, SEXP sim_typeSEXP, SEXP n_bootSEXP, SEXP mean_factorsSEXP, SEXP sd_factorsSEXP, SEXP boot_typesSEXP, SEXP sim_distSEXP, SEXP show_progressSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type triangle(triangleSEXP);
     Rcpp::traits::input_parameter< Rcpp::String >::type sim_type(sim_typeSEXP);
     Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type factor(factorSEXP);
-    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type boot_type(boot_typeSEXP);
-    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type proc_dists(proc_distsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::LogicalVector >::type conds(condsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::CharacterVector> >::type resids_type(resids_typeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type mean_factors(mean_factorsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type sd_factors(sd_factorsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type boot_types(boot_typesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::String >::type sim_dist(sim_distSEXP);
     Rcpp::traits::input_parameter< bool >::type show_progress(show_progressSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(mackSim(triangle, sim_type, n_boot, factor, boot_type, proc_dists, conds, resids_type, show_progress, seed));
+    rcpp_result_gen = Rcpp::wrap(mackSim(triangle, sim_type, n_boot, mean_factors, sd_factors, boot_types, sim_dist, show_progress, seed));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -91,7 +90,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_patternBreak_glm_boot", (DL_FUNC) &_patternBreak_glm_boot, 2},
     {"_patternBreak_glm_sim", (DL_FUNC) &_patternBreak_glm_sim, 4},
     {"_patternBreak_mackBoot", (DL_FUNC) &_patternBreak_mackBoot, 7},
-    {"_patternBreak_mackSim", (DL_FUNC) &_patternBreak_mackSim, 10},
+    {"_patternBreak_mackSim", (DL_FUNC) &_patternBreak_mackSim, 9},
     {"_patternBreak_test_pois", (DL_FUNC) &_patternBreak_test_pois, 2},
     {NULL, NULL, 0}
 };
