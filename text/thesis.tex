@@ -1660,7 +1660,17 @@ Triangles with a single perturbed point can then be obtained straightforwardly f
 
 Again, similar algorithms can be used for perturbed origin or calendar periods.
 
-\section{Results}
+\section{Implementation and results}
+
+The code for carrying out the simulations (as well as generating the examples from previous chapters) is mostly implemented in the \texttt{R} language. The most numerically intensive parts are written in \texttt{Fortran} and linked to the \texttt{R} code through a \texttt{C++} wrapper using the \texttt{Rcpp} package. For reproducibility and convenience, all code has been bundled together into a package which can easily be downloaded and used.
+
+The results are presented as a series of faceted density plots comparing, for different configurations, the predictive density of the reserve when the contaminated observations have been excluded (shown in red) with the predictive densities obtained after excluding model-conforming points. The faceting variables are the indices of the outlying point(s). Owing to the large number of possible simulation options, it would be impractical to show all of them. We have therefore endeavoured to include a sample of the most interesting ones. The reader is encouraged to download the code using the instructions outlined previously and experiment with it for him- or herself.
+
+\subsection{Mack's model}
+
+For a single contaminated point, we observe poor performance of the conditional bootstrap accross the board. Referring to \Cref{fig:mack-sim-cond-semiparam,fig:mack-sim-cond-param}, we observe no significant difference between the predictive distribution with and without the contaminated point under a conditional bootstrap. By comparison, unconditional bootstraps perform a lot better, as can be seen in \Cref{fig:mack-sim-uncond-param-gamma,fig:mack-sim-uncond-param-normal,fig:mack-sim-uncond-semiparam-standard,fig:mack-sim-uncond-semiparam-student}. Intuitively, this makes sense, as the unconditional approach propagates resampled values further in the triangle (see \Cref{alg:uncond-semiparam-mack}), thus allowing perturbations to accumulate. It is somewhat surprising, however, that this should result in such a drastic difference, perhaps lending credence to the misgivings about the conditional approach outlined at the end of \Cref{sec:mack-challenge}. The diffference between contaminated and uncontaminated predictive distributions tends to be more pronounced for later development periods.
+
+\subsection{Overdispersed Poisson GLM}
 
 \newgeometry{bottom=0cm}
 
@@ -1669,8 +1679,8 @@ Again, similar algorithms can be used for perturbed origin or calendar periods.
   \begin{figure}
     \centering
     \includegraphics{mack_sim_densities_cond_residuals_standardised_1}
-    \caption{Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals}
-    \label{fig:sim-res}
+    \caption{Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
+    \label{fig:mack-sim-cond-semiparam}
   \end{figure}
 \end{landscape}
 
@@ -1680,29 +1690,7 @@ Again, similar algorithms can be used for perturbed origin or calendar periods.
     \captionsetup{list=off,format=cont}
     \centering
     \includegraphics{mack_sim_densities_cond_residuals_standardised_2}
-    \caption{Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals}
-    \label{fig:sim-res}
-  \end{figure}
-\end{landscape}
-
-% residuals cond studentised
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_sim_densities_cond_residuals_studentised_1}
-    \caption{Mack model simulation results for the conditional semiparametric bootstrap with studentised residuals}
-    \label{fig:sim-res}
-  \end{figure}
-\end{landscape}
-
-\begin{landscape}
-  \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
-    \centering
-    \includegraphics{mack_sim_densities_cond_residuals_studentised_2}
-    \caption{Mack model simulation results for the conditional semiparametric bootstrap with studentised residuals}
-    \label{fig:sim-res}
+    \caption{Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
   \end{figure}
 \end{landscape}
 
@@ -1711,8 +1699,8 @@ Again, similar algorithms can be used for perturbed origin or calendar periods.
   \begin{figure}
     \centering
     \includegraphics{mack_sim_densities_uncond_residuals_standardised_1}
-    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals}
-    \label{fig:sim-res}
+    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
+    \label{fig:mack-sim-uncond-semiparam-standard}
   \end{figure}
 \end{landscape}
 
@@ -1722,8 +1710,7 @@ Again, similar algorithms can be used for perturbed origin or calendar periods.
     \captionsetup{list=off,format=cont}
     \centering
     \includegraphics{mack_sim_densities_uncond_residuals_standardised_2}
-    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals}
-    \label{fig:sim-res}
+    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
   \end{figure}
 \end{landscape}
 
@@ -1732,8 +1719,8 @@ Again, similar algorithms can be used for perturbed origin or calendar periods.
   \begin{figure}
     \centering
     \includegraphics{mack_sim_densities_uncond_residuals_studentised_1}
-    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals}
-    \label{fig:sim-res}
+    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals, $c_\mu = c_\sigma = 0.75$}
+    \label{fig:mack-sim-uncond-semiparam-student}
   \end{figure}
 \end{landscape}
 
@@ -1743,8 +1730,67 @@ Again, similar algorithms can be used for perturbed origin or calendar periods.
     \captionsetup{list=off,format=cont}
     \centering
     \includegraphics{mack_sim_densities_uncond_residuals_studentised_2}
-    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals}
-    \label{fig:sim-res}
+    \caption{Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals, $c_\mu = c_\sigma = 0.75$}
+  \end{figure}
+\end{landscape}
+
+% parametric cond normal
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{mack_sim_densities_cond_parametric_normal_1}
+    \caption{Mack model simulation results for the conditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
+    \label{fig:mack-sim-cond-param}
+  \end{figure}
+\end{landscape}
+
+\begin{landscape}
+  \begin{figure}
+    \ContinuedFloat
+    \captionsetup{list=off,format=cont}
+    \centering
+    \includegraphics{mack_sim_densities_cond_parametric_normal_2}
+    \caption{Mack model simulation results for the conditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
+  \end{figure}
+\end{landscape}
+
+% parametric uncond normal
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{mack_sim_densities_uncond_parametric_normal_1}
+    \caption{Mack model simulation results for the unconditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
+    \label{fig:mack-sim-uncond-param-normal}
+  \end{figure}
+\end{landscape}
+
+\begin{landscape}
+  \begin{figure}
+    \ContinuedFloat
+    \captionsetup{list=off,format=cont}
+    \centering
+    \includegraphics{mack_sim_densities_uncond_parametric_normal_2}
+    \caption{Mack model simulation results for the unconditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
+  \end{figure}
+\end{landscape}
+
+% parametric uncond gamma
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{mack_sim_densities_uncond_parametric_gamma_1}
+    \caption{Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
+    \label{fig:mack-sim-uncond-param-gamma}
+  \end{figure}
+\end{landscape}
+
+\begin{landscape}
+  \begin{figure}
+    \ContinuedFloat
+    \captionsetup{list=off,format=cont}
+    \centering
+    \includegraphics{mack_sim_densities_uncond_parametric_gamma_2}
+    \caption{Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
   \end{figure}
 \end{landscape}
 
