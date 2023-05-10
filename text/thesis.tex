@@ -35,7 +35,7 @@ Your abstract would go here.
 
 \chapter{Introduction} \label{intro}
 
-The most defining characteristic of the insurance industry is the inverted nature of its production cycle. In manufacturing, commerce, transport, etc., payment is usually received only upon delivery of goods or services. By contrast, insurance products are purchased long before the adverse events which they protect against have occured, if they ever do. Insurers therefore face the challenge of forecasting the amount and variability of funds needed to settle outstanding contracts, a process known as \emph{claims reserving}. In this the reserving actuary relies historical data which is most often presented in the form of a \emph{loss} or \emph{run-off triangle} $\mathcal{D}_I$, which consists either of cumulative or incremental amounts of some actuarial variable (payments, number of claims, etc.), respectively denoted by $C_{ij}$ and $X_{ij}$. Here $1 \leq i \leq I$ denotes the \emph{cohort}, \emph{origin year} or \emph {accident year} and $1 \leq j \leq J$ the \emph{development year}, so that
+The most defining characteristic of the insurance industry is the inverted nature of its production cycle. In manufacturing, commerce, transport, etc., payment is usually received only upon delivery of goods or services. By contrast, insurance products are purchased long before the adverse events which they protect against have occured, if they ever do. Insurers therefore face the challenge of forecasting the amount and variability of funds needed to settle outstanding contracts, a process known as \emph{claims reserving}. The reserving actuary must rely here on historical data, which is most often presented in the form of a \emph{loss} or \emph{run-off triangle} $\mathcal{D}_I$ consisting of either cumulative or incremental amounts of some actuarial variable (payments, number of claims, etc.), respectively denoted by $C_{ij}$ and $X_{ij}$. The row index $1 \leq i \leq I$ denotes the \emph{cohort}, \emph{origin year} or \emph {accident year}, and the column index $1 \leq j \leq J$ gives the \emph{development year}, so that
 \begin{equation}
   \mathcal{D}_I = \left  \{ C_{ij} \mid 1 \leq j \leq J, i + j \leq I + 1 \right \}
   %
@@ -78,7 +78,7 @@ by forecasting the values in the lower triangle $\mathcal{D}^{\mathsf{c}}_I$. A 
   \caption{General notation for a 5 by 5 claims triangle}
 \end{table}
 
-One of the most frequently used loss reserving techniques in practice is the so-called \emph{chain ladder} (CL), which predicts the cumulative claim in development year $j$ by multiplying the previous year's amount by a so-called \emph{age-to-age factor}, \emph{link ratio} or \emph{development factor}. It was originally conceived as a purely computational algorithm, but has since been framed as a stochastic model in a variety of ways. The central assumption it makes, is that the pattern observed in earlier cohorts is applicable to later ones. In one sense, this is of course perfectly reasonable: all models ultimately use the past as a guide to the future. The dearth of data typically available to the actuary makes it challenging to verify its validity, however, as it limits the efficacy of classical statistical techniques. In particular, it makes it difficult to detect structural breaks in the claims development pattern.
+One of the most frequently used loss reserving techniques in practice is the so-called \emph{chain ladder} (CL), which predicts the cumulative claim in development year $j$ by multiplying the previous year's amount by a so-called \emph{age-to-age factor}, \emph{link ratio} or \emph{development factor}. It was originally conceived as a purely computational algorithm, but has since been framed as a stochastic model in a variety of ways. Its central assumption is that the pattern observed in earlier cohorts is applicable to later ones. In one sense, this is of course perfectly reasonable: all models ultimately use the past as a guide to the future. The dearth of data typically available to the actuary makes it challenging to verify its validity, however, as it limits the efficacy of classical statistical techniques.
 
 To illustrate this point, consider \cref{tab:uk-motor}, which contains the dataset of cumulative payments for a motor insurance account from the UK given in \cite{christofides} (this will serve as the running example throughout this text). It consists of a 7 by 7 claims triangle with a total of 28 observations. \cref{fig:diag-plot-original} shows the diagnostic plot of standardised residuals against fitted value for \modelref{model:mack}, which will be discussed in \cref{chapter:mack}. The details are not important at this point; all that matters at present is that it should be symmetric around the x-axis and exhibit no structural patterns if the model gives a good fit.
 
@@ -107,7 +107,7 @@ To illustrate this point, consider \cref{tab:uk-motor}, which contains the datas
   \label{fig:diag-plot-original}
 \end{figure}
 
-The same diagnostic plots are shown in \cref{fig:diag-plot-perturbed} for the case where the single points $(2, 5)$ and $(4, 4)$ of this triangle has been perturbed by a factor $1.5$, either by direct multiplication or through simulation from the underlying model. The residual corresponding to the pathological observation has been highlighted in red. As these examples demonstrate, it is not always feasible to identify deviations from the model assumptions by examining such plots, even for the trained eye.
+The same diagnostic plots are shown in \cref{fig:diag-plot-perturbed} for the case where the points $(2, 5)$ and $(4, 4)$ have been perturbed by a factor $1.5$, either by direct multiplication or through simulation from the underlying model. The residual corresponding to the pathological observation has been highlighted in red. As these examples demonstrate, it is not always feasible to identify deviations from the model assumptions by examining such plots, even for the trained eye.
 
 \begin{figure}[!htb]
   \centering
@@ -123,7 +123,7 @@ The same diagnostic plots are shown in \cref{fig:diag-plot-perturbed} for the ca
   \label{fig:diag-plot-perturbed}
 \end{figure}
 
-Our aim is to investigate whether it is possible to use bootstrap simulations to remedy this problem. The text is divided as follows. The next chapter introduces the bootstrap and explains how it can be used for inference on regression models, which is how we will frame the reserving methods under consideration. In the subsequent two chapters, we will then apply this theory to two of the most widespread stochastic claims reserving models, \modelref{model:mack} and the (overdispersed) Poisson GLM, in order to study whether it is possible to identify pattern breaks by using the bootstrap. Specifically, we simulate claims triangles which perfectly follow the model assumptions, perturb these, and generate a bootstrap reserve from the resulting dataset. This will allow us to investigate how the simulated reserve is impacted by deviations from the model assumptions.
+Our aim is to investigate whether it is possible to use bootstrap simulations to remedy this problem. The text is divided as follows. The next chapter introduces the bootstrap and explains how it can be used for inference on regression models, which is how we will frame the reserving methods under consideration. In the following two chapters, we will then apply this theory to the most widespread stochastic claims reserving models, \modelref{model:mack} and \modelref{model:odp}, in order to study whether it is possible to identify pattern breaks using bootstrap simulation. Specifically, we simulate claims triangles which perfectly follow the model assumptions, perturb these, and generate a bootstrap reserve from the resulting dataset. This will allow us to investigate how the simulated reserve is impacted by deviations from the model assumptions.
 
 \mainmatter%
 
@@ -135,7 +135,7 @@ The bootstrap method aims to remedy this problem by using numerical simulations 
 
 \section{Bootstrapping an estimator}
 
-Let $X_1, \dots, X_n$ be an i.i.d. sample drawn from a distribution $F$, and consider an estimator $\widehat{h(F)} = g(X_1, \dots, X_n)$ of some quantity $h(F)$ whose uncertainty we wish to estimate, using e.g.\ the variance of the sampling distribution. Depending on the assumptions we are willing to make, we can choose between two broad approaches: \emph{parameteric} methods and \emph{nonparametric} ones.
+Let $X_1, \dots, X_n$ be an i.i.d. sample drawn from a distribution $F$, and consider an estimator $\widehat{h(F)} = g(X_1, \dots, X_n)$ of some quantity $h(F)$ whose uncertainty we wish to estimate using e.g.\ the variance of the sampling distribution. Depending on the assumptions we are willing to make, we can choose between two broad approaches: \emph{parameteric} methods and \emph{nonparametric} ones.
 
 In the nonparametric bootstrap, we use the data directly, drawing with replacement to simulate new samples $X^{(b)}_1, \dots, X^{(b)}_n$. In other words, we approximate $F$ using the \emph{empirical cumulative distribution function}
 \begin{equation}
@@ -147,7 +147,7 @@ which we use to generate new data. We then compute the statistic of interest on 
 \end{equation}
 with $\bar{g} = \frac{1}{B} \sum_{b=1}^B g^{(b)}$. Provided $F \approx \widehat{F}_n$ holds with sufficient accuracy, this will yield a reasonable approximation to $\mathrm{Var}(\widehat{h(F)})$.
 
-By contrast, in the parametric bootstrap, we first fit a model using the data, and then simulate samples from this with the help of a random number generator. As usual, the parametric approach offers the advantage of efficiency if its assumptions are met, at the risk of increased error when they are violated. If we assume that $F$ belongs to some family $\left \{ F_{\bm{\theta}} \mid  \bm{\theta} \in \Theta \right \}$, then we can use the sample $X_1, \dots, X_n$ to produce an estimate $\bm{\widehat{\theta}}$ of the parameter. Plugging this in then gives us $F_{\bm{\widehat{\theta}}}$, from which we can simulate $X^{(b)}_1, \dots , X^{(b)}_n$ and $g^{(b)}$ as before. An estimate of the sampling variance is likewise obtained the same manner.
+By contrast, in the parametric bootstrap, we first fit a model using the data, and then simulate samples from this with the help of a random number generator. As usual, the parametric approach offers the advantage of efficiency if its assumptions are met, at the risk of increased error when they are violated. If we assume that $F$ belongs to some family $\left \{ F_{\bm{\theta}} \mid  \bm{\theta} \in \Theta \right \}$, then we can use the sample $X_1, \dots, X_n$ to produce an estimate $\bm{\widehat{\theta}}$ of the parameter. Plugging this in then gives us $F_{\bm{\widehat{\theta}}}$, from which we can simulate $X^{(b)}_1, \dots , X^{(b)}_n$ and $g^{(b)}$ as before. An estimate of the sampling variance can be obtained the same manner.
 
 Although we have thus far only used it for the calculation of a single statistic, it is clear that the bootstrap produces a complete \emph{simulated distribution} of the estimator, which can be used for many different forms of inference. This highlights its tremendous potential as a tool for statistical analysis, which explains the rise in popularity of bootstrap methods once personal computers powerful enough to carry out the requisite calculations became widely available. Let us give an example to illustrate this. \cref{fig:boot-est} compares, for a $\Gamma(\alpha, \beta)$-distribution with $\alpha = 2$ and $\beta = 0.5$, the bootstrap distributions of the maximum likelihood estimators to their exact counterparts. It is clear that the bootstrap distribution approaches the analytic one. We use a simulated sample of size $n = 1000$ and compute . The analytic distributions are based on the well-known fact from likelihood theory that the asymptotic distribution of the MLE is given by the multivariate normal distribution $\mathcal{N}(\bm{\theta}, I(\bm{\theta})^{-1})$, where $\bm{\theta}$ is the parameter vector and $I(\bm{\theta})$ the Fisher information matrix. For the gamma distribution, the latter is given by
 \begin{equation}
@@ -198,7 +198,11 @@ By refitting the model to this new pseudo-data, we then obtain bootstrapped regr
 
 An alternative approach, which is fully nonparametric, is to resample the pairs $(\bm{\mathrm{x}_i}, Y_i)$ themselves (see \cites[Section 9.5]{efron:intro}[Algorithm 6.2]{davison}), which corresponds to approximating the multivariate distribution of $(X_1, \dots, X_n, Y)$ by the empirical distribution of the data. This has the significant benefit of parsimony, making no other assumption beside the i.i.d.-ness of the sample. The model is then fitted to the bootstrap samples $(\bm{\mathrm{x}_1}^{(b)}, Y^{(b)}_1), \dots, (\bm{\mathrm{x}_n}^{(b)}, Y^{(b)}_n)$ to produce pseudo-realisations $\widehat{\bm{\beta}}^{(b)}$ of the regression parameter estimator.
 
-For the parametric case, we have to make an additional assumption about the distribution of $\epsilon$, the classical choice being the Gaussian one. We then begin to fit \cref{eq:linear-model}, which gives us estimates $\widehat{\beta}$ for the regression parameters. With the help of a random number generator, we then produce bootstrap responses $Y^{(b)}_1, \dots, Y^{(b)}_n$ by drawing from the estimated distribution $\mathcal{N}(\bm{\mathrm{x}}^T \widehat{\bm{\beta}}, \widehat{\sigma}^2)$, and fit the model to this new data to obtain bootstrap samples $\widehat{\bm{\beta}}^{(b)}$ of the regression parameters.
+For the parametric case, we have to make an additional assumption about the distribution of $\epsilon$, the classical choice being the Gaussian one. 
+
+We then  to fit \cref{eq:linear-model}, which gives us estimates $\widehat{\beta}$ for the regression parameters. 
+
+With the help of a random number generator, we then produce bootstrap responses $Y^{(b)}_1, \dots, Y^{(b)}_n$ by drawing from the estimated distribution $\mathcal{N}(\bm{\mathrm{x}}^T \widehat{\bm{\beta}}, \widehat{\sigma}^2)$, and fit the model to this new data to obtain bootstrap samples $\widehat{\bm{\beta}}^{(b)}$ of the regression parameters.
 
 \section{Process variance and predictive distributions} \label{sec:boot-proc}
 
@@ -1678,7 +1682,7 @@ For the parametric bootstrap, is is not as clear how we should go about excludin
 
 \section{Implementation and results}
 
-The code for carrying out the simulations (as well as generating the examples from previous chapters) is mostly implemented in the \texttt{R} language. The most numerically intensive parts are written in \texttt{Fortran} and linked to the \texttt{R} code through a \texttt{C++} wrapper using the \texttt{Rcpp} package. For reproducibility and convenience, all code has been bundled together into a package which can be easily downloaded and used.
+The code for carrying out the simulations (as well as generating the examples from previous chapters) is mostly implemented in the \texttt{R} language \cite{R}. The most numerically intensive parts are written in \texttt{Fortran} and linked to the \texttt{R} code through a \texttt{C++} wrapper using the \texttt{Rcpp} package. For reproducibility and convenience, all code has been bundled together into a package which can be easily downloaded and used.
 
 The results are presented as a series of faceted density plots comparing, for different configurations, the predictive density of the reserve when the contaminated observations have been excluded (shown in red) with the predictive densities obtained after excluding model-conforming points. The faceting variables are the indices of the outlying point(s). Owing to the large number of possible simulation options, it would be impractical to show all of them. We have therefore endeavoured to include a sample of the most interesting ones. The reader is encouraged to download the code using the instructions outlined previously and experiment with it for him- or herself.
 
@@ -1875,6 +1879,26 @@ Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum e
     \centering
     \includegraphics{glm_sim_densities_parametric_poisson_2}
     \caption{ODP model simulation results for the parametric bootstrap with Poisson, $c_\mu = c_\sigma = 0.75$}
+  \end{figure}
+\end{landscape}
+
+% residuals
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{glm_sim_densities_residuals_1}
+    \caption{ODP model simulation results for the semiparametric bootstrap, $c_\mu = c_\sigma = 0.75$}
+    \label{fig:fig:glm-sim-semiparam}
+  \end{figure}
+\end{landscape}
+
+\begin{landscape}
+  \begin{figure}
+    \ContinuedFloat
+    \captionsetup{list=off,format=cont}
+    \centering
+    \includegraphics{glm_sim_densities_residuals_2}
+    \caption{ODP model simulation results for the semiparametric bootstrap, $c_\mu = c_\sigma = 0.75$}
   \end{figure}
 \end{landscape}
 

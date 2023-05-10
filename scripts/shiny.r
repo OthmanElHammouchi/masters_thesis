@@ -1,7 +1,7 @@
 library(shiny)
 library(data.table)
 library(ggplot2)
-library(patternBreak)
+library(claimsBoot)
 
 load("../results/single.rda")
 load("../results/calendar.rda")
