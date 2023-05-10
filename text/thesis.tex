@@ -123,7 +123,7 @@ The same diagnostic plots are shown in \cref{fig:diag-plot-perturbed} for the ca
   \label{fig:diag-plot-perturbed}
 \end{figure}
 
-Our aim in this chapter is to investigate whether it is possible to use bootstrap simulations to remedy this problem. The chapter is divided as follows. The next section introduces the bootstrap and explains how it can be used for inference on regression models, which is how we will frame the reserving methods under consideration. In the subsequent two sections, we will then apply this theory to two of the most widespread stochastic claims reserving models, \modelref{model:mack} and the (overdispersed) Poisson GLM, in order to study whether it is possible to identify pattern breaks by using the bootstrap. Specifically, we simulate claims triangles which perfectly follow the model assumptions, perturb these, and generate a bootstrap reserve from the resulting dataset. This will allow us to investigate how the simulated reserve is impacted by deviations from the model assumptions.
+Our aim is to investigate whether it is possible to use bootstrap simulations to remedy this problem. The text is divided as follows. The next chapter introduces the bootstrap and explains how it can be used for inference on regression models, which is how we will frame the reserving methods under consideration. In the subsequent two chapters, we will then apply this theory to two of the most widespread stochastic claims reserving models, \modelref{model:mack} and the (overdispersed) Poisson GLM, in order to study whether it is possible to identify pattern breaks by using the bootstrap. Specifically, we simulate claims triangles which perfectly follow the model assumptions, perturb these, and generate a bootstrap reserve from the resulting dataset. This will allow us to investigate how the simulated reserve is impacted by deviations from the model assumptions.
 
 \mainmatter%
 
@@ -1357,7 +1357,7 @@ The semiparametric bootstrap procedure for both \modelref{model:poisson} and \mo
 \begin{equation}
   \delta(x, \widehat{\mu}_{ij}) = r^{(k)}_{ij} \,,
 \end{equation}
-which, except in the case of the Pearson residuals, yields a set of nontrivial equations.
+which, except in the case of the Pearson residuals, yields a set of nontrivial equations. It should also be noted that the Pearson and deviance residuals corresponding to the lower left and upper right corner will always have a value of zero by construction; we follow the general trend of the literature (see \cites[706]{pinheiro}[6]{verdonck}) in excluding these from the resampling process.
 
 \begin{algorithm}
   \begin{algorithmic}
@@ -1558,9 +1558,9 @@ The only question that remains is how to incorporate the intrinsic variability o
 
 \epstopdfsetup{outdir=/home/othman/repos/masters_thesis/plots/}
 
-As explained in the \nameref{intro} and \cref{sec:boot-proc}, we want to investigate the effect of deviations from the model assumptions on the predictive distribution of the total outstanding claims. To this end, we simulate a large number of run-off triangles which conform perfectly to these assumptions, perturb them in a number of ways, and use the bootstrap methods described in \cref{chapter:mack,chapter:poisson} to compute resulting distribution. We broadly follow the methodology outlined in \cite{schiegl}, adapted, of course, to the models under consideration.
+As mentioned in the \nameref{intro} and \cref{sec:boot-proc}, we want to investigate the effect of deviations from the model assumptions on the predictive distribution of the total outstanding claims. To this end, we simulate a large number of run-off triangles which conform perfectly to these assumptions, perturb them in a number of ways, and use the bootstrap methods described in \cref{chapter:mack,chapter:poisson} to compute resulting distribution. We broadly follow the methodology outlined in \cite{schiegl}, adapted, of course, to the models under consideration.
 
-\section{Mack's model}
+\section{Mack's model} \label{sec:mack-sim}
 
 Recall from \cref{sec:mack-intro} that \modelref{model:mack} is recursive in nature, with the cumulative claim amounts in the next development determined by the observations in the previous one, and therefore requires that the first column of the triangle already be given in some way. We could use a seperate model to generate this, but we choose here to simply take the one from the UK Motor dataset in \cref{tab:uk-motor}. Likewise, we will use as development factors $f_1, \dots, f_{I - 1}$ and dispersion parameters $\sigma_1, \dots, \sigma_{I - 1}$ the fitted ones for this triangle. To generate a triangle which perfectly satisfies \cref{assump:mack-expectation,assump:mack-variance,assump:mack-independence}, we can then start from the initial column and use any suitable data-generating process (such as \cref{eq:time-series-model}) to recursively simulate the following columns of the triangle, as outline in \cref{alg:clean-mack-triangle}.
 
@@ -1611,11 +1611,12 @@ This immediately suggests a way of producing triangles where the assumptions hav
     \State \Return{$(C^*_{ij})_{1 \leq i,j \leq I}$}
   \end{algorithmic}
   \caption{Simulating triangle with single perturbed point for \modelref{model:mack}}
+  \label{alg:pert-mack-triangle}
 \end{algorithm}
 
 We can obtain algorithms for simulating triangles where an entire origin or calendar period has been perturbed in a similar way.
 
-\section{Overdispersed Poisson GLM}
+\section{Overdispersed Poisson GLM} \label{sec:odp-sim}
 
 Simulating triangles conforming to \modelref{model:odp} is significantly easier than for \modelref{model:mack}, as we don't have to deal with recursion. Using the fitted parameters from \cref{tab:uk-motor-long} for $\phi$, $c$, $a_1, \dots, a_I$ and $b_1, \dots, b_I$, we generate an observation for every cell $(i, j)$ in the upper triangle by drawing from an appropriate distribution, as shown in \cref{alg:clean-odp-triangle}.
 
@@ -1642,7 +1643,7 @@ Triangles with a single perturbed point can then be obtained straightforwardly f
 
 \begin{algorithm}[H]
   \begin{algorithmic}
-    \Require{Intercept $c$, development period parameters $a_2, \dots, a_I$, origin period parameters $b_2, \dots, b_I$, dispersion parameter $\phi$}
+    \Require{Intercept $c$, development period parameters $a_2, \dots, a_I$, origin period parameters $b_2, \dots, b_I$, dispersion parameter $\phi$, perturbation factor $c_\lambda$}
     \State $a_1 \gets 0$, $b_1 \gets 0$
     \ForAll{$1 \leq i, j \leq I$}
       \State $\mu_{ij} \gets \exp(c + a_i + b_j)$
@@ -1656,21 +1657,34 @@ Triangles with a single perturbed point can then be obtained straightforwardly f
     \State \Return{$(X^*_{ij})_{1 \leq i,j \leq I}$}
   \end{algorithmic}
   \caption{Simulating triangle with single perturbed point for \modelref{model:odp}}
+  \label{alg:pert-odp-triangle}
 \end{algorithm}
 
 Again, similar algorithms can be used for perturbed origin or calendar periods.
 
+\section{Setup}
+
+We are now ready to discuss the general setup of the simulation. Using \cref{alg:pert-mack-triangle,alg:pert-odp-triangle}, we generate claims triangles which perfectly satisfy the assumptions of \modelref{model:mack} or \modelref{model:odp} except for a selected number of points. In particular, we consider the three cases of 
+\begin{inparaenum}[(i)]
+\item a single perturbed observation
+\item a perturbed calendar period and
+\item a perturbed origin period.
+\end{inparaenum}
+In each instance, we carry out one of the bootstrap procedures outlined in \cref{chapter:mack,chapter:poisson} while excluding a subset of observations of the same type as the contaminated one, and then compare the resulting predictive distributions. Our hope is that we can detect a significant difference between the predictive distribution obtained when excluding the right subset and the ones where a different subset has been removed. This would then suggest a way of detecting irregularities in new triangles: compare for every point, calendar period or origin period the predictive bootstrap distribution obtained with and without this point; if a significant difference can be detected, then this subset constitutes a deviation from the model.
+
+The way in which observations can be excluded when carrying out the bootstrap is specific to each method, and raises a number of practical issues. For the semiparametric bootstraps, the obvious way of excluding observations is to simply remove the corresponding residuals from the resampling pool. In the case of \modelref{model:mack}, this implies that the first column cannot contain contaminated points. This makes sense, as \modelref{model:mack} does not make any statements regarding the behaviour of the initial observations. While odd points in the triangle may be considered \emph{outliers} in a general sense, they do not necessarily constitute deviations from the model assumptions. To minimise the impact of this extraneous factor on the results, we have taken the approach of borrowing this initial column from the benchmark dataset in \cref{tab:uk-motor}, as explained in \cref{sec:mack-sim}. 
+
+For the parametric bootstrap, is is not as clear how we should go about excluding certain points. Obviously, our goal is to nullify the impact of these observations on the bootstrap result, which suggests removing them from the initial fitting process when obtaining the parametric model used to simulate new pseudo-data. We have to be careful here, however, as this can sometimes lead to situations where the model cannot be fit at all. In particular, for \modelref{model:mack}, we cannot exclude the upper right corner point, because we cannot estimate the final development factor otherwise. The approach outlined here is therefore not suitable to detecting deviations for this point. This is no great loss, however: the final development year requires special attention in any case, as it is very tied up with issues of tail factors and extrapolation. For \modelref{model:poisson}, the restriction is even more stringent; here, we cannot exclude the lower left corner either, because the resulting model would have no parameter corresponding to the final origin period, and consequently cannot be used for projection.
+
 \section{Implementation and results}
 
-The code for carrying out the simulations (as well as generating the examples from previous chapters) is mostly implemented in the \texttt{R} language. The most numerically intensive parts are written in \texttt{Fortran} and linked to the \texttt{R} code through a \texttt{C++} wrapper using the \texttt{Rcpp} package. For reproducibility and convenience, all code has been bundled together into a package which can easily be downloaded and used.
+The code for carrying out the simulations (as well as generating the examples from previous chapters) is mostly implemented in the \texttt{R} language. The most numerically intensive parts are written in \texttt{Fortran} and linked to the \texttt{R} code through a \texttt{C++} wrapper using the \texttt{Rcpp} package. For reproducibility and convenience, all code has been bundled together into a package which can be easily downloaded and used.
 
 The results are presented as a series of faceted density plots comparing, for different configurations, the predictive density of the reserve when the contaminated observations have been excluded (shown in red) with the predictive densities obtained after excluding model-conforming points. The faceting variables are the indices of the outlying point(s). Owing to the large number of possible simulation options, it would be impractical to show all of them. We have therefore endeavoured to include a sample of the most interesting ones. The reader is encouraged to download the code using the instructions outlined previously and experiment with it for him- or herself.
 
 \subsection{Mack's model}
 
 For a single contaminated point, we observe poor performance of the conditional bootstrap accross the board. Referring to \Cref{fig:mack-sim-cond-semiparam,fig:mack-sim-cond-param}, we observe no significant difference between the predictive distribution with and without the contaminated point under a conditional bootstrap. By comparison, unconditional bootstraps perform a lot better, as can be seen in \Cref{fig:mack-sim-uncond-param-gamma,fig:mack-sim-uncond-param-normal,fig:mack-sim-uncond-semiparam-standard,fig:mack-sim-uncond-semiparam-student}. Intuitively, this makes sense, as the unconditional approach propagates resampled values further in the triangle (see \Cref{alg:uncond-semiparam-mack}), thus allowing perturbations to accumulate. It is somewhat surprising, however, that this should result in such a drastic difference, perhaps lending credence to the misgivings about the conditional approach outlined at the end of \Cref{sec:mack-challenge}. The diffference between contaminated and uncontaminated predictive distributions tends to be more pronounced for later development periods.
-
-\subsection{Overdispersed Poisson GLM}
 
 \newgeometry{bottom=0cm}
 
@@ -1791,6 +1805,76 @@ For a single contaminated point, we observe poor performance of the conditional 
     \centering
     \includegraphics{mack_sim_densities_uncond_parametric_gamma_2}
     \caption{Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
+  \end{figure}
+\end{landscape}
+
+\restoregeometry
+
+\subsection{Overdispersed Poisson GLM}
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer in libero porttitor, hendrerit est a, accumsan nunc. Nulla fringilla dolor eu odio sollicitudin, id convallis enim scelerisque. Nulla facilisi. Nulla nibh nibh, consectetur ut pulvinar ac, euismod in metus. Phasellus rutrum eleifend interdum. Etiam pellentesque venenatis lacus, et venenatis odio maximus sed. Pellentesque luctus magna est, sit amet rhoncus ligula fermentum nec. Proin euismod lacus vitae mi feugiat scelerisque.
+
+Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum elit eget erat mattis, sed elementum nunc vestibulum. Nulla non odio ut est ultricies condimentum eget pellentesque nisi. Fusce facilisis sodales porttitor. Nulla tincidunt tempus velit ut mollis. Nam id erat pretium, sagittis ante nec, tristique est. Duis dignissim lacinia tortor fringilla dapibus. Sed eget ipsum eu risus dictum commodo. Phasellus in leo in urna pulvinar faucibus vitae sit amet ante. Vestibulum dictum nulla ac metus vestibulum hendrerit. Aliquam nunc eros, hendrerit sit amet mi rutrum, tristique elementum ex. Aenean ut commodo lorem. Proin ultrices elit est. Etiam sit amet vehicula tellus, eu porttitor dolor. Donec bibendum ipsum non imperdiet posuere. 
+
+\newgeometry{bottom=0cm}
+
+% residuals
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_sim_densities_1}
+%     \caption{ODP model simulation results for the semiparametric bootstrap, $c_\mu = c_\sigma = 0.75$}
+%     \label{fig:glm-sim-semiparam}
+%   \end{figure}
+% \end{landscape}
+
+% \begin{landscape}
+%   \begin{figure}
+%     \ContinuedFloat
+%     \captionsetup{list=off,format=cont}
+%     \centering
+%     \includegraphics{glm_sim_densities_2}
+%     \caption{ODP model simulation results for the semiparametric bootstrap, $c_\mu = c_\sigma = 0.75$}
+%   \end{figure}
+% \end{landscape}
+
+% parametric normal
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{glm_sim_densities_parametric_normal_1}
+    \caption{ODP model simulation results for the parametric bootstrap with normal, $c_\mu = c_\sigma = 0.75$}
+    \label{fig:fig:glm-sim-param-norm}
+  \end{figure}
+\end{landscape}
+
+\begin{landscape}
+  \begin{figure}
+    \ContinuedFloat
+    \captionsetup{list=off,format=cont}
+    \centering
+    \includegraphics{glm_sim_densities_parametric_normal_2}
+    \caption{ODP model simulation results for the parametric bootstrap with normal, $c_\mu = c_\sigma = 0.75$}
+  \end{figure}
+\end{landscape}
+
+% parametric poisson
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{glm_sim_densities_parametric_poisson_1}
+    \caption{ODP model simulation results for the parametric bootstrap with Poisson, $c_\mu = c_\sigma = 0.75$}
+    \label{fig:fig:glm-sim-param-pois}
+  \end{figure}
+\end{landscape}
+
+\begin{landscape}
+  \begin{figure}
+    \ContinuedFloat
+    \captionsetup{list=off,format=cont}
+    \centering
+    \includegraphics{glm_sim_densities_parametric_poisson_2}
+    \caption{ODP model simulation results for the parametric bootstrap with Poisson, $c_\mu = c_\sigma = 0.75$}
   \end{figure}
 \end{landscape}
 
