@@ -17,7 +17,7 @@ module mod_glm
 contains
 
   subroutine sim(n_dev, triangle, sim_type, boot_type_, n_conf, m_conf, conf, &
-      n_boot, res, show_progress, seed) bind(c, name="glm_sim")
+    n_boot, res, show_progress, seed) bind(c, name="glm_sim")
     integer(c_int), intent(in), value :: n_dev, n_boot, n_conf, m_conf
     integer(c_int), intent(in), value :: sim_type, boot_type_
     real(c_double), intent(in) :: conf(n_conf, m_conf)
@@ -72,7 +72,6 @@ contains
     !$omp do schedule(dynamic, 25)
     do i_sim = 1, n_conf
       if (show_progress) call pgbar_incr(pgbar)
-
       if (sim_type == SINGLE) then
         outlier_rowidx = int(conf(i_sim, 1))
         outlier_colidx = int(conf(i_sim, 2))
@@ -176,9 +175,12 @@ contains
     integer(c_int) :: n_pts, n_covs, n_pred, n_obs
     real(c_double), allocatable :: betas(:), X_pred(:, :), y_pred(:)
     real(c_double), allocatable :: triangle_boot(:, :), betas_boot(:), resids_boot(:, :)
+    real(c_double), allocatable :: triangle_pred(:, :)
 
     real(c_double) :: disp, disp_boot
     real(c_double) :: lambda, mean, sd, shape, scale
+
+    real(c_double) :: resid_sim
 
     real(c_double), allocatable :: flat_resids(:)
 
@@ -196,6 +198,7 @@ contains
 
     allocate(resids_boot(n_pts, n_pts), source = 0._c_double)
     allocate(triangle_boot(n_dev, n_dev), source = 0._c_double)
+    allocate(triangle_pred(n_dev, n_dev), source = 0._c_double)
 
     allocate(X_pred(n_pred, n_covs), source = 0._c_double)
     allocate(y_pred(n_pred), source = 0._c_double)
@@ -222,6 +225,7 @@ contains
         end do
 
       else
+        triangle_boot = 0
         do i = 1, n_dev
           do j = 1, n_dev + 1 - i
             if (dist == NORMAL) then
@@ -261,29 +265,57 @@ contains
 
       y_pred = exp(matmul(X_pred, betas_boot))
 
-      do i = 1, n_pred
-        lambda = y_pred(i)
-        if (lambda > 1e7) cycle main_loop
-        y_pred(i) = rpois_par(rng, i_thread, lambda)
+      k = 1
+      do i = 2, n_dev
+        do j = n_dev + 1 - i + 1, n_dev
+          triangle_pred(i, j) = y_pred(k)
+          k = k + 1
+        end do
       end do
+
+      if (boot_type == RESID) then
+        k = 1
+        do i = 2, n_dev
+          do j = n_dev + 1 - i + 1, n_dev
+            resid_sim = flat_resids(1 + int(n_pts * runif_par(rng, i_thread)))
+            triangle_pred(i, j) = triangle_pred(i, j) + resid_sim * sqrt(triangle_pred(i, j))
+          end do
+        end do
+      else
+        do i = 1, n_pred
+          lambda = y_pred(i)
+          if (lambda > 1e7) cycle main_loop
+          y_pred(i) = rpois_par(rng, i_thread, lambda)
+        end do
+      end if
 
       reserve(i_boot) = sum(y_pred)
       i_boot = i_boot + 1
     end do main_loop
   end subroutine boot
 
-  subroutine boot_cpp(n_dev, triangle, boot_type_, opt, reserve, n_boot, seed) bind(c, name="glm_boot")
+  subroutine boot_cpp(n_dev, triangle, boot_type_, opt, n_boot, reserve, seed) bind(c, name="glm_boot")
     integer(c_int), intent(in), value :: n_boot, n_dev
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     integer(c_int), intent(in), value :: boot_type_, opt
     real(c_double), intent(out) :: reserve(n_boot)
     integer(c_int), intent(in), value :: seed
 
+    integer(c_int) :: i, j
+
     boot_type = boot_type_
     if (boot_type_ == PARAM) dist = opt
 
     allocate(mask(n_dev, n_dev))
+    allocate(resids(n_dev, n_dev), source=0._c_double)
+    allocate(triangle_fit(n_dev, n_dev), source=0._c_double)
+
     mask = .true.
+    do j = 1, n_dev
+      do i = n_dev + 2 - j, n_dev
+        mask(i, j) = .false.
+      end do
+    end do
 
     if (first_call) then
       rng = init_rng(1, seed)
@@ -293,6 +325,10 @@ contains
     i_thread = 0
 
     call boot(n_dev, triangle, n_boot, reserve)
+
+    deallocate(mask)
+    deallocate(resids)
+    deallocate(triangle_fit)
   end subroutine boot_cpp
 
   subroutine fit(triangle, betas, disp, use_mask, comp, status)
@@ -383,14 +419,6 @@ contains
       end do
     end do
 
-    call dgetrf(n_obs, n_covs, X, n_obs, IPIV, info)
-    temp = 1
-    do i = 1, n_covs
-      temp = temp * X(i, i)
-    end do
-
-    if (temp == 0) print *, raise(2)
-
     ! Initialise GLM coefficients.
     betas = spread(0._c_double, 1, n_covs)
     mu = y + 0.1
@@ -400,7 +428,7 @@ contains
     IPIV = 0
     info = 0
     diff = 1E6
-    eps = 1E-3
+    eps = 1E-5
     n_iter = 0
     status = SUCCESS
     do while (diff > eps .and. n_iter < max_iter)
@@ -415,7 +443,10 @@ contains
       lhs = matmul(W, X)
       rhs = matmul(W, z)
 
-      if (any(isnan(rhs))) print *, raise(2)
+      if (any(isnan(rhs)) .or. any(isnan(lhs))) then
+        status = FAILURE
+        return
+      end if
 
       call dgels('N', n_obs, n_covs, 1, lhs, n_obs, rhs, n_obs, work, lwork, info)
 
@@ -454,8 +485,8 @@ contains
       k = 1
       do i = 1, n_dev
         do j = 1, n_dev + 1 - i
-            triangle_fit(i, j) = y_fit(k)
-            k = k + 1
+          triangle_fit(i, j) = y_fit(k)
+          k = k + 1
         end do
       end do
 

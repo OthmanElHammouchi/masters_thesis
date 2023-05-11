@@ -1,38 +1,13 @@
 library(ggplot2)
-library(ggforce)
-library(claimsBoot)
-library(data.table)
-suppressPackageStartupMessages(library(ChainLadder))
-
-triangle <- UKMotor
-ndev <- ncol(triangle)
-
-# Single outlier
-single.res <- as.data.table(readRDS("results/glm_single.RDS"))
-factors <- unique(single.res$factor)
-boot.types <- unique(single.res$boot.type)
-
-# in mm
-width <- 418
-height <- 591
-
-mm.per.pt <- 0.3528
-width.mm <- mm.per.pt * width
-height.mm <- mm.per.pt * height
-
-theme_set(theme_bw())
+library(RColorBrewer)
+library(patchwork)
+library(latex2exp)
 
 plot.dir <- "plots"
 
-theme_update(
-  legend.position = "top",
-  axis.title = element_text(size = 8),
-  axis.text = element_text(size = 6),
-  legend.text = element_text(size = 8),
-  legend.key.size = unit(0.6, "cm"),
-  strip.text.x = element_text(size = 6)
-)
+theme_set(theme_bw())
 
+# in mm
 width <- 410
 height <- 630
 
@@ -40,136 +15,56 @@ mm.per.pt <- 0.3528
 width.mm <- mm.per.pt * width
 height.mm <- mm.per.pt * height
 
-f <- 0.75
+theme_update(
+  plot.title = element_text(hjust = 0.5, size = 10),
+  axis.title = element_text(size = 8),
+  axis.text = element_text(size = 6),
+  legend.text = element_text(size = 8),
+  legend.key.size = unit(0.6, "cm"),
+  strip.text.x = element_text(size = 6)
+)
 
-bt <- "parametric"
-opts <- unique(single.res[boot.type == bt]$opt)
-for (o in opts[!is.na(opts)]) {
-  contaminated <- single.res[
-    boot.type == bt &
-      opt == o &
-      (excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) &
-      factor == f
-  ]
+single.res <- readRDS("results/glm_single.RDS")
 
-  uncontaminated <- single.res[
-    boot.type == bt &
-      opt == o &
-      excl.rowidx == outlier.rowidx &
-      excl.colidx == outlier.colidx &
-      factor == f
-  ]
-
-  contaminated <- contaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-  uncontaminated <- uncontaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-
-  for (i_page in 1:2) {
-    p <- ggplot() +
-      geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated) +
-      geom_density(mapping = aes(reserve), uncontaminated, colour = "red") +
-      facet_wrap_paginate(
-        vars(i = factor(outlier.rowidx), j = factor(outlier.colidx)),
-        scales = "free",
-        labeller = label_wrap_gen(multi_line = FALSE),
-        ncol = 4,
-        nrow = 3,
-        page = i_page
-      ) +
-      xlab("Reserve") +
-      ylab("Density")
-
-    path <- file.path(plot.dir, paste0(paste(
-      "glm_sim_densities", bt, o, i_page, sep = "_"),
-    ".eps")
-    )
-
-    ggsave(
-      path,
-      p,
-      units = "mm",
-      height = width.mm, # landscape
-      width = height.mm
-    )
-  }
-}
-
-bt <- "residuals"
-contaminated <- single.res[
-  boot.type == bt &
-    (excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) &
-    factor == f
-]
-
-uncontaminated <- single.res[
-  boot.type == bt &
-    excl.rowidx == outlier.rowidx &
-    excl.colidx == outlier.colidx &
-    factor == f
-]
-
-contaminated <- contaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-uncontaminated <- uncontaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-
-for (i_page in 1:2) {
-
-  p <- ggplot() +
-    geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated) +
-    geom_density(mapping = aes(reserve), uncontaminated, colour = "red") +
-    facet_wrap_paginate(
-      vars(i = factor(outlier.rowidx), j = factor(outlier.colidx)),
-      scales = "free",
-      labeller = label_wrap_gen(multi_line = FALSE),
-      ncol = 4,
-      nrow = 3,
-      page = i_page
-    ) +
-    xlab("Reserve") +
-    ylab("Density")
-
-  path <- file.path(plot.dir, paste0(paste(
-    "glm_sim_densities", bt, i_page, sep = "_"),
-  ".eps")
-  )
-
-  ggsave(
-    path,
-    p,
-    units = "mm",
-    height = width.mm, # landscape
-    width = height.mm
-  )
-}
-
-####################################
-bt <- "parametric"
-f <- 1.25
-o <- "normal"
+factors <- unique(single.res$factor)
 i <- 3
 j <- 3
 
-contaminated <- single.res[
-  boot.type == bt &
-    opt == o &
-    outlier.rowidx == i &
-    outlier.colidx == j &
-    (excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) &
-    factor == f
-]
+plot.list <- list()
+for (f in factors) {
+  contaminated <- single.res[(excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) & factor == f]
+  clean <- single.res[excl.rowidx == outlier.rowidx & excl.colidx == outlier.colidx & factor == f]
 
-uncontaminated <- single.res[
-  boot.type == bt &
-    opt == o &
-    outlier.rowidx == i &
-    outlier.colidx == j &
-    excl.rowidx == outlier.rowidx &
-    excl.colidx == outlier.colidx &
-    factor == f
-]
+  n <- with(
+    contaminated[outlier.rowidx == i & outlier.colidx == j],
+    length(unique(interaction(excl.rowidx, excl.colidx))))
+  getPalette <- colorRampPalette(brewer.pal(9, "Set1"))
 
-ggplot() +
-  geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated) +
-  geom_density(mapping = aes(reserve), uncontaminated, colour = "red") +
-  xlab("Reserve") +
-  ylab("Density")
+  p <- ggplot() +
+    geom_density(
+      aes(reserve, colour = interaction(excl.rowidx, excl.colidx)),
+      contaminated[outlier.rowidx == i & outlier.colidx == j],
+      key_glyph = draw_key_path
+    ) +
+    geom_density(aes(reserve),
+      clean[outlier.rowidx == i & outlier.colidx == j],
+      colour = "black",
+      key_glyph = draw_key_path) +
+    scale_color_manual(values = getPalette(n)) +
+    ggtitle(TeX(sprintf(r"($c_\lambda$ = %3.2f)", f))) +
+    guides(colour = guide_legend(title = "Excluded point")) +
+    xlab("Reserve") +
+    ylab("Density")
 
-temp <- contaminated[, sd(reserve), by = .(excl.rowidx, excl.colidx)]
+  plot.list <- c(plot.list, list(p))
+}
+
+p <- do.call(wrap_plots, plot.list) + plot_layout(guides = "collect")
+
+ggsave(
+  file.path(plot.dir, "glm_sim_by_factor.eps"),
+  p,
+  units = "mm",
+  height = width.mm,
+  width = height.mm
+)

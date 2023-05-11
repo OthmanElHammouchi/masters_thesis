@@ -2,14 +2,11 @@ module mod_mack
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: omp_lib
-  use, intrinsic :: ieee_arithmetic
   use mod_global
   use mod_helpers
   use mod_interface
 
   implicit none
-
-  real(c_double) :: nan 
   
   ! Simulation configuration
   integer(c_int) :: boot_type, dist, resids_type
@@ -51,8 +48,6 @@ contains
 
     integer(c_int) :: status
     
-    nan = ieee_value(nan, ieee_quiet_nan)
-
     call fit(triangle, dev_facs_original, sigmas_original, use_mask=.false., compute_resids=.false.)
 
     if (first_call) then
@@ -130,7 +125,7 @@ contains
         triangle_sim = single_outlier(triangle, dev_facs_original, sigmas_original, &
           outlier_rowidx, outlier_colidx, mean_factor, sd_factor, sim_dist)
         call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask)
-
+        
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), m_conf + 1) = reserve
       end do
@@ -263,34 +258,15 @@ contains
       call fit(triangle, dev_facs, sigmas, use_mask=.false., compute_resids=.true.)
     end if
 
-    n_fails = 0
     i_boot = 1
     main_loop: do while (i_boot <= n_boot)
-      if (n_fails == 50) then ! bad triangle
-        reserve = nan
-        return
-      end if
-
       ! Simulate new parameters
-      if (boot_type == RESID) then
-        call sample_resids("boot", ln_shifts_boot, ln_means_boot, ln_sigmas_boot)
-      end if
-
+      if (boot_type == RESID) call sample_resids("boot", ln_shifts_boot, ln_means_boot, ln_sigmas_boot)
       call boot_params(triangle, dev_facs_boot, sigmas_boot, ln_shifts_boot, ln_means_boot, ln_sigmas_boot, status)
-      if (status == FAILURE) then
-        n_fails = n_fails + 1
-        cycle main_loop
-      end if
 
       ! Simulate process error
-      if (boot_type == RESID) then
-        call sample_resids("sim", ln_shifts_boot, ln_means_boot, ln_sigmas_boot)
-      end if
+      if (boot_type == RESID) call sample_resids("sim", ln_shifts_boot, ln_means_boot, ln_sigmas_boot)
       res = sim_res(triangle, dev_facs_boot, sigmas_boot, ln_shifts_boot, ln_means_boot, ln_sigmas_boot, status)
-      if (status == FAILURE) then
-        n_fails = n_fails + 1
-        cycle main_loop
-      end if
 
       reserve(i_boot) = res
       i_boot = i_boot + 1
@@ -403,20 +379,20 @@ contains
       resids(:, n_dev - 2) = 0
       n_resids = (n_dev ** 2 - n_dev) / 2 - 3
 
-      if (resids_type /= STUDENTISED) then
-        resids_mean = 0
-        do i = 1, n_dev - 1
-          do j = 1, n_dev - i
-            resids_mean = resids_mean + resids(i, j)
-          end do
-        end do
-        resids_mean = resids_mean / n_resids
-        do i = 1, n_dev - 1
-          do j = 1, n_dev - i
-            resids(i, j) = resids(i, j) - resids_mean
-          end do
-        end do
-      end if
+    !   if (resids_type /= STUDENTISED) then
+    !     resids_mean = 0
+    !     do i = 1, n_dev - 1
+    !       do j = 1, n_dev - i
+    !         resids_mean = resids_mean + resids(i, j)
+    !       end do
+    !     end do
+    !     resids_mean = resids_mean / n_resids
+    !     do i = 1, n_dev - 1
+    !       do j = 1, n_dev - i
+    !         resids(i, j) = resids(i, j) - resids_mean
+    !       end do
+    !     end do
+    !   end if
     end if
 
     deallocate(indiv_dev_facs)
@@ -500,6 +476,7 @@ contains
             if (resids_type == LOGNORMAL) then
               triangle_boot(i, j + 1) = exp(resampled_resids(i, j) * ln_sigmas(i, j) + &
                 ln_means(i, j)) - ln_shifts(i, j)
+
               triangle_boot(i, j + 1) = dev_facs(j) * triangle(i, j) + &
                 sigmas(j) * sqrt(triangle(i, j)) * triangle_boot(i, j + 1)
 
@@ -621,9 +598,11 @@ contains
           j = n_dev + i_diag + 1 - i
           if (resids_type == LOGNORMAL) then
             triangle_sim(i, j) = exp(resampled_resids(i - 1, j - 1) * ln_sigmas_sim(i - 1, j - 1) + &
-              ln_means_sim(i - 1, j - 1)) - ln_shifts_sim(i - 1, j - 1)
-            triangle_sim(i, j) = dev_facs_boot(j - 1) * triangle_sim(i, j) + &
-              sigmas_boot(j - 1) * sqrt(triangle_sim(i, j)) * triangle_sim(i, j)
+              ln_means_sim(i - 1, j - 1)) - ln_shifts_sim(i - 1, j - 1) ! triangle_sim temporarily holds value of epsilon
+
+            triangle_sim(i, j) = dev_facs_boot(j - 1) * triangle_sim(i, j - 1) + &
+              sigmas_boot(j - 1) * sqrt(triangle_sim(i, j - 1)) * triangle_sim(i, j)
+
           else
             mean = triangle_sim(i, j - 1) * dev_facs_boot(j - 1)
             sd = sigmas_boot(j - 1) * sqrt(triangle_sim(i, j - 1))

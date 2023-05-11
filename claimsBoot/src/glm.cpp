@@ -20,16 +20,21 @@ int validate_rng_(int n_samples);
 //' @export
 // [[Rcpp::export]]
 Rcpp::NumericVector glmBoot(Rcpp::NumericMatrix triangle, int n_boot,
-                            Rcpp::String boot_type, Rcpp::String opt,
+                            Rcpp::String boot_type, Rcpp::String opt = "null",
                             int seed = 42) {
   triangle = na_to_zero(triangle);
   int n_dev = triangle.cols();
 
   int boot_type_ = key[boot_type];
-  int opt_ = key[opt];
+  int opt_;
+  if (boot_type == "parametric") {
+    opt_ = key[opt];
+  } else {
+    opt_ = 0;
+  }
 
   Rcpp::NumericVector reserve(n_boot);
-  glm_boot(n_dev, triangle.begin(), boot_type_, n_boot, opt_, reserve.begin(),
+  glm_boot(n_dev, triangle.begin(), boot_type_, opt_, n_boot, reserve.begin(),
            seed);
   return (reserve);
 };

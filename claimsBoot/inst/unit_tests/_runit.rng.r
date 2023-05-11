@@ -1,3 +1,3 @@
 test.rng <- function() {
-    checkEquals(patternBreak:::validate_rng(1e3), "Success")
+    checkEquals(claimsBoot:::validate_rng(1e3), "Success")
 }

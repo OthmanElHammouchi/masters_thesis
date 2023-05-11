@@ -18,7 +18,7 @@ NULL
 #'
 #' @param triangle Incremental claims triangle
 #' @export
-glmBoot <- function(triangle, n_boot, boot_type, opt, seed = 42L) {
+glmBoot <- function(triangle, n_boot, boot_type, opt = "null", seed = 42L) {
     .Call('_claimsBoot_glmBoot', PACKAGE = 'claimsBoot', triangle, n_boot, boot_type, opt, seed)
 }
 

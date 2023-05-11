@@ -4,7 +4,7 @@
 \alias{glmBoot}
 \title{Simulate Poisson GLM reserve.}
 \usage{
-glmBoot(triangle, n_boot, boot_type, opt, seed = 42L)
+glmBoot(triangle, n_boot, boot_type, opt = "null", seed = 42L)
 }
 \arguments{
 \item{triangle}{Incremental claims triangle}

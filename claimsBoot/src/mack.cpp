@@ -86,7 +86,8 @@ Rcpp::DataFrame mackSim(Rcpp::NumericMatrix triangle, Rcpp::String sim_type,
     mack_sim(n_dev, triangle.begin(), sim_type_, boot_type_, sim_dist_, n_boot,
              n_conf, m_conf, conf.begin(), fort_res.begin(), show_progress,
              seed);
-    res_list[boot_type_ - 1] = fort_res;
+    int idx = i - boot_types.begin();
+    res_list[idx] = fort_res;
   }
   Rcpp::DataFrame res = mackPost(res_list, boot_types, sim_type);
   return (res);

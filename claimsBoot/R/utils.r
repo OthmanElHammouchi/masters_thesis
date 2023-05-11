@@ -8,7 +8,7 @@ mackConfig <- function(ndev,
   if (boot.type != "pairs") {
     conds <- c(TRUE, FALSE)
     if (boot.type == "residuals") {
-      opt <- as.double(key[c("standardised", "studentised")])
+      opt <- as.double(key[c("standardised", "studentised", "lognormal")])
     } else if (boot.type == "parametric") {
       opt <- as.double(key[c("normal", "gamma")])
     }
@@ -115,13 +115,24 @@ mackPost <- function(res.list, res.names, sim.type) {
       "cond",
       "reserve"
     )
-  } else {
+  } else if (sim.type == "calendar") {
     out.names <- c(
       "boot.type",
       "outlier.diagidx",
       "mean.factor",
       "sd.factor",
       "excl.diagidx",
+      "opt",
+      "cond",
+      "reserve"
+    )
+  } else {
+    out.names <- c(
+      "boot.type",
+      "outlier.rowidx",
+      "mean.factor",
+      "sd.factor",
+      "excl.rowidx",
       "opt",
       "cond",
       "reserve"
@@ -289,12 +300,21 @@ glmPost <- function(res.list, res.names, sim.type) {
       "opt",
       "reserve"
     )
-  } else {
+  } else if (sim.type == "calendar") {
     out.names <- c(
       "boot.type",
       "outlier.diagidx",
       "factor",
       "excl.diagidx",
+      "opt",
+      "reserve"
+    )
+  } else {
+    out.names <- c(
+      "boot.type",
+      "outlier.rowidx",
+      "factor",
+      "excl.rowidx",
       "opt",
       "reserve"
     )

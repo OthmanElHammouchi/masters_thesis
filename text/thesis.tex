@@ -198,9 +198,9 @@ By refitting the model to this new pseudo-data, we then obtain bootstrapped regr
 
 An alternative approach, which is fully nonparametric, is to resample the pairs $(\bm{\mathrm{x}_i}, Y_i)$ themselves (see \cites[Section 9.5]{efron:intro}[Algorithm 6.2]{davison}), which corresponds to approximating the multivariate distribution of $(X_1, \dots, X_n, Y)$ by the empirical distribution of the data. This has the significant benefit of parsimony, making no other assumption beside the i.i.d.-ness of the sample. The model is then fitted to the bootstrap samples $(\bm{\mathrm{x}_1}^{(b)}, Y^{(b)}_1), \dots, (\bm{\mathrm{x}_n}^{(b)}, Y^{(b)}_n)$ to produce pseudo-realisations $\widehat{\bm{\beta}}^{(b)}$ of the regression parameter estimator.
 
-For the parametric case, we have to make an additional assumption about the distribution of $\epsilon$, the classical choice being the Gaussian one. 
+For the parametric case, we have to make an additional assumption about the distribution of $\epsilon$, the classical choice being the Gaussian one.
 
-We then  to fit \cref{eq:linear-model}, which gives us estimates $\widehat{\beta}$ for the regression parameters. 
+We then  to fit \cref{eq:linear-model}, which gives us estimates $\widehat{\beta}$ for the regression parameters.
 
 With the help of a random number generator, we then produce bootstrap responses $Y^{(b)}_1, \dots, Y^{(b)}_n$ by drawing from the estimated distribution $\mathcal{N}(\bm{\mathrm{x}}^T \widehat{\bm{\beta}}, \widehat{\sigma}^2)$, and fit the model to this new data to obtain bootstrap samples $\widehat{\bm{\beta}}^{(b)}$ of the regression parameters.
 
@@ -1668,15 +1668,15 @@ Again, similar algorithms can be used for perturbed origin or calendar periods.
 
 \section{Setup}
 
-We are now ready to discuss the general setup of the simulation. Using \cref{alg:pert-mack-triangle,alg:pert-odp-triangle}, we generate claims triangles which perfectly satisfy the assumptions of \modelref{model:mack} or \modelref{model:odp} except for a selected number of points. In particular, we consider the three cases of 
+We are now ready to discuss the general setup of the simulation. Using \cref{alg:pert-mack-triangle,alg:pert-odp-triangle}, we generate claims triangles which perfectly satisfy the assumptions of \modelref{model:mack} or \modelref{model:odp} except for a selected number of points. In particular, we consider the three cases of
 \begin{inparaenum}[(i)]
-\item a single perturbed observation
-\item a perturbed calendar period and
-\item a perturbed origin period.
+  \item a single perturbed observation
+  \item a perturbed calendar period and
+  \item a perturbed origin period.
 \end{inparaenum}
 In each instance, we carry out one of the bootstrap procedures outlined in \cref{chapter:mack,chapter:poisson} while excluding a subset of observations of the same type as the contaminated one, and then compare the resulting predictive distributions. Our hope is that we can detect a significant difference between the predictive distribution obtained when excluding the right subset and the ones where a different subset has been removed. This would then suggest a way of detecting irregularities in new triangles: compare for every point, calendar period or origin period the predictive bootstrap distribution obtained with and without this point; if a significant difference can be detected, then this subset constitutes a deviation from the model.
 
-The way in which observations can be excluded when carrying out the bootstrap is specific to each method, and raises a number of practical issues. For the semiparametric bootstraps, the obvious way of excluding observations is to simply remove the corresponding residuals from the resampling pool. In the case of \modelref{model:mack}, this implies that the first column cannot contain contaminated points. This makes sense, as \modelref{model:mack} does not make any statements regarding the behaviour of the initial observations. While odd points in the triangle may be considered \emph{outliers} in a general sense, they do not necessarily constitute deviations from the model assumptions. To minimise the impact of this extraneous factor on the results, we have taken the approach of borrowing this initial column from the benchmark dataset in \cref{tab:uk-motor}, as explained in \cref{sec:mack-sim}. 
+The way in which observations can be excluded when carrying out the bootstrap is specific to each method, and raises a number of practical issues. For the semiparametric bootstraps, the obvious way of excluding observations is to simply remove the corresponding residuals from the resampling pool. In the case of \modelref{model:mack}, this implies that the first column cannot contain contaminated points. This makes sense, as \modelref{model:mack} does not make any statements regarding the behaviour of the initial observations. While odd points in the triangle may be considered \emph{outliers} in a general sense, they do not necessarily constitute deviations from the model assumptions. To minimise the impact of this extraneous factor on the results, we have taken the approach of borrowing this initial column from the benchmark dataset in \cref{tab:uk-motor}, as explained in \cref{sec:mack-sim}.
 
 For the parametric bootstrap, is is not as clear how we should go about excluding certain points. Obviously, our goal is to nullify the impact of these observations on the bootstrap result, which suggests removing them from the initial fitting process when obtaining the parametric model used to simulate new pseudo-data. We have to be careful here, however, as this can sometimes lead to situations where the model cannot be fit at all. In particular, for \modelref{model:mack}, we cannot exclude the upper right corner point, because we cannot estimate the final development factor otherwise. The approach outlined here is therefore not suitable to detecting deviations for this point. This is no great loss, however: the final development year requires special attention in any case, as it is very tied up with issues of tail factors and extrapolation. For \modelref{model:poisson}, the restriction is even more stringent; here, we cannot exclude the lower left corner either, because the resulting model would have no parameter corresponding to the final origin period, and consequently cannot be used for projection.
 
@@ -1692,6 +1692,7 @@ For a single contaminated point, we observe poor performance of the conditional 
 
 \newgeometry{bottom=0cm}
 
+%% single
 % residuals cond standardised
 \begin{landscape}
   \begin{figure}
@@ -1812,13 +1813,16 @@ For a single contaminated point, we observe poor performance of the conditional 
   \end{figure}
 \end{landscape}
 
+%% calendar
+
+%% origin
 \restoregeometry
 
 \subsection{Overdispersed Poisson GLM}
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer in libero porttitor, hendrerit est a, accumsan nunc. Nulla fringilla dolor eu odio sollicitudin, id convallis enim scelerisque. Nulla facilisi. Nulla nibh nibh, consectetur ut pulvinar ac, euismod in metus. Phasellus rutrum eleifend interdum. Etiam pellentesque venenatis lacus, et venenatis odio maximus sed. Pellentesque luctus magna est, sit amet rhoncus ligula fermentum nec. Proin euismod lacus vitae mi feugiat scelerisque.
 
-Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum elit eget erat mattis, sed elementum nunc vestibulum. Nulla non odio ut est ultricies condimentum eget pellentesque nisi. Fusce facilisis sodales porttitor. Nulla tincidunt tempus velit ut mollis. Nam id erat pretium, sagittis ante nec, tristique est. Duis dignissim lacinia tortor fringilla dapibus. Sed eget ipsum eu risus dictum commodo. Phasellus in leo in urna pulvinar faucibus vitae sit amet ante. Vestibulum dictum nulla ac metus vestibulum hendrerit. Aliquam nunc eros, hendrerit sit amet mi rutrum, tristique elementum ex. Aenean ut commodo lorem. Proin ultrices elit est. Etiam sit amet vehicula tellus, eu porttitor dolor. Donec bibendum ipsum non imperdiet posuere. 
+Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum elit eget erat mattis, sed elementum nunc vestibulum. Nulla non odio ut est ultricies condimentum eget pellentesque nisi. Fusce facilisis sodales porttitor. Nulla tincidunt tempus velit ut mollis. Nam id erat pretium, sagittis ante nec, tristique est. Duis dignissim lacinia tortor fringilla dapibus. Sed eget ipsum eu risus dictum commodo. Phasellus in leo in urna pulvinar faucibus vitae sit amet ante. Vestibulum dictum nulla ac metus vestibulum hendrerit. Aliquam nunc eros, hendrerit sit amet mi rutrum, tristique elementum ex. Aenean ut commodo lorem. Proin ultrices elit est. Etiam sit amet vehicula tellus, eu porttitor dolor. Donec bibendum ipsum non imperdiet posuere.
 
 \newgeometry{bottom=0cm}
 
@@ -1827,7 +1831,7 @@ Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum e
 %   \begin{figure}
 %     \centering
 %     \includegraphics{glm_sim_densities_1}
-%     \caption{ODP model simulation results for the semiparametric bootstrap, $c_\mu = c_\sigma = 0.75$}
+%     \caption{ODP model simulation results for the semiparametric bootstrap, $c_\lambda = 0.75$}
 %     \label{fig:glm-sim-semiparam}
 %   \end{figure}
 % \end{landscape}
@@ -1838,7 +1842,7 @@ Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum e
 %     \captionsetup{list=off,format=cont}
 %     \centering
 %     \includegraphics{glm_sim_densities_2}
-%     \caption{ODP model simulation results for the semiparametric bootstrap, $c_\mu = c_\sigma = 0.75$}
+%     \caption{ODP model simulation results for the semiparametric bootstrap, $c_\lambda = 0.75$}
 %   \end{figure}
 % \end{landscape}
 
@@ -1847,8 +1851,8 @@ Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum e
   \begin{figure}
     \centering
     \includegraphics{glm_sim_densities_parametric_normal_1}
-    \caption{ODP model simulation results for the parametric bootstrap with normal, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:fig:glm-sim-param-norm}
+    \caption{ODP model simulation results for the parametric bootstrap with normal, $c_\lambda = 0.75$}
+    \label{fig:glm-sim-param-norm}
   \end{figure}
 \end{landscape}
 
@@ -1858,7 +1862,7 @@ Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum e
     \captionsetup{list=off,format=cont}
     \centering
     \includegraphics{glm_sim_densities_parametric_normal_2}
-    \caption{ODP model simulation results for the parametric bootstrap with normal, $c_\mu = c_\sigma = 0.75$}
+    \caption{ODP model simulation results for the parametric bootstrap with normal, $c_\lambda = 0.75$}
   \end{figure}
 \end{landscape}
 
@@ -1867,8 +1871,8 @@ Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum e
   \begin{figure}
     \centering
     \includegraphics{glm_sim_densities_parametric_poisson_1}
-    \caption{ODP model simulation results for the parametric bootstrap with Poisson, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:fig:glm-sim-param-pois}
+    \caption{ODP model simulation results for the parametric bootstrap with Poisson, $c_\lambda = 0.75$}
+    \label{fig:glm-sim-param-pois}
   \end{figure}
 \end{landscape}
 
@@ -1878,7 +1882,7 @@ Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum e
     \captionsetup{list=off,format=cont}
     \centering
     \includegraphics{glm_sim_densities_parametric_poisson_2}
-    \caption{ODP model simulation results for the parametric bootstrap with Poisson, $c_\mu = c_\sigma = 0.75$}
+    \caption{ODP model simulation results for the parametric bootstrap with Poisson, $c_\lambda = 0.75$}
   \end{figure}
 \end{landscape}
 
@@ -1887,8 +1891,8 @@ Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum e
   \begin{figure}
     \centering
     \includegraphics{glm_sim_densities_residuals_1}
-    \caption{ODP model simulation results for the semiparametric bootstrap, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:fig:glm-sim-semiparam}
+    \caption{ODP model simulation results for the semiparametric bootstrap, $c_\lambda = 0.75$}
+    \label{fig:glm-sim-semiparam}
   \end{figure}
 \end{landscape}
 
@@ -1898,7 +1902,17 @@ Ut posuere ultricies quam, et finibus libero tincidunt non. Nullam condimentum e
     \captionsetup{list=off,format=cont}
     \centering
     \includegraphics{glm_sim_densities_residuals_2}
-    \caption{ODP model simulation results for the semiparametric bootstrap, $c_\mu = c_\sigma = 0.75$}
+    \caption{ODP model simulation results for the semiparametric bootstrap, $c_\lambda = 0.75$}
+  \end{figure}
+\end{landscape}
+
+% different factors
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{glm_sim_by_factor}
+    \caption{ODP model simulation results for $i = j = 3$ and different values of $c_\lambda$. The predictive distribution based on the cleaned data is shown black.}
+    \label{fig:glm-sim-by-factor}
   \end{figure}
 \end{landscape}
 

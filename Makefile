@@ -50,4 +50,4 @@ shiny:
 	R -e 'shiny::runApp("scripts/shiny.r")'
 
 test:
-	R -e 'source("patternBreak/tests/run_tests.r")'
+	R -e 'source("claimsBoot/tests/run_tests.r")'

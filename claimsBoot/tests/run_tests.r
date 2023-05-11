@@ -1,9 +1,9 @@
 if (require("RUnit", quietly = TRUE)) {
-    require("patternBreak")
-    test.dir <- system.file("unit_tests", package = "patternBreak")
+    require("claimsBoot")
+    test.dir <- system.file("unit_tests", package = "claimsBoot")
     test.triangle <- ChainLadder::UKMotor
 
-    testsuite <- defineTestSuite("patternBreak",
+    testsuite <- defineTestSuite("claimsBoot",
         dirs = test.dir,
         testFileRegexp = "^runit.+\\.r",
         testFuncRegexp = "^test.+",

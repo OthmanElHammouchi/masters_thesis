@@ -14,9 +14,8 @@ inline const int RESID = 2;
 inline const int PAIRS = 3;
 
 inline const int STANDARDISED = 1;
-inline const int MODIFIED = 2;
-inline const int STUDENTISED = 3;
-inline const int LOGNORMAL = 4;
+inline const int STUDENTISED = 2;
+inline const int LOGNORMAL = 3;
 
 inline const int SINGLE = 1;
 inline const int CALENDAR = 2;
@@ -30,7 +29,6 @@ inline Rcpp::List key = Rcpp::List::create(
   Rcpp::Named("residuals") = RESID,
   Rcpp::Named("pairs") = PAIRS,
   Rcpp::Named("standardised") = STANDARDISED,
-  Rcpp::Named("modified") = MODIFIED,
   Rcpp::Named("studentised") = STUDENTISED,
   Rcpp::Named("log-normal") = LOGNORMAL,
   Rcpp::Named("single") = SINGLE,
