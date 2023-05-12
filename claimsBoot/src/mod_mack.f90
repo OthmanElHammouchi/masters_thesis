@@ -7,7 +7,7 @@ module mod_mack
   use mod_interface
 
   implicit none
-  
+
   ! Simulation configuration
   integer(c_int) :: boot_type, dist, resids_type
   logical(c_bool) :: cond
@@ -47,7 +47,7 @@ contains
     type(c_ptr) :: pgbar
 
     integer(c_int) :: status
-    
+
     call fit(triangle, dev_facs_original, sigmas_original, use_mask=.false., compute_resids=.false.)
 
     if (first_call) then
@@ -119,13 +119,16 @@ contains
         if (boot_type == PARAM) obs_mask(1, n_dev) = .true.
 
         resids_mask = obs_mask(1:(n_dev - 1), 2:n_dev)
-        resids_mask(:, n_dev - 1) = .false.
-        resids_mask(:, n_dev - 2) = .false.
+        if (resids_type /= LOGNORMAL) then
+          resids_mask(:, n_dev - 1) = .false.
+          resids_mask(:, n_dev - 2) = .false.
+        end if
 
         triangle_sim = single_outlier(triangle, dev_facs_original, sigmas_original, &
           outlier_rowidx, outlier_colidx, mean_factor, sd_factor, sim_dist)
+        if (any(triangle_sim < 0)) print *, raise(2)
         call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask)
-        
+
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), m_conf + 1) = reserve
       end do
@@ -241,7 +244,7 @@ contains
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     logical(c_bool), intent(in) :: mask(:, :)
     real(c_double), intent(inout) :: reserve(n_boot)
-    
+
     real(c_double) :: res
 
     integer(c_int) :: i_boot, n_resids, n_excl_resids, n_fails
@@ -375,24 +378,27 @@ contains
         end do
       end select
 
-      resids(1, n_dev - 1) = 0
-      resids(:, n_dev - 2) = 0
+      if (resids_type /= LOGNORMAL) then
+        resids(1, n_dev - 1) = 0
+        resids(:, n_dev - 2) = 0
+      end if
+      
       n_resids = (n_dev ** 2 - n_dev) / 2 - 3
 
-    !   if (resids_type /= STUDENTISED) then
-    !     resids_mean = 0
-    !     do i = 1, n_dev - 1
-    !       do j = 1, n_dev - i
-    !         resids_mean = resids_mean + resids(i, j)
-    !       end do
-    !     end do
-    !     resids_mean = resids_mean / n_resids
-    !     do i = 1, n_dev - 1
-    !       do j = 1, n_dev - i
-    !         resids(i, j) = resids(i, j) - resids_mean
-    !       end do
-    !     end do
-    !   end if
+      !   if (resids_type /= STUDENTISED) then
+      !     resids_mean = 0
+      !     do i = 1, n_dev - 1
+      !       do j = 1, n_dev - i
+      !         resids_mean = resids_mean + resids(i, j)
+      !       end do
+      !     end do
+      !     resids_mean = resids_mean / n_resids
+      !     do i = 1, n_dev - 1
+      !       do j = 1, n_dev - i
+      !         resids(i, j) = resids(i, j) - resids_mean
+      !       end do
+      !     end do
+      !   end if
     end if
 
     deallocate(indiv_dev_facs)
@@ -437,7 +443,12 @@ contains
             else if (dist == GAMMA) then
               shape = (dev_facs(j - 1)**2 * triangle(i, j - 1)) / sigmas(j - 1) **2
               scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
+              if (shape < 0 .or. scale < 0) print *, raise(2)
               triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
+              if (triangle_boot(i, j) <= 0) then
+                status = FAILURE
+                return
+              end if
             end if
           end do
         end do
@@ -459,7 +470,12 @@ contains
             else if (dist == GAMMA) then
               shape = (dev_facs(j - 1)**2 * triangle_boot(i, j - 1)) / sigmas(j - 1) **2
               scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
+              if (shape < 0 .or. scale < 0) print *, raise(2)
               triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
+              if (triangle_boot(i, j) <= 0) then
+                status = FAILURE
+                return
+              end if
             end if
           end do
         end do
@@ -587,7 +603,12 @@ contains
             j = n_dev + i_diag + 1 - i
             shape = (dev_facs_boot(j - 1)**2 * triangle_sim(i, j - 1)) / sigmas_boot(j - 1) **2
             scale = sigmas_boot(j - 1) ** 2 / dev_facs_boot(j - 1)
+            if (shape < 0 .or. scale < 0) print *, raise(2)
             triangle_sim(i, j) = rgamma_par(rng, i_thread, shape, scale)
+            if (triangle_sim(i, j) <= 0) then
+              status = FAILURE
+              return
+            end if
           end do
         end do
       end if
@@ -740,8 +761,9 @@ contains
     real(c_double), allocatable:: single_outlier(:, :)
     real(c_double) :: shape, scale, mean, sd
     integer(c_int) :: n_dev, i, j
+    logical :: negative
 
-    if (mean_factor == 1) then
+    if (mean_factor == 1 .and. sd_factor == 1) then
       single_outlier = triangle
       return
     end if
@@ -751,34 +773,39 @@ contains
     single_outlier(:, 1) = triangle(:, 1)
 
     if (sim_dist == NORMAL) then
-      do j = 2, n_dev
-        do i = 1, n_dev + 1 - j
-          if (i == outlier_rowidx) cycle
-          mean = dev_facs(j - 1) * single_outlier(i, j - 1)
-          sd = sigmas(j - 1) * sqrt(single_outlier(i, j - 1))
-          single_outlier(i, j) = rnorm_par(rng, i_thread, mean, sd)
+      negative = .true.
+      do while (negative)
+        do j = 2, n_dev
+          do i = 1, n_dev + 1 - j
+            if (i == outlier_rowidx) cycle
+            mean = dev_facs(j - 1) * single_outlier(i, j - 1)
+            sd = sigmas(j - 1) * sqrt(single_outlier(i, j - 1))
+            single_outlier(i, j) = rnorm_par(rng, i_thread, mean, sd)
+          end do
         end do
+
+        if (outlier_colidx > 2) then
+          do j = 2, outlier_colidx - 1
+            mean = dev_facs(j - 1) * single_outlier(outlier_rowidx, j - 1)
+            sd = sigmas(j - 1) * sqrt(single_outlier(outlier_rowidx, j - 1))
+            single_outlier(outlier_rowidx, j) = rnorm_par(rng, i_thread, mean, sd)
+          end do
+        end if
+
+        mean = mean_factor * dev_facs(outlier_colidx - 1) * single_outlier(outlier_rowidx, outlier_colidx - 1)
+        sd = sd_factor * sigmas(outlier_colidx - 1) * sqrt(single_outlier(outlier_rowidx, outlier_colidx - 1))
+        single_outlier(outlier_rowidx, outlier_colidx) = rnorm_par(rng, i_thread, mean, sd)
+
+        if (outlier_colidx < n_dev) then
+          do j = outlier_colidx + 1, n_dev + 1 - outlier_rowidx
+            mean = dev_facs(j - 1) * single_outlier(outlier_rowidx, j - 1)
+            sd = sigmas(j - 1) * sqrt(single_outlier(outlier_rowidx, j - 1))
+            single_outlier(outlier_rowidx, j) = rnorm_par(rng, i_thread, mean, sd)
+          end do
+        end if
+
+        if (all(single_outlier >= 0)) negative = .false.
       end do
-
-      if (outlier_colidx > 2) then
-        do j = 2, outlier_colidx - 1
-          mean = dev_facs(j - 1) * single_outlier(outlier_rowidx, j - 1)
-          sd = sigmas(j - 1) * sqrt(single_outlier(outlier_rowidx, j - 1))
-          single_outlier(outlier_rowidx, j) = rnorm_par(rng, i_thread, mean, sd)
-        end do
-      end if
-
-      mean = mean_factor * dev_facs(outlier_colidx - 1) * single_outlier(outlier_rowidx, outlier_colidx - 1)
-      sd = sd_factor * sigmas(outlier_colidx - 1) * sqrt(single_outlier(outlier_rowidx, outlier_colidx - 1))
-      single_outlier(outlier_rowidx, outlier_colidx) = rnorm_par(rng, i_thread, mean, sd)
-
-      if (outlier_colidx < n_dev) then
-        do j = outlier_colidx + 1, n_dev + 1 - outlier_rowidx
-          mean = dev_facs(j - 1) * single_outlier(outlier_rowidx, j - 1)
-          sd = sigmas(j - 1) * sqrt(single_outlier(outlier_rowidx, j - 1))
-          single_outlier(outlier_rowidx, j) = rnorm_par(rng, i_thread, mean, sd)
-        end do
-      end if
 
     else if (sim_dist == GAMMA) then
       do j = 2, n_dev
@@ -786,6 +813,7 @@ contains
           if (i == outlier_rowidx) cycle
           shape = dev_facs(j - 1)**2 * single_outlier(i, j - 1) / sigmas(j - 1)**2
           scale = sigmas(j - 1)**2 / dev_facs(j - 1)
+          if (shape < 0 .or. scale < 0) print *, raise(2)
           single_outlier(i, j) = rgamma_par(rng, i_thread, shape, scale)
         end do
       end do
@@ -823,8 +851,9 @@ contains
     integer(c_int) :: i, j, n_dev, n_cols
     real(c_double), allocatable :: calendar_outlier(:, :)
     real(c_double) :: shape, scale, mean, sd
+    logical :: negative
 
-    if (mean_factor == 1) then
+    if (mean_factor == 1 .and. sd_factor == 1) then
       calendar_outlier = triangle
       return
     end if
@@ -846,13 +875,18 @@ contains
         end do
 
         if (sim_dist == NORMAL) then
-          mean = mean_factor * dev_facs(n_cols - 1) * calendar_outlier(i, n_cols - 1)
-          sd = sd_factor * sigmas(n_cols - 1) * sqrt(calendar_outlier(i, n_cols - 1))
-          calendar_outlier(i, n_cols) = rnorm_par(rng, i_thread, mean, sd)
-          do j = n_cols + 1, n_dev + 1 - i
-            mean = dev_facs(j - 1) * calendar_outlier(i, j - 1)
-            sd = sigmas(j - 1) * sqrt(calendar_outlier(i, j - 1))
-            calendar_outlier(i, j) = rnorm_par(rng, i_thread, mean, sd)
+          negative = .true.
+          do while (negative)
+            mean = mean_factor * dev_facs(n_cols - 1) * calendar_outlier(i, n_cols - 1)
+            sd = sd_factor * sigmas(n_cols - 1) * sqrt(calendar_outlier(i, n_cols - 1))
+            calendar_outlier(i, n_cols) = rnorm_par(rng, i_thread, mean, sd)
+            do j = n_cols + 1, n_dev + 1 - i
+              mean = dev_facs(j - 1) * calendar_outlier(i, j - 1)
+              sd = sigmas(j - 1) * sqrt(calendar_outlier(i, j - 1))
+              calendar_outlier(i, j) = rnorm_par(rng, i_thread, mean, sd)
+            end do
+            
+            if (all(calendar_outlier >= 0)) negative = .false.
           end do
 
         else if (sim_dist == GAMMA) then
@@ -879,8 +913,9 @@ contains
     real(c_double) :: shape, scale, mean, sd
     real(c_double), allocatable:: origin_outlier(:, :)
     integer(c_int) :: n_dev, j
+    logical :: negative
 
-    if (mean_factor == 1) then
+    if (mean_factor == 1 .and. sd_factor == 1) then
       origin_outlier = triangle
       return
     end if
@@ -890,9 +925,14 @@ contains
 
     do j = 2, n_dev + 1 - outlier_rowidx
       if (sim_dist == NORMAL) then
+        negative = .true.
+        do while (negative)
         mean = mean_factor * dev_facs(j - 1) * origin_outlier(outlier_rowidx, j - 1)
         sd = sd_factor * sigmas(j - 1) * sqrt(origin_outlier(outlier_rowidx, j - 1))
         origin_outlier(outlier_rowidx, j) = rnorm_par(rng, i_thread, mean, sd)
+
+        if (all(origin_outlier >= 0)) negative = .false.
+        end do
 
       else if (sim_dist == GAMMA) then
         shape = (mean_factor * dev_facs(j - 1))**2 * origin_outlier(outlier_rowidx, j - 1) / (sd_factor * sigmas(j - 1))**2

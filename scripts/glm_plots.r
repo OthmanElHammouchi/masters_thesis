@@ -32,8 +32,16 @@ j <- 3
 
 plot.list <- list()
 for (f in factors) {
-  contaminated <- single.res[(excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) & factor == f]
-  clean <- single.res[excl.rowidx == outlier.rowidx & excl.colidx == outlier.colidx & factor == f]
+  contaminated <- single.res[
+    (excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) &
+      factor == f &
+      boot.type == "parametric"
+  ]
+
+  clean <- single.res[excl.rowidx == outlier.rowidx & excl.colidx == outlier.colidx &
+    factor == f &
+    boot.type == "parametric"
+  ]
 
   n <- with(
     contaminated[outlier.rowidx == i & outlier.colidx == j],

@@ -22,8 +22,8 @@ contains
       n_threads = min(omp_get_thread_limit(), n_threads)
       n_threads = min(omp_get_max_threads(), n_threads)
     end if
-    ! call omp_set_num_threads(1)
-    ! n_threads = 1
+    call omp_set_num_threads(1)
+    n_threads = 1
   end function init_omp
 
   

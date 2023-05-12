@@ -10,7 +10,7 @@ mackConfig <- function(ndev,
     if (boot.type == "residuals") {
       opt <- as.double(key[c("standardised", "studentised", "lognormal")])
     } else if (boot.type == "parametric") {
-      opt <- as.double(key[c("normal", "gamma")])
+      opt <- as.double(key[c("gamma", "normal")])
     }
   }
 
