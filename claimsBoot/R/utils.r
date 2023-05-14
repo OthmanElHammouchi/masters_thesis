@@ -94,12 +94,14 @@ mackConfig <- function(ndev,
       config <- rbind(df1, df2)
 
     } else {
+      outlier.points <- outlier.points[!(outlier.points[, 1] == 1 & outlier.points[, 2] == 7), ]
+      excl.points <- outlier.points
       idxs <- do.call(expand.grid,
         list(
-          seq_len(npts),
+          seq_len(nrow(outlier.points)),
           seq_along(mean.factors),
           seq_along(sd.factors),
-          seq_len(npts)
+          seq_len(nrow(excl.points))
       ))
       config <- cbind(
         outlier.points[idxs[, 1], ],

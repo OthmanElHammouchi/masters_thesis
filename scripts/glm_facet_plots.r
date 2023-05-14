@@ -28,118 +28,214 @@ theme_update(
   strip.text.x = element_text(size = 6)
 )
 
-## Single outlier:
+### Single outlier:
 ###############################################################################
 single.res <- as.data.table(readRDS("results/glm_single.RDS"))
-factors <- unique(single.res$factor)
-boot.types <- unique(single.res$boot.type)
 
+## Parametric
+# normal
+bt <- "parametric"
+o <- "normal"
 f <- 2
 
-bt <- "parametric"
-opts <- unique(single.res[boot.type == bt]$opt)
-for (o in opts[!is.na(opts)]) {
-  contaminated <- single.res[
-    boot.type == bt &
-      opt == o &
-      (excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) &
-      factor == f
-  ]
+subset.idxs <- data.frame(outlier.rowidx = c(1, 2, 4, 5), outlier.colidx = c(2, 3, 2, 3))
+subset <- do.call(rbind, lapply(seq_len(nrow(subset.idxs)), function(i) {
+  single.res[outlier.rowidx == subset.idxs[i, 1] & outlier.colidx == subset.idxs[i, 2]]
+}))
 
-  uncontaminated <- single.res[
-    boot.type == bt &
-      opt == o &
-      excl.rowidx == outlier.rowidx &
-      excl.colidx == outlier.colidx &
-      factor == f
-  ]
-
-  contaminated <- contaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-  uncontaminated <- uncontaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-
-  for (i_page in 1:2) {
-    p <- ggplot() +
-      geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated) +
-      geom_density(mapping = aes(reserve), uncontaminated, colour = "red") +
-      facet_wrap_paginate(
-        vars(i = factor(outlier.rowidx), j = factor(outlier.colidx)),
-        scales = "free",
-        labeller = label_wrap_gen(multi_line = FALSE),
-        ncol = 4,
-        nrow = 3,
-        page = i_page
-      ) +
-      xlab("Reserve") +
-      ylab("Density")
-
-    path <- file.path(plot.dir, paste0(paste(
-      "glm_single_densities", bt, o, i_page, sep = "_"),
-    ".eps")
-    )
-
-    ggsave(
-      path,
-      p,
-      units = "mm",
-      height = width.mm, # landscape
-      width = height.mm
-    )
-  }
-}
-
-bt <- "residuals"
-contaminated <- single.res[
+contaminated <- subset[
   boot.type == bt &
+    opt == o &
     (excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) &
     factor == f
 ]
 
-uncontaminated <- single.res[
+cleaned <- subset[
+  boot.type == bt &
+    opt == o &
+    excl.rowidx == outlier.rowidx &
+    excl.colidx == outlier.colidx &
+    factor == f
+]
+
+p <- ggplot() +
+  geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated) +
+  geom_density(mapping = aes(reserve), cleaned, colour = "red") +
+  facet_wrap(
+    vars(factor(outlier.rowidx), factor(outlier.colidx)),
+    scales = "free",
+    labeller = label_wrap_gen(multi_line = FALSE),
+    ncol = 2,
+    nrow = 2
+  ) +
+  xlab("Reserve") +
+  ylab("Density")
+
+path <- file.path(plot.dir, paste0(paste(
+  "glm_single_densities", bt, o, sep = "_"),
+".eps")
+)
+
+ggsave(
+  path,
+  p,
+  units = "mm",
+  height = width.mm, # landscape
+  width = height.mm
+)
+
+# gamma
+bt <- "parametric"
+o <- "gamma"
+f <- 2
+
+subset.idxs <- data.frame(outlier.rowidx = c(1, 2, 4, 5), outlier.colidx = c(2, 3, 2, 3))
+subset <- do.call(rbind, lapply(seq_len(nrow(subset.idxs)), function(i) {
+  single.res[outlier.rowidx == subset.idxs[i, 1] & outlier.colidx == subset.idxs[i, 2]]
+}))
+
+contaminated <- subset[
+  boot.type == bt &
+    opt == o &
+    (excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) &
+    factor == f
+]
+
+cleaned <- subset[
+  boot.type == bt &
+    opt == o &
+    excl.rowidx == outlier.rowidx &
+    excl.colidx == outlier.colidx &
+    factor == f
+]
+
+p <- ggplot() +
+  geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated) +
+  geom_density(mapping = aes(reserve), cleaned, colour = "red") +
+  facet_wrap(
+    vars(factor(outlier.rowidx), factor(outlier.colidx)),
+    scales = "free",
+    labeller = label_wrap_gen(multi_line = FALSE),
+    ncol = 2,
+    nrow = 2
+  ) +
+  xlab("Reserve") +
+  ylab("Density")
+
+path <- file.path(plot.dir, paste0(paste(
+  "glm_single_densities", bt, o, sep = "_"),
+".eps")
+)
+
+ggsave(
+  path,
+  p,
+  units = "mm",
+  height = width.mm, # landscape
+  width = height.mm
+)
+
+# poisson
+bt <- "parametric"
+o <- "poisson"
+f <- 2
+
+subset.idxs <- data.frame(outlier.rowidx = c(1, 2, 4, 5), outlier.colidx = c(2, 3, 2, 3))
+subset <- do.call(rbind, lapply(seq_len(nrow(subset.idxs)), function(i) {
+  single.res[outlier.rowidx == subset.idxs[i, 1] & outlier.colidx == subset.idxs[i, 2]]
+}))
+
+contaminated <- subset[
+  boot.type == bt &
+    opt == o &
+    (excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) &
+    factor == f
+]
+
+cleaned <- subset[
+  boot.type == bt &
+    opt == o &
+    excl.rowidx == outlier.rowidx &
+    excl.colidx == outlier.colidx &
+    factor == f
+]
+
+p <- ggplot() +
+  geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated) +
+  geom_density(mapping = aes(reserve), cleaned, colour = "red") +
+  facet_wrap(
+    vars(factor(outlier.rowidx), factor(outlier.colidx)),
+    scales = "free",
+    labeller = label_wrap_gen(multi_line = FALSE),
+    ncol = 2,
+    nrow = 2
+  ) +
+  xlab("Reserve") +
+  ylab("Density")
+
+path <- file.path(plot.dir, paste0(paste(
+  "glm_single_densities", bt, o, sep = "_"),
+".eps")
+)
+
+ggsave(
+  path,
+  p,
+  units = "mm",
+  height = width.mm, # landscape
+  width = height.mm
+)
+
+## Residuals
+bt <- "residuals"
+f <- 2
+
+subset.idxs <- data.frame(outlier.rowidx = c(1, 2, 4, 5), outlier.colidx = c(2, 3, 2, 3))
+subset <- do.call(rbind, lapply(seq_len(nrow(subset.idxs)), function(i) {
+  single.res[outlier.rowidx == subset.idxs[i, 1] & outlier.colidx == subset.idxs[i, 2]]
+}))
+
+contaminated <- subset[
+  boot.type == bt &
+    (excl.rowidx != outlier.rowidx | excl.colidx != outlier.colidx) &
+    factor == f
+]
+cleaned <- subset[
   boot.type == bt &
     excl.rowidx == outlier.rowidx &
     excl.colidx == outlier.colidx &
     factor == f
 ]
 
-contaminated <- contaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-uncontaminated <- uncontaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
+p <- ggplot() +
+  geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated) +
+  geom_density(mapping = aes(reserve), cleaned, colour = "red") +
+  facet_wrap_paginate(
+    vars(factor(outlier.rowidx), factor(outlier.colidx)),
+    scales = "free",
+    labeller = label_wrap_gen(multi_line = FALSE),
+    ncol = 2,
+    nrow = 2
+  ) +
+  xlab("Reserve") +
+  ylab("Density")
 
-for (i_page in 1:2) {
+path <- file.path(plot.dir, paste0(paste(
+  "glm_single_densities", bt, sep = "_"),
+".eps")
+)
 
-  p <- ggplot() +
-    geom_density(aes(reserve, group = interaction(excl.colidx, excl.rowidx)), contaminated) +
-    geom_density(mapping = aes(reserve), uncontaminated, colour = "red") +
-    facet_wrap_paginate(
-      vars(i = factor(outlier.rowidx), j = factor(outlier.colidx)),
-      scales = "free",
-      labeller = label_wrap_gen(multi_line = FALSE),
-      ncol = 4,
-      nrow = 3,
-      page = i_page
-    ) +
-    xlab("Reserve") +
-    ylab("Density")
-
-  path <- file.path(plot.dir, paste0(paste(
-    "glm_single_densities", bt, i_page, sep = "_"),
-  ".eps")
-  )
-
-  ggsave(
-    path,
-    p,
-    units = "mm",
-    height = width.mm, # landscape
-    width = height.mm
-  )
-}
+ggsave(
+  path,
+  p,
+  units = "mm",
+  height = width.mm, # landscape
+  width = height.mm
+)
 
 ## Calendar outlier:
 ###############################################################################
 calendar.res <- as.data.table(readRDS("results/glm_calendar.RDS"))
-factors <- unique(calendar.res$factor)
-boot.types <- unique(calendar.res$boot.type)
-
 f <- 2
 
 bt <- "parametric"
@@ -221,105 +317,6 @@ p <- ggplot() +
 
 path <- file.path(plot.dir, paste0(paste(
   "glm_calendar_densities", bt, sep = "_"),
-".eps")
-)
-
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm, # landscape
-  width = height.mm
-)
-
-## Origin outlier:
-###############################################################################
-origin.res <- as.data.table(readRDS("results/glm_origin.RDS"))
-factors <- unique(origin.res$factor)
-boot.types <- unique(origin.res$boot.type)
-
-f <- 2
-
-bt <- "parametric"
-opts <- unique(origin.res[boot.type == bt]$opt)
-for (o in opts[!is.na(opts)]) {
-  contaminated <- origin.res[
-    boot.type == bt &
-      opt == o &
-      excl.rowidx != outlier.rowidx &
-      factor == f
-  ]
-
-  uncontaminated <- origin.res[
-    boot.type == bt &
-      opt == o &
-      excl.rowidx == outlier.rowidx &
-      factor == f
-  ]
-
-  contaminated <- contaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-  uncontaminated <- uncontaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-
-
-  p <- ggplot() +
-    geom_density(aes(reserve, group = factor(excl.rowidx)), contaminated) +
-    geom_density(mapping = aes(reserve), uncontaminated, colour = "red") +
-    facet_wrap(
-      vars(factor(outlier.rowidx)),
-      scales = "free",
-      labeller = label_wrap_gen(multi_line = FALSE),
-      ncol = 3,
-      nrow = 2
-    ) +
-    xlab("Reserve") +
-    ylab("Density")
-
-  path <- file.path(plot.dir, paste0(paste(
-    "glm_origin_densities", bt, o, sep = "_"),
-  ".eps")
-  )
-
-  ggsave(
-    path,
-    p,
-    units = "mm",
-    height = width.mm, # landscape
-    width = height.mm
-  )
-}
-
-
-bt <- "residuals"
-contaminated <- origin.res[
-  boot.type == bt &
-    excl.rowidx != outlier.rowidx &
-    factor == f
-]
-
-uncontaminated <- origin.res[
-  boot.type == bt &
-    excl.rowidx == outlier.rowidx &
-    factor == f
-]
-
-contaminated <- contaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-uncontaminated <- uncontaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-
-p <- ggplot() +
-  geom_density(aes(reserve, group = factor(excl.rowidx)), contaminated) +
-  geom_density(mapping = aes(reserve), uncontaminated, colour = "red") +
-  facet_wrap(
-    vars(factor(outlier.rowidx)),
-    scales = "free",
-    labeller = label_wrap_gen(multi_line = FALSE),
-    ncol = 3,
-    nrow = 2
-  ) +
-  xlab("Reserve") +
-  ylab("Density")
-
-path <- file.path(plot.dir, paste0(paste(
-  "glm_origin_densities", bt, sep = "_"),
 ".eps")
 )
 

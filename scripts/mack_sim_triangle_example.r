@@ -5,9 +5,9 @@ triangle <- UKMotor
 boot.types <- c("residuals")
 
 # Single outlier
-mean.factors <- c(100)
-sd.factors <- c(1)
-single.res <- mackSim(triangle, "single", 10, mean.factors, sd.factors, boot.types)
+# mean.factors <- c(100)
+# sd.factors <- c(1)
+# single.res <- mackSim(triangle, "single", 10, mean.factors, sd.factors, boot.types)
 
 # Example of simulated triangle from Fortran routine
 # The way we obtain it for the moment is very primitive, we just interrupt the routine
@@ -85,12 +85,13 @@ latex(triangle,
   file = "results/sim_triangle_example.tex",
   cgroup = c("Dev"),
   n.cgroup = c(ndev),
-  caption = "Example of simulated triangle where the point $(1, 2)$ has been perturbed, $c_\\mu = 100$, $c_\\sigma = 1$",
+  caption = "Simulated triangle where observation $C_{12}$ has been perturbed, with $c_\\mu = 100$ and $c_\\sigma = 1$",
   caption.loc = "bottom",
+  label = "tab:sim-triangle-example",
   booktabs = TRUE,
-  insert.top = "\\setlength{\\tabcolsep}{-2pt}",
   rowlabel.just = "r",
-  rowlabel = "Origin"
+  rowlabel = "Origin",
+  where = "!p"
 )
 
 latex(resids.standard,
@@ -99,10 +100,10 @@ latex(resids.standard,
   cgroup = c("Dev"),
   n.cgroup = c(ndev - 1),
   booktabs = TRUE,
-  insert.top = "\\setlength{\\tabcolsep}{-2pt}",
   rowlabel.just = "r",
   rowlabel = "Origin",
-  table.env = FALSE
+  table.env = FALSE,
+  where = "!p"
 )
 
 latex(resids.ln,
@@ -111,10 +112,10 @@ latex(resids.ln,
   cgroup = c("Dev"),
   n.cgroup = c(ndev - 1),
   booktabs = TRUE,
-  insert.top = "\\setlength{\\tabcolsep}{-2pt}",
   rowlabel.just = "r",
   rowlabel = "Origin",
-  table.env = FALSE
+  table.env = FALSE,
+  where = "!p"
 )
 
 latex(resids.student,
@@ -122,10 +123,11 @@ latex(resids.student,
   file = "results/resids_studentised_example.tex",
   cgroup = c("Dev"),
   n.cgroup = c(ndev - 1),
-  caption = "Studentised residuals corresponding to \\cref{fig:sim-triangle-example}",
+  caption = "Studentised residuals corresponding to the triangle in \\cref{tab:sim-triangle-example}",
   caption.loc = "bottom",
+  label = "tab:resids-studentised-example",
   booktabs = TRUE,
-  insert.top = "\\setlength{\\tabcolsep}{-2pt}",
   rowlabel.just = "r",
-  rowlabel = "Origin"
+  rowlabel = "Origin",
+  where = "!p"
 )

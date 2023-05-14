@@ -23,19 +23,23 @@
 
 \input{footnotes.tex}%
 
-\chapter{Abstract}
+\chapter{\abstractname}
+The problem of estimating the reserve needed to cover outstanding claims liabilities, and of quantifying the uncertainty of such estimates, has been the subject of much research within actuarial science. The insurance sector distinguishes itself from other model-heavy fields in the high degree of deference it accords to expert judgement. Reserving actuaries are reluctant to move away from established techniques, which are based on macro-level models that aggregate claims data over certain periods. The resulting datasets contain relatively few observations, limiting the efficacy of classical diagnostic methods, and making it difficult to verify model assumptions. We investigate the use of the statistical bootstrap to remedy this, studying how the simulatied predictive distribution of the reserve is impacted by the presence of observations which deviate from the assumptions of two major stochastic reserving models: the Mack chain ladder and the Overdispersed Poisson GLM. Our findings indicate that certain types of bootstraps are very promising for the purpose of distinguishing contaminated points from normal observations.
 
-Your abstract would go here.
+\begin{otherlanguage}{dutch}
+  \chapter{\abstractname}
+  Het schatten van de reserve die nodig is om openstaande schadeverplichtingen te dekken, evenals het kwantificeren van de onzekerheid van dergelijke schattingen, is het voorwerp van veel onderzoek binnen de actuari\"ele wetenschap. De verzekeringssector onderscheidt zich van andere domeinen waarin wiskundige modellen een belangrijke rol spelen door de hoge achting die het toekent aan het oordeel van deskundigen. Actuarissen die verantwoordelijk zijn voor het schadereserveringsproces zijn willen typisch niet afwijken van gevestigde technieken, en deze zijn gebaseerd op macro-modellen die schadegegevens aggregeren over bepaalde periodes. De datasets die men hieruit verkrijgt bevatten relatief weinig observaties, hetgeen de doeltreffendheid van klassieke diagnostische methodes beperkt en de verificatie van modelaannames beperkt. We onderzoeken het gebruik van de statistische bootstrap om deze moeilijkheid te remedi\"eren. Dit doen we door te bestuderen hoe de gesimuleerde voorspellende verdeling van de reserve be\"invloed wordt door de aanwezigheid van observaties die afwijken van de aannames van twee belangrijke stochastische schadereserveringsmodellen: de Mack chain ladder en de Overdispersed Poisson GLM. Onze bevindingen geven aan dat bepaalde types bootstrap beloftevol zijn voor het onderscheiden van gecontamineerde datapunten van gewone waarnemingen.
+\end{otherlanguage}
 
 \tableofcontents%
-
+\listoftables%
+\listoffigures%
 \input{nomenclature.tex}
-
 \printnomenclature%
 
 \chapter{Introduction} \label{intro}
 
-The most defining characteristic of the insurance industry is the inverted nature of its production cycle. In manufacturing, commerce, transport, etc., payment is usually received only upon delivery of goods or services. By contrast, insurance products are purchased long before the adverse events which they protect against have occured, if they ever do. Insurers therefore face the challenge of forecasting the amount and variability of funds needed to settle outstanding contracts, a process known as \emph{claims reserving}. The reserving actuary must rely here on historical data, which is most often presented in the form of a \emph{loss} or \emph{run-off triangle} $\mathcal{D}_I$ consisting of either cumulative or incremental amounts of some actuarial variable (payments, number of claims, etc.), respectively denoted by $C_{ij}$ and $X_{ij}$. The row index $1 \leq i \leq I$ denotes the \emph{cohort}, \emph{origin year} or \emph {accident year}, and the column index $1 \leq j \leq J$ gives the \emph{development year}, so that
+The most defining characteristic of the insurance industry is the inverted nature of its production cycle. In manufacturing, commerce, transport, etc., payment is usually received only upon delivery of goods or services. By contrast, insurance products are purchased long before the adverse events which they protect against have occured, if they ever do. Insurers therefore face the challenge of forecasting the amount and variability of funds needed to settle outstanding contracts, a process known as \emph{claims reserving}\index{reserving}. The reserving actuary must rely here on historical data, which is most often presented in the form of a \emph{loss}\index{triangle!loss} or \emph{run-off triangle}\index{triangle!run-off} $\mathcal{D}_I$ consisting of either cumulative or incremental amounts of some actuarial variable (payments, number of claims, etc.), respectively denoted by $C_{ij}$ and $X_{ij}$. The row index $1 \leq i \leq I$ denotes the \emph{cohort}\index{cohort}, \emph{origin year}\index{origin year} or \emph {accident year}\index{accident year}, and the column index $1 \leq j \leq J$ gives the \emph{development year}\index{development year}, so that
 \begin{equation}
   \mathcal{D}_I = \left  \{ C_{ij} \mid 1 \leq j \leq J, i + j \leq I + 1 \right \}
   %
@@ -43,7 +47,7 @@ The most defining characteristic of the insurance industry is the inverted natur
   %
   \mathcal{D}_I = \left  \{ X_{ij} \mid 1 \leq j \leq J, i + j \leq I + 1 \right \} \,.
 \end{equation}
-To simplify the formulas, we assume throughout this exposition that $I = J$. Embedding $\mathcal{D}_I$ into a matrix on and above the anti-diagonal, the actuary then seeks to predict the \emph{total outstanding loss liabilities}
+To simplify the formulas, we assume throughout this exposition that $I = J$. Embedding $\mathcal{D}_I$ into a matrix on and above the anti-diagonal, the actuary then seeks to predict the \emph{total outstanding loss liabilities}\index{liabilities!total outstanding}
 \begin{equation}
   R = \sum_{i = 2}^I (C_{i, I} - C_{i, I + 1- i})
 \end{equation}
@@ -78,22 +82,22 @@ by forecasting the values in the lower triangle $\mathcal{D}^{\mathsf{c}}_I$. A 
   \caption{General notation for a 5 by 5 claims triangle}
 \end{table}
 
-One of the most frequently used loss reserving techniques in practice is the so-called \emph{chain ladder} (CL), which predicts the cumulative claim in development year $j$ by multiplying the previous year's amount by a so-called \emph{age-to-age factor}, \emph{link ratio} or \emph{development factor}. It was originally conceived as a purely computational algorithm, but has since been framed as a stochastic model in a variety of ways. Its central assumption is that the pattern observed in earlier cohorts is applicable to later ones. In one sense, this is of course perfectly reasonable: all models ultimately use the past as a guide to the future. The dearth of data typically available to the actuary makes it challenging to verify its validity, however, as it limits the efficacy of classical statistical techniques.
+One of the most frequently used loss reserving techniques in practice is the so-called \emph{chain ladder} (CL)\index{chain ladder}, which predicts the cumulative claim in development year $j$ by multiplying the previous year's amount by a so-called \emph{age-to-age factor}\index{factor!age-to-age}, \emph{link ratio}\index{link ratio} or \emph{development factor}\index{factor!development}. It was originally conceived as a purely computational algorithm, but has since been framed as a stochastic model in a variety of ways. Its central assumption is that the pattern observed in earlier cohorts is applicable to later ones. In one sense, this is of course perfectly reasonable: all models ultimately use the past as a guide to the future. The dearth of data typically available to the actuary makes it challenging to verify its validity, however, as it limits the efficacy of classical statistical techniques.
 
 To illustrate this point, consider \cref{tab:uk-motor}, which contains the dataset of cumulative payments for a motor insurance account from the UK given in \cite{christofides} (this will serve as the running example throughout this text). It consists of a 7 by 7 claims triangle with a total of 28 observations. \cref{fig:diag-plot-original} shows the diagnostic plot of standardised residuals against fitted value for \modelref{model:mack}, which will be discussed in \cref{chapter:mack}. The details are not important at this point; all that matters at present is that it should be symmetric around the x-axis and exhibit no structural patterns if the model gives a good fit.
 
 \begin{table}[!htb]
   \centering
   \begin{tabularx}{0.7\linewidth}{XXXXXXXX} \toprule
-           & \multicolumn{7}{c}{dev}                                                \\ \cmidrule{2-8}
-    origin & 1                       & 2    & 3     & 4     & 5     & 6     & 7     \\ \midrule
-    2007   & 3511                    & 6726 & 8992  & 10704 & 11763 & 12350 & 12690 \\
-    2008   & 4001                    & 7703 & 9981  & 11161 & 12117 & 12746 &       \\
-    2009   & 4355                    & 8287 & 10233 & 11755 & 12993 &       &       \\
-    2010   & 4295                    & 7750 & 9773  & 11093 &       &       &       \\
-    2011   & 4150                    & 7897 & 10217 &       &       &       &       \\
-    2012   & 5102                    & 9650 &       &       &       &       &       \\
-    2013   & 6283                    &      &       &       &       &       &       \\
+    \bf{Origin} & \multicolumn{7}{c}{\bf{Dev}}                                                \\ \cmidrule{2-8}
+                & 1                            & 2    & 3     & 4     & 5     & 6     & 7     \\ \midrule
+    2007        & 3511                         & 6726 & 8992  & 10704 & 11763 & 12350 & 12690 \\
+    2008        & 4001                         & 7703 & 9981  & 11161 & 12117 & 12746 &       \\
+    2009        & 4355                         & 8287 & 10233 & 11755 & 12993 &       &       \\
+    2010        & 4295                         & 7750 & 9773  & 11093 &       &       &       \\
+    2011        & 4150                         & 7897 & 10217 &       &       &       &       \\
+    2012        & 5102                         & 9650 &       &       &       &       &       \\
+    2013        & 6283                         &      &       &       &       &       &       \\
     \bottomrule
   \end{tabularx}
   \caption{UK Motor cumulative claims triangle from \textcite{christofides}}
@@ -131,13 +135,13 @@ Our aim in the present study is to investigate whether it is possible to use boo
 
 When using a statistical model to describe a dataset in terms of a reduced number of parameters, we are not only interested in producing point estimates of these parameters, but also in quantifying their \emph{uncertainty}. In classical statistics, the usual approach to achieve this is to start from the model assumptions and derive from them analytically the sampling distribution of the estimators. In most cases (the Gaussian distribution being a notable exception) this leads to intractible calculations, so that one is either forced to rely on approximations and asymptotic results, or make unrealistic simplifying assumptions. Moreover, estimates obtained in this way often heavily depend on their underlying assumptions, which can potentially lead to gross errors if these are violated.
 
-The bootstrap method aims to remedy this problem by using numerical simulations to compute estimates of model uncertainty. At its core, it is premised on the idea that the empirical distribution of the sample forms a good proxy for that the population distribution. Consequently, we can approximate sampling from the population by \emph{resampling our data}, which, to the uncareful observer, can give the impression that we're 'magically' producing new information, using our single sample to 'pull ourselves up by our own bootstraps', which is where the procedure derives its name from. Let's see how this can be done concretely for a simple estimation problem.
+The bootstrap\index{bootstrap} method aims to remedy this problem by using numerical simulations to compute estimates of model uncertainty. At its core, it is premised on the idea that the empirical distribution of the sample forms a good proxy for that the population distribution. Consequently, we can approximate sampling from the population by \emph{resampling our data}\index{resampling}, which, to the uncareful observer, can give the impression that we're 'magically' producing new information, using our single sample to 'pull ourselves up by our own bootstraps', which is where the procedure derives its name from. Let's see how this can be done concretely for a simple estimation problem.
 
 \section{Bootstrapping an estimator}
 
-Let $X_1, \dots, X_n$ be an i.i.d. sample drawn from a distribution $F$, and consider an estimator $\widehat{h(F)} = g(X_1, \dots, X_n)$ of some quantity $h(F)$ whose uncertainty we wish to estimate using e.g.\ the variance of the sampling distribution. Depending on the assumptions we are willing to make, we can choose between two broad approaches: \emph{parameteric} methods and \emph{nonparametric} ones.
+Let $X_1, \dots, X_n$ be an i.i.d. sample drawn from a distribution $F$, and consider an estimator $\widehat{h(F)} = g(X_1, \dots, X_n)$ of some quantity $h(F)$ whose uncertainty we wish to estimate using e.g.\ the variance of the sampling distribution. Depending on the assumptions we are willing to make, we can choose between two broad approaches: \emph{parameteric}\index{parametric!method} methods and \emph{nonparametric}\index{nonparametric!method} ones.
 
-In the nonparametric bootstrap, we use the data directly, drawing with replacement to simulate new samples $X^{(b)}_1, \dots, X^{(b)}_n$. In other words, we approximate $F$ using the \emph{empirical cumulative distribution function}
+In the nonparametric\index{nonparametric!bootstrap} bootstrap, we use the data directly, drawing with replacement to simulate new samples $X^{(b)}_1, \dots, X^{(b)}_n$. In other words, we approximate $F$ using the \emph{empirical cumulative distribution function}\index{cumulative distribution function!empirical}
 \begin{equation}
   \widehat{F}_n(x) \coloneqq \sum_{k=1}^n I_{\{ X_k \leq x \}} \,,
 \end{equation}
@@ -147,9 +151,9 @@ which we use to generate new data. We then compute the statistic of interest on 
 \end{equation}
 with $\bar{g} = \frac{1}{B} \sum_{b=1}^B g^{(b)}$. Provided $F \approx \widehat{F}_n$ holds with sufficient accuracy, this will yield a reasonable approximation to $\mathrm{Var}(\widehat{h(F)})$.
 
-By contrast, in the parametric bootstrap, we first fit a model using the data, and then simulate samples from this with the help of a random number generator. As usual, the parametric approach offers the advantage of efficiency if its assumptions are met, at the risk of increased error when they are violated. If we assume that $F$ belongs to some family $\left \{ F_{\bm{\theta}} \mid  \bm{\theta} \in \Theta \right \}$, then we can use the sample $X_1, \dots, X_n$ to produce an estimate $\bm{\widehat{\theta}}$ of the parameter. Plugging this in then gives us $F_{\bm{\widehat{\theta}}}$, from which we can simulate $X^{(b)}_1, \dots , X^{(b)}_n$ and $g^{(b)}$ as before. An estimate of the sampling variance can be obtained the same manner.
+By contrast, in the parametric bootstrap\index{parametric!bootstrap}, we first fit a model using the data, and then simulate samples from this with the help of a random number generator. As usual, the parametric approach offers the advantage of efficiency if its assumptions are met, at the risk of increased error when they are violated. If we assume that $F$ belongs to some family $\left \{ F_{\bm{\theta}} \mid  \bm{\theta} \in \Theta \right \}$, then we can use the sample $X_1, \dots, X_n$ to produce an estimate $\bm{\widehat{\theta}}$ of the parameter. Plugging this in then gives us $F_{\bm{\widehat{\theta}}}$, from which we can simulate $X^{(b)}_1, \dots , X^{(b)}_n$ and $g^{(b)}$ as before. An estimate of the sampling variance can be obtained the same manner.
 
-Although we have thus far only used it for the calculation of a single statistic, it is clear that the bootstrap produces a complete \emph{simulated distribution} of the estimator, which can be used for many different forms of inference. This highlights its tremendous potential as a tool for statistical analysis, which explains the rise in popularity of bootstrap methods once personal computers powerful enough to carry out the requisite calculations became widely available. Let us give an example to illustrate this. \cref{fig:boot-est} compares, for a $\Gamma(\alpha, \beta)$-distribution with $\alpha = 2$ and $\beta = 0.5$, the bootstrap distributions of the maximum likelihood estimators to their exact counterparts. It is clear that the bootstrap distribution approaches the analytic one. We use a simulated sample of size $n = 1000$ and compute . The analytic distributions are based on the well-known fact from likelihood theory that the asymptotic distribution of the MLE is given by the multivariate normal distribution $\mathcal{N}(\bm{\theta}, I(\bm{\theta})^{-1})$, where $\bm{\theta}$ is the parameter vector and $I(\bm{\theta})$ the Fisher information matrix. For the gamma distribution, the latter is given by
+Although we have thus far only used it for the calculation of a single statistic, it is clear that the bootstrap produces a complete \emph{simulated distribution}\index{simulated distribution} of the estimator, which can be used for many different forms of inference. This highlights its tremendous potential as a tool for statistical analysis, which explains the rise in popularity of bootstrap methods once personal computers powerful enough to carry out the requisite calculations became widely available. Let us give an example to illustrate this. \cref{fig:boot-est} compares, for a $\Gamma(\alpha, \beta)$-distribution with $\alpha = 2$ and $\beta = 0.5$, the bootstrap distributions of the maximum likelihood estimators to their exact counterparts. It is clear that the bootstrap distribution approaches the analytic one. We use a simulated sample of size $n = 1000$ and compute . The analytic distributions are based on the well-known fact from likelihood theory that the asymptotic distribution of the MLE is given by the multivariate normal distribution $\mathcal{N}(\bm{\theta}, I(\bm{\theta})^{-1})$, where $\bm{\theta}$ is the parameter vector and $I(\bm{\theta})$ the Fisher information matrix\index{Fisher information matrix}. For the gamma distribution\index{gamma distribution}, the latter is given by
 \begin{equation}
   I(\alpha, \beta) = n
   \begin{pmatrix}
@@ -176,7 +180,7 @@ where $\psi(x) \coloneqq \odv{}{x} \log \Gamma(x)$ is the so-called digamma func
 
 \section{Bootstrapping a regression model} \label{sec:boot-reg}
 
-Altough we have introduced the bootstrap in the context of a classical one-sample estimation problem, the same principles can be applied to data structures of arbitrary complexity, so long as we have a model for the probabilistic mechanism generating the observations (see \cite[Chapter 8]{efron:intro} for a general exposition of this methodology). In particular, bootstrap methods for regression models are well-established in the literature. We now turn our attention to these, as they will form the foundation for developing bootstrap methods for claims triangles.
+Altough we have introduced the bootstrap\index{bootstrap} in the context of a classical one-sample estimation problem, the same principles can be applied to data structures of arbitrary complexity, so long as we have a model for the probabilistic mechanism generating the observations (see \cite[Chapter 8]{efron:intro} for a general exposition of this methodology). In particular, bootstrap methods for regression models are well-established in the literature. We now turn our attention to these, as they will form the foundation for developing bootstrap methods for claims triangles.
 
 Consider a set of covariates $X_1, \dots, X_p$ and a response variable $Y$ whose relationship we model by a parametrised mapping $f(X_1, \dots, X_p; \bm{\beta})$. Given a sample of pairs $(\bm{\mathrm{x}_1}, Y_1), \dots, (\bm{\mathrm{x}_n}, Y_N)$ and a choice of loss function, we can fit this model to obtain an estimate $\widehat{\bm{\beta}}$ of $\bm{\beta}$. For new values $x_1^+, \dots, x_N^+$ of the regressors, we can then predict the response $Y^+$ as $f(x_1^+, \dots, x_N^+; \widehat{\bm{\beta}})$. It is worth emphasising these as two distinct operations, which correspond to different bootstrap procedures (see \cite[Sections 6.3.3 and 7.2.4]{davison}). \emph{Estimation} seeks to \emph{identify} the value of a quantity which is \emph{fixed but unknown}; \emph{prediction} aims to \emph{forecast} the value of a \emph{random variable}.
 
@@ -186,7 +190,7 @@ Let's illustrate this in the case of the all-familiar linear regression model, w
 \begin{equation} \label{eq:linear-model}
   Y_i = \bm{\mathrm{x}_i}^T \bm{\beta} + \varepsilon_i \,, \qquad i \in {1, \dots, n}
 \end{equation}
-with $\expect{\varepsilon_i} = 0$, $\operatorname{Var}(\varepsilon_i) = \sigma$ and $\expect{\varepsilon_i \varepsilon_j} = 0$ for $i \neq j$. Considering the nonparametric bootstrap first, we need to identify a fundamental unit of resampling such that the resulting variables are interchangeable. One option would be to use some suitably standardised residuals which we obtain by fitting the model (see \cite[Algorithm 6.1]{davison}). This approach is sometimes referred to as \emph{semiparametric}, because it only uses the specification of certain aspects of the data distribution in terms of some parameters, but does not assume a specific form for it. Choosing, for example, the residuals
+with $\expect{\varepsilon_i} = 0$, $\operatorname{Var}(\varepsilon_i) = \sigma$ and $\expect{\varepsilon_i \varepsilon_j} = 0$ for $i \neq j$. Considering the nonparametric bootstrap\index{bootstrap!nonparametric} first, we need to identify a fundamental unit of resampling such that the resulting variables are interchangeable. One option would be to use some suitably standardised residuals which we obtain by fitting the model (see \cite[Algorithm 6.1]{davison}). This approach is sometimes referred to as \emph{semiparametric}\index{semiparametric!bootstrap}, because it only uses the specification of certain aspects of the data distribution in terms of some parameters, but does not assume a specific form for it. Choosing, for example, the residuals
 \begin{equation}
   r_i \coloneqq \frac{Y_i - \bm{\mathrm{x}}^T_i \widehat{\bm{\beta}}}{\widehat{\sigma} \sqrt{1 - h_{ii}}} \,,
 \end{equation}
@@ -196,7 +200,7 @@ we resample these for $B$ times to obtain pseudo-residuals $r^{(b)}_1, \dots, r^
 \end{equation}
 By refitting the model to this new pseudo-data, we then obtain bootstrapped regression parameter estimates $\widehat{\bm{\beta}}^{(b)}$ for $1, \dots, B$.
 
-An alternative approach, which is fully nonparametric, is to resample the pairs $(\bm{\mathrm{x}_i}, Y_i)$ themselves (see \cites[Section 9.5]{efron:intro}[Algorithm 6.2]{davison}), which corresponds to approximating the multivariate distribution of $(X_1, \dots, X_n, Y)$ by the empirical distribution of the data. This has the significant benefit of parsimony, making no other assumption beside the i.i.d.-ness of the sample. The model is then fitted to the bootstrap samples $(\bm{\mathrm{x}_1}^{(b)}, Y^{(b)}_1), \dots, (\bm{\mathrm{x}_n}^{(b)}, Y^{(b)}_n)$ to produce pseudo-realisations $\widehat{\bm{\beta}}^{(b)}$ of the regression parameter estimator.
+An alternative approach, which is fully nonparametric\index{nonparametric!fully}, is to resample the pairs $(\bm{\mathrm{x}_i}, Y_i)$ themselves (see \cites[Section 9.5]{efron:intro}[Algorithm 6.2]{davison}), which corresponds to approximating the multivariate distribution of $(X_1, \dots, X_n, Y)$ by the empirical distribution of the data. This has the significant benefit of parsimony, making no other assumption beside the i.i.d.-ness of the sample. The model is then fitted to the bootstrap samples $(\bm{\mathrm{x}_1}^{(b)}, Y^{(b)}_1), \dots, (\bm{\mathrm{x}_n}^{(b)}, Y^{(b)}_n)$ to produce pseudo-realisations $\widehat{\bm{\beta}}^{(b)}$ of the regression parameter estimator.
 
 For the parametric case, we have to make an additional assumption about the distribution of $\epsilon$, the classical choice being the Gaussian one.
 
@@ -206,17 +210,17 @@ With the help of a random number generator, we then produce bootstrap responses 
 
 \section{Process variance and predictive distributions} \label{sec:boot-proc}
 
-If we want to do predictive inference on a regression model using the bootstrap, we additionally have to take into account the inherent variability of the response. Considering once again the example of the normal linear model, suppose we are interested in predicting the response $Y_+$ at new value $\mathbf{x_+}$ of the regressors. One way to quantify the accuracy of our forecast is to consider the \emph{prediction error}
+If we want to do predictive inference on a regression model using the bootstrap, we additionally have to take into account the inherent variability of the response. Considering once again the example of the normal linear model, suppose we are interested in predicting the response $Y_+$ at new value $\mathbf{x_+}$ of the regressors. One way to quantify the accuracy of our forecast is to consider the \emph{prediction error}\index{prediction error}
 \begin{equation}
   \delta \coloneqq Y_+ - \widehat{Y}_+
 \end{equation}
-(see \cite[Algorithm 6.4]{davison}). The second term in this expression can be bootstrapped using any one of the methods described in the previous section, as these yield replicates $\widehat{\bm{\beta}}^{(b)}$ of the parameter estimator and hence of the predictor $\widehat{Y}^{(b)}_+ = \mathbf{x_+}^T \widehat{\bm{\beta}}^{(b)}$. It then remains for us to produce bootstrap simulations of the response $Y_+$ itself. In the semiparametric approach, this can be achieved by resampling the residuals a second time to obtain pseudo-realisations $r^{(s)}$ for $s = 1, \dots, S$, and adding these (after correctly scaling them) to the value of the regression line at $x_+$. The resulting pseudo-responses $Y^{(s)}_+$ mimick the random fluctuations of $Y_+$, allowing us to approximate $\delta$ with the bootstrapped prediction errors
+(see \cite[Algorithm 6.4]{davison}). The second term in this expression can be bootstrapped using any one of the methods described in the previous section, as these yield replicates $\widehat{\bm{\beta}}^{(b)}$ of the parameter estimator and hence of the predictor $\widehat{Y}^{(b)}_+ = \mathbf{x_+}^T \widehat{\bm{\beta}}^{(b)}$. It then remains for us to produce bootstrap simulations of the response $Y_+$ itself. In the semiparametric approach\index{semiparametric!approach}, this can be achieved by resampling the residuals a second time to obtain pseudo-realisations $r^{(s)}$ for $s = 1, \dots, S$, and adding these (after correctly scaling them) to the value of the regression line at $x_+$. The resulting pseudo-responses $Y^{(s)}_+$ mimick the random fluctuations of $Y_+$, allowing us to approximate $\delta$ with the bootstrapped prediction errors
 \begin{equation} \label{eq:pred-error-boot}
   \widehat{\delta}^{(b, s)} \coloneqq Y^{(s)}_+ - \widehat{Y}^{(b)}_+ = (\widehat{\mathbf{x}}^T_+ \widehat{\bm{\beta}} + r^{(s)}) - \widehat{\mathbf{x}}^T_+ \widehat{\bm{\beta}}^{(b)} \,.
 \end{equation}
-A similar procedure can be outlined for the parametric bootstrap by appropriately adjusting the method of generating bootstrap response replicates. The method cannot be applied to the pairs bootstrap, however, as it lacks a mechanism for simulating new response values by themselves; we must therefore borrow this part from one of the alternative approaches, forsaking part of its parsimony and robustness properties in the process. We can then use \cref{eq:pred-error-boot} for different kinds of inference, e.g. obtaining prediction intervals or estimating the mean squared error of prediction.
+A similar procedure can be outlined for the parametric bootstrap\index{parametric!bootstrap} by appropriately adjusting the method of generating bootstrap response replicates. The method cannot be applied to the pairs bootstrap, however, as it lacks a mechanism for simulating new response values by themselves; we must therefore borrow this part from one of the alternative approaches, forsaking part of its parsimony and robustness properties in the process. We can then use \cref{eq:pred-error-boot} for different kinds of inference, e.g. obtaining prediction intervals or estimating the mean squared error of prediction.
 
-While this offers an avenue for incorporating the process variance into bootstrap procedures for predictive inference, it is not the one best suited to our purposes. Recall from the \nameref{intro} that we want to study how the reserve is impacted by violations of the assumptions of a given actuarial model which can be framed in terms of regression, as we shall see in \cref{chapter:mack,chapter:poisson}. In other words, we would like to simulate the distribution of the response itself. In \cref{eq:pred-error-boot}, this was done by generating fluctuations around $\widehat{\bm{\beta}}$ through resampling (or in the parametric case, with the help of a random number generator). The trouble with this approach is that it fails to account for the error in our parameter estimates, leading to an underestimation of the prediction uncertainty. Although we will endeavour in this exposition to remain agnostic with respect to philosophical questions about the interpretation of probability, it will be necessary in this case, for reasons which will become apparent shortly, to borrow a concept from Bayesian school of statistics in order to address this problem.
+While this offers an avenue for incorporating the process variance\index{process variance} into bootstrap procedures for predictive inference, it is not the one best suited to our purposes. Recall from the \nameref{intro} that we want to study how the reserve is impacted by violations of the assumptions of a given actuarial model which can be framed in terms of regression, as we shall see in \cref{chapter:mack,chapter:poisson}. In other words, we would like to simulate the distribution of the response itself. In \cref{eq:pred-error-boot}, this was done by generating fluctuations around $\widehat{\bm{\beta}}$ through resampling (or in the parametric case, with the help of a random number generator). The trouble with this approach is that it fails to account for the error in our parameter estimates, leading to an underestimation of the prediction uncertainty. Although we will endeavour in this exposition to remain agnostic with respect to philosophical questions about the interpretation of probability, it will be necessary in this case, for reasons which will become apparent shortly, to borrow a concept from Bayesian school of statistics in order to address this problem.
 
 Recall that the Bayesian point of view is premised on the idea that the parameters $\bm{\theta}$ governing a statistical model $p(y \mid \bm{\theta}, x_1, \dots, x_p)$ are themselves random variables. These are assumed to follow a so-called \emph{prior distribution} $p(\theta)$, which is a probabilistic expression of the beliefs we have about them before observing any data\sepfootnote{fn:bayes}. When presented with a sample $D = \{ (\bm{\mathrm{x}_1}, Y_1), \dots, (\bm{\mathrm{x}_n}, Y_n) \}$, we are then led to \emph{update our beliefs}; using the formula
 \begin{equation}
@@ -523,23 +527,23 @@ While this does not directly address our present concern, namely of bootstrappin
 \end{equation}
 Clearly, the support of such a distribution has to be bounded from below, and it must moreover allow for normalisation, so that the resulting residuals can be made interchangeable by an algebraic transformation. The only candidate satisfying these conditions which readily springs to mind is the \emph{shifted lognormal distribution}
 \begin{equation}
-  \log(\varepsilon_{i, j + 1} - \xi_{ij}) \sim \mathcal{N}(\mu_{ij}, s_{ij}^2)
+  \log(\varepsilon_{i, j + 1} - \xi_{ij}) \sim \mathcal{N}(m_{ij}, s_{ij}^2)
 \end{equation}
-for certain parameters $\xi_{ij}$, $\mu_{ij}$ and $s_{ij}$. his has support $(\xi_{ij}, +\infty)$, leading us to choose $\xi_{ij} = -\frac{f_j \sqrt{C_{ij}}}{\sigma_j}$, and again we must determine $\mu_{ij}$ and $s_{ij}$ to satisfy
+for certain parameters $\xi_{ij}$, $m_{ij}$ and $s_{ij}$. his has support $(\xi_{ij}, +\infty)$, leading us to choose $\xi_{ij} = -\frac{f_j \sqrt{C_{ij}}}{\sigma_j}$, and again we must determine $m_{ij}$ and $s_{ij}$ to satisfy
 \begin{equation}
   \begin{cases}
-    \displaystyle \condexpp{\varepsilon_{i, j + 1}}{C_{ij}} = \exp \left( \mu_{ij} + \frac{s_{ij}^2}{2} \right) + \xi_{ij} = 0 \\
-    \displaystyle \condvarr{\varepsilon_{i, j + 1}}{C_{ij}} = (\exp{s_{ij}^2} - 1) \exp(s_{ij}^2 + 2 \mu_{ij}) = 1 \,.
+    \displaystyle \condexpp{\varepsilon_{i, j + 1}}{C_{ij}} = \exp \left( m_{ij} + \frac{s_{ij}^2}{2} \right) + \xi_{ij} = 0 \\
+    \displaystyle \condvarr{\varepsilon_{i, j + 1}}{C_{ij}} = (\exp{s_{ij}^2} - 1) \exp(s_{ij}^2 + 2 m_{ij}) = 1 \,.
   \end{cases}
 \end{equation}
 Solving these equations, we obtain
 \begin{equation}
-  s_{ij} = \sqrt{\log \left( 1 + \frac{1}{\xi^2_{ij}} \right)}, \qquad \mu_{ij} = \log(-\xi_{ij}) - \frac{s^2_{ij}}{2} \,.
+  s_{ij} = \sqrt{\log \left( 1 + \frac{1}{\xi^2_{ij}} \right)}, \qquad m_{ij} = \log(-\xi_{ij}) - \frac{s^2_{ij}}{2} \,.
 \end{equation}
 Provided the sampling variability of $\widehat{f}_j$ and $\widehat{\sigma}_j$ is not too severe, this means that the residuals
 \begin{align} \label{eq:log-normal-resids}
   r_{i, j + 1}
-   & \coloneqq \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j \right) - \widehat{\mu}_{ij}}{\widehat{s}_{ij}}                                                                                                                                                                             \\
+   & \coloneqq \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j \right) - \widehat{m}_{ij}}{\widehat{s}_{ij}}                                                                                                                                                                               \\
    & = \frac{\log \left( C_{i, j + 1} - \widehat{f}_j C_{ij} + \widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j \right) - \log(\widehat{f}_j \sqrt{C_{ij}} / \widehat{\sigma}_j) + \frac{1}{2} \log \left( 1 + \widehat{\sigma}^2_j / \widehat{f}^2_j C_{ij} \right)}{\sqrt{\log \left( 1 + \widehat{\sigma}^2_j / \widehat{f}^2_j C_{ij} \right)}}
 \end{align}
 are approximately $\mathcal{N}(0, 1)$-distributed.
@@ -1136,7 +1140,7 @@ This procedure can be specialised to the particular case of \modelref{model:pois
 \begin{table}[!htb]
   \centering
   \begin{tabularx}{0.3 \linewidth}{CCC}\toprule%
-    origin  & dev  & value  \\ \midrule
+    \bf{Origin}  & \bf{Dev}  & \bf{Value}  \\ \midrule
     \csvreader[
     late after line =       \\
     ]{%
@@ -1556,41 +1560,17 @@ The only question that remains is how to incorporate the intrinsic variability o
   \label{fig:pred-semiparam}
 \end{figure}
 
-\newgeometry{bottom=0.1cm}
-
 \chapter{Simulation study}
 
 \epstopdfsetup{outdir=/home/othman/repos/masters_thesis/plots/}
 
-As explained in the \nameref{intro} and \cref{sec:boot-proc}, we want to study the impact of deviations from the model assumptions on the predictive distribution of the total outstanding claims. To this end, we simulate a large number of run-off triangles, following a similar approach to the one described in \cite{schiegl}, which satisfy these assumptions perfectly except for a number of deviating observations. We then use the bootstrap methods described in \cref{chapter:mack,chapter:poisson} to compute the corresponding distribution while excluding a subset of points from the resampling process. Our aim is to investigate whether the predictive distributions computed from data where the correct points have been discarded differ significantly from those obtained after removing arbitrary observations.
+As explained in the \nameref{intro} and \cref{sec:boot-proc}, we want to study the impact of deviations from the model assumptions on the predictive distribution of the total outstanding claims. To this end, we simulate a large number of run-off triangles, following a similar approach to the one described in \cite{schiegl}, which satisfy these assumptions perfectly except for a number of deviating observations (we will call such data \emph{contaminated}). We then use the bootstrap methods described in \cref{chapter:mack,chapter:poisson} to compute the corresponding distribution while excluding a subset of points from the resampling process. Our aim is to investigate whether the predictive distributions computed from data where the correct points have been discarded (which we will refer to as the \emph{cleaned} data) differ significantly from those obtained after removing arbitrary observations.
 
 \section{Mack's model} \label{sec:mack-sim}
 
 Recall from \cref{sec:mack-intro} that \modelref{model:mack} is recursive in nature, modelling the cumulative claim amounts in the next development period as a function of those in the previous one. Hence, it requires that observations for the first development period be given initially. This could be done using a seperate model, but we choose here the simpler approach of borrowing the first column from the UK Motor example data in \cref{tab:uk-motor}. Similarly, we choose for the development factors $f_1, \dots, f_{I - 1}$ and dispersion parameters $\sigma_1, \dots, \sigma_{I - 1}$ of the simulated triangles the fitted ones from this dataset.
 
-In order to obtain a synthetic triangle which satisfies \cref{assump:mack-expectation,assump:mack-variance,assump:mack-independence} with no deviations, we can then start from the initial column and use any suitable data-generating process (such as \cref{eq:time-series-model}) to recursively generate the next antidiagonal of the triangle, stopping when we reach the final development year.
-
-\begin{algorithm}[!htb]
-  \begin{algorithmic}
-    \Require{Development factors $f_1, \dots, f_{I - 1}$, dispersion parameters $\sigma_1, \dots, \sigma_{I - 1}$}
-    \ForAll{$1 \leq i \leq I$, $2 \leq j \leq I$}
-      \State $C_{ij} \gets 0$
-    \EndFor
-    \For{$i \gets 1, I$}
-      \State $C^*_{i1} \gets C_{i1}$
-      \For{$j \gets 2, I + 1 - i$}
-        \State $C^*_{ij} \gets \mathcal{N}(f_j C^*_{i, j - 1}, \sigma_j^2 C^*_{i, j - 1})$
-      \EndFor
-    \EndFor
-    \State \Return{$(C^*_{ij})_{1 \leq i,j \leq I}$}
-  \end{algorithmic}
-  \caption{Simulating a clean triangle conforming to \modelref{model:mack}}
-  \label{alg:clean-mack-triangle}
-\end{algorithm}
-
-\restoregeometry
-
-This immediately suggests a way of producing triangles where the assumptions have been perturbed for a single point $(i^*, j^*)$ with $i^* + j^* \leq I + 1$ and $j^* > 1$. In the contaminated row, we start from the first column and recursively simulate observations until we arrive at column $j^*$. Using perturbation factors $c_\mu$ and $c_\sigma$ for the mean and variance, we then draw an observation from the perturbed distribution $\mathcal{N}(c_\mu f_{j^* - 1} C^*_{i^*, j^* - 1}, c_\sigma \sigma^2_{j^* - 1} C^*_{i^*, j^* - 1})$. The non-contaminated rows are then obtained with the same procedure as in \cref{alg:clean-mack-triangle}.
+In order to obtain a synthetic triangle which satisfies \cref{assump:mack-expectation,assump:mack-variance,assump:mack-independence} with no deviations, we can then start from the initial column and use any suitable data-generating process (such as \cref{eq:time-series-model}) to recursively generate the next antidiagonal of the triangle, stopping when we reach the final development year. This immediately suggests a way of producing triangles where the assumptions have been perturbed for a single point $(i^*, j^*)$ with $i^* + j^* \leq I + 1$ and $j^* > 1$. In the contaminated row, we start from the first column and simulate observations until we arrive at column $j^* - 1$. Using perturbation factors $c_\mu$ and $c_\sigma$ for the mean and variance, we then draw an observation from the perturbed distribution $\mathcal{N}(c_\mu f_{j^* - 1} C^*_{i^*, j^* - 1}, c_\sigma \sigma^2_{j^* - 1} C^*_{i^*, j^* - 1})$. The non-contaminated rows are then obtained with the same procedure.
 
 \begin{algorithm}[!htb]
   \begin{algorithmic}
@@ -1626,28 +1606,9 @@ We can obtain algorithms for simulating triangles where an entire origin or cale
 
 Simulating triangles conforming to \modelref{model:odp} is significantly easier than for \modelref{model:mack}, as we don't have to deal with recursion. Using the fitted parameters from \cref{tab:uk-motor-long} for $\phi$, $c$, $a_1, \dots, a_I$ and $b_1, \dots, b_I$, we generate an observation for every cell $(i, j)$ in the upper triangle by drawing from an appropriate distribution, as shown in \cref{alg:clean-odp-triangle}.
 
-\begin{algorithm}[H]
-  \begin{algorithmic}
-    \Require{Intercept $c$, development period parameters $a_2, \dots, a_I$, origin period parameters $b_2, \dots, b_I$, dispersion parameter $\phi$}
-    \State $a_1 \gets 0$, $b_1 \gets 0$
-    \ForAll{$1 \leq i, j \leq I$}
-      \State $\mu_{ij} \gets \exp(c + a_i + b_j)$
-      \State $X_{ij} \gets 0$
-    \EndFor
-    \For{$i \gets 1, I$}
-      \For{$j \gets 1, I + 1 - i$}
-        \State $X^*_{ij} \gets \mathcal{N}(\mu_{ij}, \sqrt{\phi \mu_{ij}})$
-      \EndFor
-    \EndFor
-    \State \Return{$(X^*_{ij})_{1 \leq i,j \leq I}$}
-  \end{algorithmic}
-  \caption{Simulating a clean triangle conforming to \modelref{model:odp}}
-  \label{alg:clean-odp-triangle}
-\end{algorithm}
-
 Triangles with a single perturbed point can then be obtained straightforwardly from this.
 
-\begin{algorithm}[H]
+\begin{algorithm}[!htb]
   \begin{algorithmic}
     \Require{Intercept $c$, development period parameters $a_2, \dots, a_I$, origin period parameters $b_2, \dots, b_I$, dispersion parameter $\phi$, perturbation factor $c_\lambda$}
     \State $a_1 \gets 0$, $b_1 \gets 0$
@@ -1688,36 +1649,39 @@ The code for carrying out the simulations (as well as generating the examples fr
 
 The results are presented as a series of faceted density plots comparing, for different configurations, the predictive density of the reserve when the contaminated observations have been excluded (shown in red) with the predictive densities obtained after excluding model-conforming points. The faceting variables are the indices of the outlying point(s). Owing to the large number of possible simulation options, it would be impractical to show all of them. We have therefore endeavoured to include a sample of the most interesting ones. The reader is encouraged to download the code using the instructions outlined previously and experiment with it for him- or herself.
 
-\subsection{Mack's model}
+\subsection{Mack's model} \label{subsec:mack-sim-res}
 
-In general, there seems to be little difference between conditional and unconditional.
+In experiments where a single point has been perturbed, the semiparametric bootstrap performs poorly when used with standardised and log-normal residuals, as shown by \cref{fig:mack-single-cond-semiparam-standardised,fig:mack-single-cond-semiparam-log-normal,fig:mack-single-uncond-semiparam-standardised,fig:mack-single-uncond-semiparam-log-normal}. The predictive distribution does not differ significantly between the cleaned and contaminated data, and this holds regardless of whether the conditional or unconditional approach is used, and across different perturbation factors.
 
-In experiments where a single point has been perturbed, we observe no difference the semiparametric bootstraps with standardised and log-normal residuals perform
+Closer inspection of the simulation reveals the reason for this: standardised and log-normal residuals are not very sensitive to anomalies in a single observation. Consider for instance the triangle in \cref{tab:sim-triangle-example}, which is perturbed in point $(1, 2)$ with $c_\mu = 100$ and $c_\sigma = 1$, leading to hugely inflated values in the first row. The corresponding residual in \cref{tab:resids-log-normal-example,tab:resids-standard-example} does not exhibit a deviation of commensurate severity, however, and so excluding it does.
 
-we observe no significant difference between the predictive distribution with and without
+This stands in stark contrast with the studentised residuals, which are strongly affected by single ;point deviations in the simulated triangle, as can be seen in \cref{tab:resids-studentised-example}. Consequently, the cleaned triangle stands out from the contaminated ones. This is illustrated in \cref{tab:resids-student-res-mean}, which contains the means of the predictive distribution based on different outlier and excluded points with $c_\mu = 2$ and $c_\sigma = 1$. The minimum in each row is highlighted in red. This lines up almost perfectly with diagonal, which means that the predictive reserve mean of the cleaned triangle tends to stand out when using studentised residuals.
 
+The parametric bootstrap shows good performance across the board. The choice of distribution does not appear to have a noticeable impact, although we do observe a substantial difference between the conditional and unconditional approaches, with the latter generally outperforming the former, often drastically, as shown in \cref{fig:mack-single-param}. Lastly, the pairs bootstrap is better at distinguishing contaminated from cleaned data than the semiparametric bootstrap with log-normal or standardised residuals, but does not outperform the one using studentised residuals or the parametric bootstrap. As \cref{tab:resids-pairs-res-mean} shows, the mean of the predictive distribution simulated on the basis of the cleaned data stands out for every outlier point, but often only barely. In all cases, differences tend to be noticeable for later development periods.
+
+The same general trends are observed in a more pronouned form when a calendar or origin period is perturbed, owing to the larger number of deviating points. Consequently, even the semiparametric bootstrap with log-normal or standardised residuals shows serviceable results, as can be seen in \cref{fig:mack-calendar-cond-semiparam-log-normal,fig:mack-calendar-uncond-semiparam-log-normal,fig:mack-calendar-cond-semiparam-standard,fig:mack-calendar-uncond-semiparam-standard}. Later periods universally show stronger effects, because they contain more observations; for the final period, no bootstrap method can distinguish between clean and contaminated data.
 
 \input{../results/sim_triangle_example.tex}
 
-
-\begin{table}
+\begin{table}[!p]
+  \setlength\tabcolsep{3pt}
   \begin{subtable}{0.45\linewidth}
     \centering
     \input{../results/resids_standardised_example.tex}
     \subcaption{Standardised}
-    \label{fig:resids-standard-example}
+    \label{tab:resids-standard-example}
   \end{subtable}
   \hfill
   \begin{subtable}{0.45\linewidth}
     \centering
     \input{../results/resids_log_normal_example.tex}
     \subcaption{Log-normal}
-    \label{fig:resids-log-normal-example}
+    \label{tab:resids-log-normal-example}
   \end{subtable}
-  \caption{Residuals corresponding to \cref{fig:sim-triangle-example}}
+  \caption{Residuals corresponding to the triangle in \cref{tab:sim-triangle-example}}
 \end{table}
 
-\label{fig:resids-studentised-example}
+\input{../results/resids_studentised_example.tex}
 
 \newgeometry{bottom=2cm}
 
@@ -1727,7 +1691,7 @@ we observe no significant difference between the predictive distribution with an
   \begin{figure}
     \centering
     \includegraphics{mack_single_densities_cond_residuals_standardised}
-    \caption{Density plots of predictive distributions obtained using the conditional semiparametric bootstrap with standardised residuals on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = c_\sigma = 0.5$.}
+    \caption{Density plots of predictive distributions obtained using the conditional semiparametric bootstrap of Mack's model with standardised residuals for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = c_\sigma = 0.5$.}
     \label{fig:mack-single-cond-semiparam-standardised}
   \end{figure}
 \end{landscape}
@@ -1737,7 +1701,7 @@ we observe no significant difference between the predictive distribution with an
   \begin{figure}
     \centering
     \includegraphics{mack_single_densities_cond_residuals_log-normal}
-    \caption{Density plots of predictive distributions obtained using the conditional semiparametric bootstrap with log-normal residuals on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = 0.5$ and $c_\sigma = 2$.}
+    \caption{Density plots of predictive distributions obtained using the conditional semiparametric bootstrap of Mack's model with log-normal residuals for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = 0.5$ and $c_\sigma = 2$.}
     \label{fig:mack-single-cond-semiparam-log-normal}
   \end{figure}
 \end{landscape}
@@ -1747,7 +1711,7 @@ we observe no significant difference between the predictive distribution with an
   \begin{figure}
     \centering
     \includegraphics{mack_single_densities_uncond_residuals_standardised}
-    \caption{Density plots of predictive distributions obtained using the unconditional semiparametric bootstrap with standardised residuals on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = 2$ and $c_\sigma = 0.5$.}
+    \caption{Density plots of predictive distributions obtained using the unconditional semiparametric bootstrap of Mack's model with standardised residuals for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = 2$ and $c_\sigma = 0.5$.}
     \label{fig:mack-single-uncond-semiparam-standardised}
   \end{figure}
 \end{landscape}
@@ -1757,29 +1721,65 @@ we observe no significant difference between the predictive distribution with an
   \begin{figure}
     \centering
     \includegraphics{mack_single_densities_uncond_residuals_log-normal}
-    \caption{Density plots of predictive distributions obtained using the unconditional semiparametric bootstrap with log-normal residuals on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = c_\sigma = 2$.}
-    \label{fig:mack-single-uncond-semiparam-lognormal}
+    \caption{Density plots of predictive distributions obtained using the unconditional semiparametric bootstrap of Mack's model with log-normal residuals for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = c_\sigma = 2$.}
+    \label{fig:mack-single-uncond-semiparam-log-normal}
   \end{figure}
 \end{landscape}
 
-% parametric cond normal
+% parametric
 \begin{landscape}
   \begin{figure}
-    \centering
-    \includegraphics{mack_single_densities_cond_parametric_normal}
-    \caption{Density plots of predictive distributions obtained using the conditional parametric bootstrap with the normal distribution on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = 2$ and $c_\sigma = 1$.}
-    \label{fig:mack-single-cond-param-normal}
+    % cond normal
+    \begin{subfigure}{0.5\linewidth}
+      \centering
+      \includegraphics{mack_single_densities_cond_parametric_normal}
+      \subcaption{Conditional, normal distribution, $c_\mu = 2$}
+    \end{subfigure}
+    % uncond normal
+    \begin{subfigure}{0.5\linewidth}
+      \centering
+      \includegraphics{mack_single_densities_uncond_parametric_normal}
+      \subcaption{Unconditional, normal distribution, $c_\mu = 0.5$}
+    \end{subfigure}
+    % cond gamma
+    \begin{subfigure}{0.5\linewidth}
+      \centering
+      \includegraphics{mack_single_densities_cond_parametric_gamma}
+      \subcaption{Conditional, gamma distribution, $c_\mu = 0.5$}
+    \end{subfigure}
+    % uncond gamma
+    \begin{subfigure}{0.5\linewidth}
+      \centering
+      \includegraphics{mack_single_densities_uncond_parametric_gamma}
+      \subcaption{Unconditional, gamma distribution, $c_\mu = 2$}
+    \end{subfigure}
+    \caption{Density plots of predictive distributions obtained using the conditional parametric bootstrap of Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. We set $c_\sigma = 1$ and $i^* = 4$, $j^* = 2$ for all subfigures.}
+    \label{fig:mack-single-param}
   \end{figure}
 \end{landscape}
 
-% parametric uncond gamma
+% residuals studentised table
+\begin{landscape}
+  \setlength\tabcolsep{4pt}
+  \renewcommand{\arraystretch}{1.2}
+  \input{../results/mean_table_studentised.tex}
+\end{landscape}
+
+% pairs
 \begin{landscape}
   \begin{figure}
     \centering
-    \includegraphics{mack_single_densities_uncond_parametric_gamma}
-    \caption{Density plots of predictive distributions obtained using the unconditional parametric bootstrap with the gamma distribution on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = 0.5$ and $c_\sigma = 1$.}
-    \label{fig:mack-single-uncond-param-gamma}
+    \includegraphics{mack_single_densities_pairs}
+    \caption{Density plots of predictive distributions obtained using the pairs bootstrap of Mack's model for different deviating points.}
+    \label{fig:mack-single-pairs}
   \end{figure}
+\end{landscape}
+
+% pairs table
+\begin{landscape}
+  \setlength\tabcolsep{2pt}
+  \renewcommand{\arraystretch}{1.2}
+  \input{../results/mean_table_pairs.tex}
 \end{landscape}
 
 %% calendar
@@ -1790,7 +1790,7 @@ we observe no significant difference between the predictive distribution with an
       \centering
       \includegraphics{mack_calendar_densities_cond_residuals_standardised}
       \subcaption{Conditional, $c_\mu = c_\sigma = 0.5$}
-      \label{fig:mack-calendar-cond-semiparam}
+      \label{fig:mack-calendar-cond-semiparam-standard}
     \end{subfigure}
     % residuals uncond standardised
     \begin{subfigure}{0.5\linewidth}
@@ -1799,7 +1799,7 @@ we observe no significant difference between the predictive distribution with an
       \subcaption{Unconditional, $c_\mu = 2$ and $c_\sigma = 0.5$}
       \label{fig:mack-calendar-uncond-semiparam-standard}
     \end{subfigure}
-    \caption{Density plots of predictive distributions obtained using the semiparametric bootstrap with standardised residuals on Mack's model for different deviating calendar periods}
+    \caption{Density plots of predictive distributions obtained using the semiparametric bootstrap of Mack's model with standardised residuals for different deviating calendar periods}
   \end{figure}
 \end{landscape}
 
@@ -1819,7 +1819,7 @@ we observe no significant difference between the predictive distribution with an
       \subcaption{Unconditional, $c_\mu = c_\sigma = 2$}
       \label{fig:mack-calendar-uncond-semiparam-log-normal}
     \end{subfigure}
-    \caption{Density plots of predictive distributions obtained using the semiparametric bootstrap with log-normal residuals on Mack's model for different deviating calendar periods}
+    \caption{Density plots of predictive distributions obtained using the semiparametric bootstrap of Mack's model with log-normal residuals for different deviating calendar periods}
   \end{figure}
 \end{landscape}
 
@@ -1839,202 +1839,94 @@ we observe no significant difference between the predictive distribution with an
       \subcaption{Unconditional, gamma distribution, $c_\mu =  2$ and $c_\sigma = 1$}
       \label{fig:mack-calendar-uncond-param-gamma}
     \end{subfigure}
-    \caption{Density plots of predictive distributions obtained using the parametric bootstrap on Mack's model for different deviating calendar periods}
+    \caption{Density plots of predictive distributions obtained using of Mack's model the parametric bootstrap for different deviating calendar periods}
   \end{figure}
 \end{landscape}
 
-
-% \begin{subfigure}{0.5\linewidth}
-%   \centering
-%   \includegraphics{mack_calendar_densities_cond_parametric_normal}
-%   \caption{Calendar period contamination Mack model simulation results for the conditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-%   \label{fig:mack-calendar-cond-param}
-% \end{subfigure}
-
-% % parametric uncond normal
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{mack_calendar_densities_uncond_parametric_normal}
-%     \caption{Calendar period contamination Mack model simulation results for the unconditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-%     \label{fig:mack-calendar-uncond-param-normal}
-%   \end{figure}
-% \end{landscape}
-
-% % parametric uncond gamma
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{mack_calendar_densities_uncond_parametric_gamma}
-%     \caption{Calendar period contamination Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
-%     \label{fig:mack-calendar-uncond-param-gamma}
-%   \end{figure}
-% \end{landscape}
-
-% %% origin
-% % residuals cond standardised
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{mack_origin_densities_cond_residuals_standardised}
-%     \caption{Origin period contamination Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
-%     \label{fig:mack-origin-cond-semiparam}
-%   \end{figure}
-% \end{landscape}
-
-% % residuals uncond standardised
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{mack_origin_densities_uncond_residuals_standardised}
-%     \caption{Origin period contamination Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
-%     \label{fig:mack-origin-uncond-semiparam-standard}
-%   \end{figure}
-% \end{landscape}
-
-% % residuals uncond studentised
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{mack_origin_densities_uncond_residuals_studentised}
-%     \caption{Origin period contamination Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals, $c_\mu = c_\sigma = 0.75$}
-%     \label{fig:mack-origin-uncond-semiparam-student}
-%   \end{figure}
-% \end{landscape}
-
-% % parametric cond normal
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{mack_origin_densities_cond_parametric_normal}
-%     \caption{Origin period contamination Mack model simulation results for the conditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-%     \label{fig:mack-origin-cond-param}
-%   \end{figure}
-% \end{landscape}
-
-% % parametric uncond normal
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{mack_origin_densities_uncond_parametric_normal}
-%     \caption{Origin period contamination Mack model simulation results for the unconditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-%     \label{fig:mack-origin-uncond-param-normal}
-%   \end{figure}
-% \end{landscape}
-
-% % parametric uncond gamma
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{mack_origin_densities_uncond_parametric_gamma}
-%     \caption{Origin period contamination Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
-%     \label{fig:mack-origin-uncond-param-gamma}
-%   \end{figure}
-% \end{landscape}
+% pairs
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{mack_calendar_densities_pairs}
+    \caption{Density plots of predictive distributions obtained using of Mack's model the pairs bootstrap for different deviating calendar periods}
+    \label{fig:mack-calendar-pairs}
+  \end{figure}
+\end{landscape}
 
 \restoregeometry
 
-\input{../results/mean_table_1.tex}
-\input{../results/mean_table_2.tex}
-
 \subsection{Overdispersed Poisson GLM}
 
-poor performance for the residuals bootstrap: removing the offending point produces absolutely no difference in the predictive distribution of the reserve. Investigation reveals that this is caused by the fact that model
+In the single point simulation, the semiparametric bootstrap performs rather poorly compared to the parametric one, regardless of which distribution is used in the latter. As in \cref{subsec:mack-sim-res}, we can trace the cause of this by analysing how the residuals are affected by perturbations.
 
-The parametric bootstrap, on the other hand, performs considerably better.
+\input{../results/glm_triangle_example.tex}
 
-\newgeometry{bottom=0cm}
+\begin{table}
+  \setlength{\tabcolsep}{2pt}
+  \begin{subtable}{0.5\linewidth}
+    \input{../results/glm_resids_original_example.tex}
+    \caption{Original}
+  \end{subtable}
+  \hfill
+  \begin{subtable}{0.5\linewidth}
+    \input{../results/glm_resids_perturbed_example.tex}
+    \caption{Perturbed}
+  \end{subtable}
+  \caption{Pearson residuals}
+\end{table}
 
-% %% single
-% % parametric gamma
+\newgeometry{bottom=2cm}
+
+%% single
+% parametric gamma
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{glm_single_densities_parametric_gamma}
+    \caption{Single point contamination ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
+    \label{fig:glm-single-param-gamma}
+  \end{figure}
+\end{landscape}
+
+% parametric normal
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{glm_single_densities_parametric_normal}
+    \caption{Single point contamination ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
+    \label{fig:glm-single-param-norm}
+  \end{figure}
+\end{landscape}
+
+% parametric poisson
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{glm_single_densities_parametric_poisson}
+    \caption{Single point contamination ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
+    \label{fig:glm-single-param-pois}
+  \end{figure}
+\end{landscape}
+
+% residuals
+\begin{landscape}
+  \begin{figure}
+    \centering
+    \includegraphics{glm_single_densities_residuals}
+    \caption{Single point contamination ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
+    \label{fig:glm-single-semiparam}
+  \end{figure}
+\end{landscape}
+
+% % different factors
 % \begin{landscape}
 %   \begin{figure}
 %     \centering
-%     \includegraphics{glm_single_densities_parametric_gamma_1}
-%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
-%     \label{fig:glm-single-param-gamma}
+%     \includegraphics{glm_single_by_factor}
+%     \caption{Single point contamination ODP model simulation results for $i = j = 3$ and different values of $c_\lambda$. The predictive distribution based on the cleaned data is shown black.}
+%     \label{fig:glm-single-by-factor}
 %   \end{figure}
 % \end{landscape}
-
-% \begin{landscape}
-%   \begin{figure}
-%     \ContinuedFloat
-%     \captionsetup{list=off,format=cont}
-%     \centering
-%     \includegraphics{glm_single_densities_parametric_gamma_2}
-%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
-%   \end{figure}
-% \end{landscape}
-
-% % parametric normal
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{glm_single_densities_parametric_normal_1}
-%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
-%     \label{fig:glm-single-param-norm}
-%   \end{figure}
-% \end{landscape}
-
-% \begin{landscape}
-%   \begin{figure}
-%     \ContinuedFloat
-%     \captionsetup{list=off,format=cont}
-%     \centering
-%     \includegraphics{glm_single_densities_parametric_normal_2}
-%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
-%   \end{figure}
-% \end{landscape}
-
-% % parametric poisson
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{glm_single_densities_parametric_poisson_1}
-%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
-%     \label{fig:glm-single-param-pois}
-%   \end{figure}
-% \end{landscape}
-
-% \begin{landscape}
-%   \begin{figure}
-%     \ContinuedFloat
-%     \captionsetup{list=off,format=cont}
-%     \centering
-%     \includegraphics{glm_single_densities_parametric_poisson_2}
-%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
-%   \end{figure}
-% \end{landscape}
-
-% % residuals
-% \begin{landscape}
-%   \begin{figure}
-%     \centering
-%     \includegraphics{glm_single_densities_residuals_1}
-%     \caption{Single point contamination ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
-%     \label{fig:glm-single-semiparam}
-%   \end{figure}
-% \end{landscape}
-
-% \begin{landscape}
-%   \begin{figure}
-%     \ContinuedFloat
-%     \captionsetup{list=off,format=cont}
-%     \centering
-%     \includegraphics{glm_single_densities_residuals_2}
-%     \caption{Single point contamination ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
-%   \end{figure}
-% \end{landscape}
-
-% % % different factors
-% % \begin{landscape}
-% %   \begin{figure}
-% %     \centering
-% %     \includegraphics{glm_single_by_factor}
-% %     \caption{Single point contamination ODP model simulation results for $i = j = 3$ and different values of $c_\lambda$. The predictive distribution based on the cleaned data is shown black.}
-% %     \label{fig:glm-single-by-factor}
-% %   \end{figure}
-% % \end{landscape}
 
 % %% calendar
 % % parametric gamma
@@ -2118,12 +2010,14 @@ The parametric bootstrap, on the other hand, performs considerably better.
 %   \end{figure}
 % \end{landscape}
 
-% \restoregeometry
+\restoregeometry
 
 \backmatter%
 
 \chapter{Conclusion} \label{conclusion}
 
 \printbibliography%
+
+\printindex
 
 \end{document}

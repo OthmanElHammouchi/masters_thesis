@@ -47,7 +47,6 @@ contains
     type(c_ptr) :: pgbar
 
     integer(c_int) :: status
-    logical(c_bool) :: print_triangles
 
     call fit(triangle, dev_facs_original, sigmas_original, use_mask=.false., compute_resids=.false.)
 
@@ -85,7 +84,6 @@ contains
 
     i_thread = omp_get_thread_num()
     boot_type = boot_type_
-    print_triangles = .false.
 
     reserve = 0
     select case (sim_type)
@@ -117,7 +115,7 @@ contains
           end do
         end do
         obs_mask(excl_rowidx, excl_colidx) = .false.
-        if (boot_type == PARAM) obs_mask(1, n_dev) = .true.
+        if (boot_type == PARAM .or. boot_type == PAIRS) obs_mask(1, n_dev) = .true.
 
         resids_mask = obs_mask(1:(n_dev - 1), 2:n_dev)
         if (resids_type /= LOGNORMAL) then
@@ -125,12 +123,9 @@ contains
           resids_mask(:, n_dev - 2) = .false.
         end if
 
-        if (boot_type == RESID .and. outlier_colidx == 2 .and. outlier_rowidx == 1 &
-        .and. excl_colidx == outlier_colidx .and. excl_rowidx == outlier_rowidx) print_triangles = .true.
-
         triangle_sim = single_outlier(triangle, dev_facs_original, sigmas_original, &
           outlier_rowidx, outlier_colidx, mean_factor, sd_factor, sim_dist)
-        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask, print_triangles)
+        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask)
 
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), m_conf + 1) = reserve
@@ -166,7 +161,7 @@ contains
           if (i <= 0) cycle
           obs_mask(i, j) = .false.
         end do
-        if (boot_type == PARAM) obs_mask(1, n_dev) = .true.
+        if (boot_type == PARAM .or. boot_type == PAIRS) obs_mask(1, n_dev) = .true.
 
         resids_mask = obs_mask(1:(n_dev - 1), 2:n_dev)
         resids_mask(:, n_dev - 1) = .false.
@@ -175,7 +170,7 @@ contains
         triangle_sim = calendar_outlier(triangle, dev_facs_original, sigmas_original, outlier_diagidx, &
           mean_factor, sd_factor, sim_dist)
 
-        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask, print_triangles)
+        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask)
 
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
         res(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_conf + 1) = reserve
@@ -210,7 +205,7 @@ contains
         do j = 2, n_dev + 1 - excl_rowidx
           obs_mask(excl_rowidx, j) = .false.
         end do
-        if (boot_type == PARAM) obs_mask(1, n_dev) = .true. ! avoid 0/0
+        if (boot_type == PARAM .or. boot_type == PAIRS) obs_mask(1, n_dev) = .true. 
 
         resids_mask = obs_mask(1:(n_dev - 1), 2:n_dev)
         resids_mask(:, n_dev - 1) = .false.
@@ -218,7 +213,7 @@ contains
 
         triangle_sim = origin_outlier(triangle, dev_facs_original, sigmas_original, outlier_rowidx, &
           mean_factor, sd_factor, sim_dist)
-        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask, print_triangles)
+        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask)
 
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
         res(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_conf + 1) = reserve
@@ -242,12 +237,11 @@ contains
     !$omp end parallel
   end subroutine mack_sim
 
-  subroutine boot(n_dev, triangle, n_boot, reserve, mask, print)
+  subroutine boot(n_dev, triangle, n_boot, reserve, mask)
     integer(c_int), intent(in) :: n_boot, n_dev
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     logical(c_bool), intent(in) :: mask(:, :)
     real(c_double), intent(inout) :: reserve(n_boot)
-    logical(c_bool), intent(in) :: print
 
     real(c_double) :: res
 
@@ -256,8 +250,6 @@ contains
     real(c_double) :: ln_means_boot(n_dev - 1, n_dev - 1), ln_sigmas_boot(n_dev - 1, n_dev - 1)
     real(c_double) :: ln_shifts_boot(n_dev - 1, n_dev - 1)
     integer(c_int) :: status
-
-    character(len=999, kind=c_char) :: info
 
     n_resids = count(mask) - n_dev
 
@@ -272,20 +264,20 @@ contains
       ! Simulate new parameters
       if (boot_type == RESID) call sample_resids("boot", ln_shifts_boot, ln_means_boot, ln_sigmas_boot)
       call boot_params(triangle, dev_facs_boot, sigmas_boot, ln_shifts_boot, ln_means_boot, ln_sigmas_boot, status)
+      if (boot_type == PAIRS .and. status == FAILURE) then
+        cycle main_loop
+      end if
 
       ! Simulate process error
       if (boot_type == RESID) call sample_resids("sim", ln_shifts_boot, ln_means_boot, ln_sigmas_boot)
       res = sim_res(triangle, dev_facs_boot, sigmas_boot, ln_shifts_boot, ln_means_boot, ln_sigmas_boot, status)
+      if (boot_type == PAIRS .and. status == FAILURE) then
+        cycle main_loop
+      end if
 
       reserve(i_boot) = res
       i_boot = i_boot + 1
     end do main_loop
-
-    write(info, *) "Residual type: ", resids_type, c_new_line, "Triangle: "
-    if (print) then
-      call print_triangle(triangle, trim(info))
-      call print_triangle(resids, "Resids: ")
-    end if
   end subroutine boot
 
   ! Return fitted development factors and dispersion parameters, changing
@@ -426,7 +418,7 @@ contains
     integer(c_int), intent(out) :: status
 
     real(c_double), allocatable :: triangle_boot(:, :)
-    integer(c_int) :: i, j, n_rows, n_dev
+    integer(c_int) :: i, j, n_rows, n_dev, k, n_obs
     real(c_double) :: mean, sd, shape, scale
 
     real(c_double), allocatable :: resampled_pairs(:, :)
@@ -545,18 +537,23 @@ contains
       call fit(triangle_boot, dev_facs_boot, sigmas_boot, use_mask=.false., compute_resids=.false.)
 
      case (PAIRS)
-      allocate(resampled_pairs(n_dev - 1, 2), source=0._c_double)
-      allocate(pair_indices(n_dev - 1))
-      allocate(resampled_pair_indices(n_dev - 1))
-
-      do i = 1, n_dev - 1
-        pair_indices(i) = i
-      end do
-
       do j = 1, n_dev - 1
         n_rows = n_dev - j
+        n_obs = count(obs_mask(:, j + 1))
+
+        allocate(pair_indices(n_obs))
+        allocate(resampled_pair_indices(n_rows))
+        allocate(resampled_pairs(n_rows, 2), source=0._c_double)
+
+        k = 1
         do i = 1, n_rows
-          resampled_pair_indices(i) = pair_indices(1 + int(n_rows * runif_par(rng, i_thread)))
+          if (obs_mask(i, j + 1)) then
+            pair_indices(k) = i
+            k = k + 1
+          end if
+        end do
+        do i = 1, n_rows
+          resampled_pair_indices(i) = pair_indices(1 + int(n_obs * runif_par(rng, i_thread)))
         end do
         resampled_pairs(1:n_rows, :) = triangle(resampled_pair_indices(1:n_rows), j:(j + 1))
 
@@ -567,6 +564,10 @@ contains
         else
           sigmas_boot(j) = extrapolate_sigma(sigmas_boot, j)
         end if
+
+        deallocate(pair_indices)
+        deallocate(resampled_pair_indices)
+        deallocate(resampled_pairs)
       end do
     end select
   end subroutine boot_params
@@ -591,8 +592,8 @@ contains
 
     status = SUCCESS
     triangle_sim = triangle
-    if (boot_type == PARAM) then
-      if (dist == NORMAL) then
+    if (boot_type == PARAM .or. boot_type == PAIRS) then
+      if (dist == NORMAL .or. boot_type == PAIRS) then
         do i_diag = 1, n_dev - 1
           do i = i_diag + 1, n_dev
             j = n_dev + i_diag + 1 - i
@@ -679,6 +680,8 @@ contains
       end do
     end do
 
+    resampled_resids = 0
+
     if (which == "boot") then
       do j = 2, n_dev
         n_rows = n_dev + 1 - j
@@ -703,7 +706,6 @@ contains
         end do
       end do
     end if
-
   end subroutine sample_resids
 
   pure real(c_double) function extrapolate_sigma(sigmas, col)
@@ -719,10 +721,6 @@ contains
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     real(c_double), intent(out) :: reserve(n_boot)
     integer(c_int), intent(in), value :: seed
-
-    logical(c_bool) :: print_triangles
-
-    print_triangles = .false.
 
     allocate(dev_facs(n_dev - 1), source=0._c_double)
     allocate(sigmas(n_dev - 1), source=0._c_double)
@@ -751,7 +749,7 @@ contains
 
     i_thread = 0
 
-    call boot(n_dev, triangle, n_boot, reserve, obs_mask, print_triangles)
+    call boot(n_dev, triangle, n_boot, reserve, obs_mask)
 
     deallocate(dev_facs)
     deallocate(sigmas)
