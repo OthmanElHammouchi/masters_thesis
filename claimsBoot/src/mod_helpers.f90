@@ -67,25 +67,30 @@ contains
     else
       print *, "Failure"
     end if
-
   end function validate_rng
 
-  subroutine print_triangle(triangle)
+  subroutine print_triangle(triangle, info)
     real(c_double), intent(in) :: triangle(:, :)
+    character(len=*, kind=c_char) :: info
     integer :: i, n_dev
     character(len=999, kind=c_char) :: str, str_
-
     n_dev = size(triangle, 1)
 
-    write(str, '(*(f9.2))') triangle(1, :)
-    str = c_new_line // trim(str) // c_new_line // c_carriage_return
-    do i = 2, n_dev
-      write(str_, '(*(f9.2))') triangle(i, :)
-      str = trim(str) // trim(str_) // c_new_line // c_carriage_return
-    end do
+    ! open(10, file='results/triangles.txt', position='append')
 
-    call rprint_par(str)
-    call r_flush_console()
+    ! write(str, '(*(f30.10))') triangle(1, :)
+    ! str = c_new_line // trim(str) // c_new_line // c_carriage_return
+    ! do i = 2, n_dev
+    !   write(str_, '(*(f30.10))') triangle(i, :)
+    !   str = trim(str) // trim(str_) // c_new_line // c_carriage_return
+    ! end do
+
+    ! write(10, *) trim(info)
+    ! write(10, *) trim(str // c_null_char)
+    ! close(10)
+
+    ! call rprint_par(str)
+    ! call r_flush_console()
   end subroutine print_triangle
 
   subroutine print_vector(vector)

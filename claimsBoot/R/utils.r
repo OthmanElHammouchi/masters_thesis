@@ -26,13 +26,15 @@ mackConfig <- function(ndev,
     }
     excl.points <- outlier.points
 
-    if (boot.type != "pairs") {
+    if (boot.type == "parametric") {
+      outlier.points <- outlier.points[!(outlier.points[, 1] == 1 & outlier.points[, 2] == 7), ]
+      excl.points <- outlier.points
       idxs <- do.call(expand.grid,
         list(
-          seq_len(npts),
+          seq_len(nrow(outlier.points)),
           seq_along(mean.factors),
           seq_along(sd.factors),
-          seq_len(npts),
+          seq_len(nrow(excl.points)),
           seq_along(opt),
           seq_along(conds)
       ))
@@ -44,6 +46,52 @@ mackConfig <- function(ndev,
         opt[idxs[, 5]],
         as.integer(conds[idxs[, 6]])
       )
+
+    } else if (boot.type == "residuals") {
+      opt <- as.double(key[c("lognormal")])
+      idxs <- do.call(expand.grid,
+        list(
+          seq_len(nrow(outlier.points)),
+          seq_along(mean.factors),
+          seq_along(sd.factors),
+          seq_len(nrow(excl.points)),
+          seq_along(opt),
+          seq_along(conds)
+      ))
+      df1 <- cbind(
+        outlier.points[idxs[, 1], ],
+        mean.factors[idxs[, 2]],
+        sd.factors[idxs[, 3]],
+        excl.points[idxs[, 4], ],
+        opt[idxs[, 5]],
+        as.integer(conds[idxs[, 6]])
+      )
+
+      outlier.points <- outlier.points[
+        !(outlier.points[, 1] == 1 & outlier.points[, 2] == 7) &
+        !(outlier.points[, 1] == 1 & outlier.points[, 2] == 6) &
+        !(outlier.points[, 1] == 2 & outlier.points[, 2] == 6),
+      ]
+      excl.points <- outlier.points
+      opt <- as.double(key[c("standardised", "studentised")])
+      idxs <- do.call(expand.grid,
+        list(
+          seq_len(nrow(outlier.points)),
+          seq_along(mean.factors),
+          seq_along(sd.factors),
+          seq_len(nrow(outlier.points)),
+          seq_along(opt),
+          seq_along(conds)
+      ))
+      df2 <- cbind(
+        outlier.points[idxs[, 1], ],
+        mean.factors[idxs[, 2]],
+        sd.factors[idxs[, 3]],
+        excl.points[idxs[, 4], ],
+        opt[idxs[, 5]],
+        as.integer(conds[idxs[, 6]])
+      )
+      config <- rbind(df1, df2)
 
     } else {
       idxs <- do.call(expand.grid,

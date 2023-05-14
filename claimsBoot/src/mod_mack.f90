@@ -47,6 +47,7 @@ contains
     type(c_ptr) :: pgbar
 
     integer(c_int) :: status
+    logical(c_bool) :: print_triangles
 
     call fit(triangle, dev_facs_original, sigmas_original, use_mask=.false., compute_resids=.false.)
 
@@ -83,8 +84,8 @@ contains
     allocate(reserve(n_boot), source=0._c_double)
 
     i_thread = omp_get_thread_num()
-
     boot_type = boot_type_
+    print_triangles = .false.
 
     reserve = 0
     select case (sim_type)
@@ -124,10 +125,12 @@ contains
           resids_mask(:, n_dev - 2) = .false.
         end if
 
+        if (boot_type == RESID .and. outlier_colidx == 2 .and. outlier_rowidx == 1 &
+        .and. excl_colidx == outlier_colidx .and. excl_rowidx == outlier_rowidx) print_triangles = .true.
+
         triangle_sim = single_outlier(triangle, dev_facs_original, sigmas_original, &
           outlier_rowidx, outlier_colidx, mean_factor, sd_factor, sim_dist)
-        if (any(triangle_sim < 0)) print *, raise(2)
-        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask)
+        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask, print_triangles)
 
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), m_conf + 1) = reserve
@@ -172,7 +175,7 @@ contains
         triangle_sim = calendar_outlier(triangle, dev_facs_original, sigmas_original, outlier_diagidx, &
           mean_factor, sd_factor, sim_dist)
 
-        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask)
+        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask, print_triangles)
 
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
         res(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_conf + 1) = reserve
@@ -215,7 +218,7 @@ contains
 
         triangle_sim = origin_outlier(triangle, dev_facs_original, sigmas_original, outlier_rowidx, &
           mean_factor, sd_factor, sim_dist)
-        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask)
+        call boot(n_dev, triangle_sim, n_boot, reserve, obs_mask, print_triangles)
 
         res(((i_sim - 1) * n_boot + 1):(i_sim * n_boot), 1:m_conf) = spread(conf(i_sim, 1:m_conf), 1, n_boot)
         res(((i_sim - 1)*n_boot + 1):(i_sim*n_boot), m_conf + 1) = reserve
@@ -239,11 +242,12 @@ contains
     !$omp end parallel
   end subroutine mack_sim
 
-  subroutine boot(n_dev, triangle, n_boot, reserve, mask)
+  subroutine boot(n_dev, triangle, n_boot, reserve, mask, print)
     integer(c_int), intent(in) :: n_boot, n_dev
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     logical(c_bool), intent(in) :: mask(:, :)
     real(c_double), intent(inout) :: reserve(n_boot)
+    logical(c_bool), intent(in) :: print
 
     real(c_double) :: res
 
@@ -252,6 +256,8 @@ contains
     real(c_double) :: ln_means_boot(n_dev - 1, n_dev - 1), ln_sigmas_boot(n_dev - 1, n_dev - 1)
     real(c_double) :: ln_shifts_boot(n_dev - 1, n_dev - 1)
     integer(c_int) :: status
+
+    character(len=999, kind=c_char) :: info
 
     n_resids = count(mask) - n_dev
 
@@ -274,6 +280,12 @@ contains
       reserve(i_boot) = res
       i_boot = i_boot + 1
     end do main_loop
+
+    write(info, *) "Residual type: ", resids_type, c_new_line, "Triangle: "
+    if (print) then
+      call print_triangle(triangle, trim(info))
+      call print_triangle(resids, "Resids: ")
+    end if
   end subroutine boot
 
   ! Return fitted development factors and dispersion parameters, changing
@@ -443,7 +455,6 @@ contains
             else if (dist == GAMMA) then
               shape = (dev_facs(j - 1)**2 * triangle(i, j - 1)) / sigmas(j - 1) **2
               scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
-              if (shape < 0 .or. scale < 0) print *, raise(2)
               triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
               if (triangle_boot(i, j) <= 0) then
                 status = FAILURE
@@ -470,7 +481,6 @@ contains
             else if (dist == GAMMA) then
               shape = (dev_facs(j - 1)**2 * triangle_boot(i, j - 1)) / sigmas(j - 1) **2
               scale = sigmas(j - 1) ** 2 / dev_facs(j - 1)
-              if (shape < 0 .or. scale < 0) print *, raise(2)
               triangle_boot(i, j) = rgamma_par(rng, i_thread, shape, scale)
               if (triangle_boot(i, j) <= 0) then
                 status = FAILURE
@@ -603,7 +613,6 @@ contains
             j = n_dev + i_diag + 1 - i
             shape = (dev_facs_boot(j - 1)**2 * triangle_sim(i, j - 1)) / sigmas_boot(j - 1) **2
             scale = sigmas_boot(j - 1) ** 2 / dev_facs_boot(j - 1)
-            if (shape < 0 .or. scale < 0) print *, raise(2)
             triangle_sim(i, j) = rgamma_par(rng, i_thread, shape, scale)
             if (triangle_sim(i, j) <= 0) then
               status = FAILURE
@@ -711,6 +720,10 @@ contains
     real(c_double), intent(out) :: reserve(n_boot)
     integer(c_int), intent(in), value :: seed
 
+    logical(c_bool) :: print_triangles
+
+    print_triangles = .false.
+
     allocate(dev_facs(n_dev - 1), source=0._c_double)
     allocate(sigmas(n_dev - 1), source=0._c_double)
     allocate(scale_facs(n_dev, n_dev), source=0._c_double)
@@ -738,7 +751,7 @@ contains
 
     i_thread = 0
 
-    call boot(n_dev, triangle, n_boot, reserve, obs_mask)
+    call boot(n_dev, triangle, n_boot, reserve, obs_mask, print_triangles)
 
     deallocate(dev_facs)
     deallocate(sigmas)
@@ -813,7 +826,6 @@ contains
           if (i == outlier_rowidx) cycle
           shape = dev_facs(j - 1)**2 * single_outlier(i, j - 1) / sigmas(j - 1)**2
           scale = sigmas(j - 1)**2 / dev_facs(j - 1)
-          if (shape < 0 .or. scale < 0) print *, raise(2)
           single_outlier(i, j) = rgamma_par(rng, i_thread, shape, scale)
         end do
       end do

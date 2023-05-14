@@ -123,7 +123,7 @@ The same diagnostic plots are shown in \cref{fig:diag-plot-perturbed} for the ca
   \label{fig:diag-plot-perturbed}
 \end{figure}
 
-Our aim is to investigate whether it is possible to use bootstrap simulations to remedy this problem. The text is divided as follows. The next chapter introduces the bootstrap and explains how it can be used for inference on regression models, which is how we will frame the reserving methods under consideration. In the following two chapters, we will then apply this theory to the most widespread stochastic claims reserving models, \modelref{model:mack} and \modelref{model:odp}, in order to study whether it is possible to identify pattern breaks using bootstrap simulation. Specifically, we simulate claims triangles which perfectly follow the model assumptions, perturb these, and generate a bootstrap reserve from the resulting dataset. This will allow us to investigate how the simulated reserve is impacted by deviations from the model assumptions.
+Our aim in the present study is to investigate whether it is possible to use bootstrap simulations to remedy this problem. The next chapter introduces the bootstrap and explains how it can be used for inference on regression models, which is how we will frame the reserving methods under consideration. In the following two chapters, we will then apply this theory to the most widespread stochastic claims reserving models, \modelref{model:mack} and \modelref{model:odp}, in order to study whether it is possible to identify pattern breaks using bootstrap simulation. Specifically, we simulate claims triangles which perfectly follow the model assumptions, perturb these, and generate a bootstrap reserve from the resulting dataset. This will allow us to investigate how the simulated reserve is impacted by deviations from the model assumptions.
 
 \mainmatter%
 
@@ -1562,11 +1562,13 @@ The only question that remains is how to incorporate the intrinsic variability o
 
 \epstopdfsetup{outdir=/home/othman/repos/masters_thesis/plots/}
 
-As mentioned in the \nameref{intro} and \cref{sec:boot-proc}, we want to investigate the effect of deviations from the model assumptions on the predictive distribution of the total outstanding claims. To this end, we simulate a large number of run-off triangles which conform perfectly to these assumptions, perturb them in a number of ways, and use the bootstrap methods described in \cref{chapter:mack,chapter:poisson} to compute resulting distribution. We broadly follow the methodology outlined in \cite{schiegl}, adapted, of course, to the models under consideration.
+As explained in the \nameref{intro} and \cref{sec:boot-proc}, we want to study the impact of deviations from the model assumptions on the predictive distribution of the total outstanding claims. To this end, we simulate a large number of run-off triangles, following a similar approach to the one described in \cite{schiegl}, which satisfy these assumptions perfectly except for a number of deviating observations. We then use the bootstrap methods described in \cref{chapter:mack,chapter:poisson} to compute the corresponding distribution while excluding a subset of points from the resampling process. Our aim is to investigate whether the predictive distributions computed from data where the correct points have been discarded differ significantly from those obtained after removing arbitrary observations.
 
 \section{Mack's model} \label{sec:mack-sim}
 
-Recall from \cref{sec:mack-intro} that \modelref{model:mack} is recursive in nature, with the cumulative claim amounts in the next development determined by the observations in the previous one, and therefore requires that the first column of the triangle already be given in some way. We could use a seperate model to generate this, but we choose here to simply take the one from the UK Motor dataset in \cref{tab:uk-motor}. Likewise, we will use as development factors $f_1, \dots, f_{I - 1}$ and dispersion parameters $\sigma_1, \dots, \sigma_{I - 1}$ the fitted ones for this triangle. To generate a triangle which perfectly satisfies \cref{assump:mack-expectation,assump:mack-variance,assump:mack-independence}, we can then start from the initial column and use any suitable data-generating process (such as \cref{eq:time-series-model}) to recursively simulate the following columns of the triangle, as outline in \cref{alg:clean-mack-triangle}.
+Recall from \cref{sec:mack-intro} that \modelref{model:mack} is recursive in nature, modelling the cumulative claim amounts in the next development period as a function of those in the previous one. Hence, it requires that observations for the first development period be given initially. This could be done using a seperate model, but we choose here the simpler approach of borrowing the first column from the UK Motor example data in \cref{tab:uk-motor}. Similarly, we choose for the development factors $f_1, \dots, f_{I - 1}$ and dispersion parameters $\sigma_1, \dots, \sigma_{I - 1}$ of the simulated triangles the fitted ones from this dataset.
+
+In order to obtain a synthetic triangle which satisfies \cref{assump:mack-expectation,assump:mack-variance,assump:mack-independence} with no deviations, we can then start from the initial column and use any suitable data-generating process (such as \cref{eq:time-series-model}) to recursively generate the next antidiagonal of the triangle, stopping when we reach the final development year.
 
 \begin{algorithm}[!htb]
   \begin{algorithmic}
@@ -1688,28 +1690,55 @@ The results are presented as a series of faceted density plots comparing, for di
 
 \subsection{Mack's model}
 
-For a single contaminated point, we observe poor performance of the conditional bootstrap accross the board. Referring to \Cref{fig:mack-sim-cond-semiparam,fig:mack-sim-cond-param}, we observe no significant difference between the predictive distribution with and without the contaminated point under a conditional bootstrap. By comparison, unconditional bootstraps perform a lot better, as can be seen in \Cref{fig:mack-sim-uncond-param-gamma,fig:mack-sim-uncond-param-normal,fig:mack-sim-uncond-semiparam-standard,fig:mack-sim-uncond-semiparam-student}. Intuitively, this makes sense, as the unconditional approach propagates resampled values further in the triangle (see \Cref{alg:uncond-semiparam-mack}), thus allowing perturbations to accumulate. It is somewhat surprising, however, that this should result in such a drastic difference, perhaps lending credence to the misgivings about the conditional approach outlined at the end of \Cref{sec:mack-challenge}. The diffference between contaminated and uncontaminated predictive distributions tends to be more pronounced for later development periods.
+In general, there seems to be little difference between conditional and unconditional.
 
-\newgeometry{bottom=0cm}
+In experiments where a single point has been perturbed, we observe no difference the semiparametric bootstraps with standardised and log-normal residuals perform
+
+we observe no significant difference between the predictive distribution with and without
+
+
+\input{../results/sim_triangle_example.tex}
+
+
+\begin{table}
+  \begin{subtable}{0.45\linewidth}
+    \centering
+    \input{../results/resids_standardised_example.tex}
+    \subcaption{Standardised}
+    \label{fig:resids-standard-example}
+  \end{subtable}
+  \hfill
+  \begin{subtable}{0.45\linewidth}
+    \centering
+    \input{../results/resids_log_normal_example.tex}
+    \subcaption{Log-normal}
+    \label{fig:resids-log-normal-example}
+  \end{subtable}
+  \caption{Residuals corresponding to \cref{fig:sim-triangle-example}}
+\end{table}
+
+\label{fig:resids-studentised-example}
+
+\newgeometry{bottom=2cm}
 
 %% single
 % residuals cond standardised
 \begin{landscape}
   \begin{figure}
     \centering
-    \includegraphics{mack_single_densities_cond_residuals_standardised_1}
-    \caption{Single point contamination Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-single-cond-semiparam}
+    \includegraphics{mack_single_densities_cond_residuals_standardised}
+    \caption{Density plots of predictive distributions obtained using the conditional semiparametric bootstrap with standardised residuals on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = c_\sigma = 0.5$.}
+    \label{fig:mack-single-cond-semiparam-standardised}
   \end{figure}
 \end{landscape}
 
+% residuals cond log-normal
 \begin{landscape}
   \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
     \centering
-    \includegraphics{mack_single_densities_cond_residuals_standardised_2}
-    \caption{Single point contamination Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
+    \includegraphics{mack_single_densities_cond_residuals_log-normal}
+    \caption{Density plots of predictive distributions obtained using the conditional semiparametric bootstrap with log-normal residuals on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = 0.5$ and $c_\sigma = 2$.}
+    \label{fig:mack-single-cond-semiparam-log-normal}
   \end{figure}
 \end{landscape}
 
@@ -1717,39 +1746,19 @@ For a single contaminated point, we observe poor performance of the conditional 
 \begin{landscape}
   \begin{figure}
     \centering
-    \includegraphics{mack_single_densities_uncond_residuals_standardised_1}
-    \caption{Single point contamination Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-single-uncond-semiparam-standard}
+    \includegraphics{mack_single_densities_uncond_residuals_standardised}
+    \caption{Density plots of predictive distributions obtained using the unconditional semiparametric bootstrap with standardised residuals on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = 2$ and $c_\sigma = 0.5$.}
+    \label{fig:mack-single-uncond-semiparam-standardised}
   \end{figure}
 \end{landscape}
 
-\begin{landscape}
-  \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
-    \centering
-    \includegraphics{mack_single_densities_uncond_residuals_standardised_2}
-    \caption{Single point contamination Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
-  \end{figure}
-\end{landscape}
-
-% residuals uncond studentised
+% residuals uncond log-normal
 \begin{landscape}
   \begin{figure}
     \centering
-    \includegraphics{mack_single_densities_uncond_residuals_studentised_1}
-    \caption{Single point contamination Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-single-uncond-semiparam-student}
-  \end{figure}
-\end{landscape}
-
-\begin{landscape}
-  \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
-    \centering
-    \includegraphics{mack_single_densities_uncond_residuals_studentised_2}
-    \caption{Single point contamination Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals, $c_\mu = c_\sigma = 0.75$}
+    \includegraphics{mack_single_densities_uncond_residuals_log-normal}
+    \caption{Density plots of predictive distributions obtained using the unconditional semiparametric bootstrap with log-normal residuals on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = c_\sigma = 2$.}
+    \label{fig:mack-single-uncond-semiparam-lognormal}
   \end{figure}
 \end{landscape}
 
@@ -1757,39 +1766,9 @@ For a single contaminated point, we observe poor performance of the conditional 
 \begin{landscape}
   \begin{figure}
     \centering
-    \includegraphics{mack_single_densities_cond_parametric_normal_1}
-    \caption{Single point contamination Mack model simulation results for the conditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-single-cond-param}
-  \end{figure}
-\end{landscape}
-
-\begin{landscape}
-  \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
-    \centering
-    \includegraphics{mack_single_densities_cond_parametric_normal_2}
-    \caption{Single point contamination Mack model simulation results for the conditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-  \end{figure}
-\end{landscape}
-
-% parametric uncond normal
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_single_densities_uncond_parametric_normal_1}
-    \caption{Single point contamination Mack model simulation results for the unconditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-single-uncond-param-normal}
-  \end{figure}
-\end{landscape}
-
-\begin{landscape}
-  \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
-    \centering
-    \includegraphics{mack_single_densities_uncond_parametric_normal_2}
-    \caption{Single point contamination Mack model simulation results for the unconditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
+    \includegraphics{mack_single_densities_cond_parametric_normal}
+    \caption{Density plots of predictive distributions obtained using the conditional parametric bootstrap with the normal distribution on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = 2$ and $c_\sigma = 1$.}
+    \label{fig:mack-single-cond-param-normal}
   \end{figure}
 \end{landscape}
 
@@ -1797,19 +1776,9 @@ For a single contaminated point, we observe poor performance of the conditional 
 \begin{landscape}
   \begin{figure}
     \centering
-    \includegraphics{mack_single_densities_uncond_parametric_gamma_1}
-    \caption{Single point contamination Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
+    \includegraphics{mack_single_densities_uncond_parametric_gamma}
+    \caption{Density plots of predictive distributions obtained using the unconditional parametric bootstrap with the gamma distribution on Mack's model for different deviating points. The curves in each facet correspond to densities obtained while excluding a different point in the resampling procedure, with the result from the cleaned dataset highlighted in red. The perturbation factors are $c_\mu = 0.5$ and $c_\sigma = 1$.}
     \label{fig:mack-single-uncond-param-gamma}
-  \end{figure}
-\end{landscape}
-
-\begin{landscape}
-  \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
-    \centering
-    \includegraphics{mack_single_densities_uncond_parametric_gamma_2}
-    \caption{Single point contamination Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
   \end{figure}
 \end{landscape}
 
@@ -1817,125 +1786,156 @@ For a single contaminated point, we observe poor performance of the conditional 
 % residuals cond standardised
 \begin{landscape}
   \begin{figure}
-    \centering
-    \includegraphics{mack_calendar_densities_cond_residuals_standardised}
-    \caption{Calendar period contamination Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-calendar-cond-semiparam}
+    \begin{subfigure}{0.5\linewidth}
+      \centering
+      \includegraphics{mack_calendar_densities_cond_residuals_standardised}
+      \subcaption{Conditional, $c_\mu = c_\sigma = 0.5$}
+      \label{fig:mack-calendar-cond-semiparam}
+    \end{subfigure}
+    % residuals uncond standardised
+    \begin{subfigure}{0.5\linewidth}
+      \centering
+      \includegraphics{mack_calendar_densities_uncond_residuals_standardised}
+      \subcaption{Unconditional, $c_\mu = 2$ and $c_\sigma = 0.5$}
+      \label{fig:mack-calendar-uncond-semiparam-standard}
+    \end{subfigure}
+    \caption{Density plots of predictive distributions obtained using the semiparametric bootstrap with standardised residuals on Mack's model for different deviating calendar periods}
   \end{figure}
 \end{landscape}
 
-% residuals uncond standardised
+% residuals cond log-normal
 \begin{landscape}
   \begin{figure}
-    \centering
-    \includegraphics{mack_calendar_densities_uncond_residuals_standardised}
-    \caption{Calendar period contamination Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-calendar-uncond-semiparam-standard}
-  \end{figure}
-\end{landscape}
-
-% residuals uncond studentised
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_calendar_densities_uncond_residuals_studentised}
-    \caption{Calendar period contamination Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-calendar-uncond-semiparam-student}
-  \end{figure}
-\end{landscape}
-
-% parametric cond normal
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_calendar_densities_cond_parametric_normal}
-    \caption{Calendar period contamination Mack model simulation results for the conditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-calendar-cond-param}
-  \end{figure}
-\end{landscape}
-
-% parametric uncond normal
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_calendar_densities_uncond_parametric_normal}
-    \caption{Calendar period contamination Mack model simulation results for the unconditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-calendar-uncond-param-normal}
-  \end{figure}
-\end{landscape}
-
-% parametric uncond gamma
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_calendar_densities_uncond_parametric_gamma}
-    \caption{Calendar period contamination Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-calendar-uncond-param-gamma}
-  \end{figure}
-\end{landscape}
-
-%% origin
-% residuals cond standardised
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_origin_densities_cond_residuals_standardised}
-    \caption{Origin period contamination Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-origin-cond-semiparam}
-  \end{figure}
-\end{landscape}
-
-% residuals uncond standardised
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_origin_densities_uncond_residuals_standardised}
-    \caption{Origin period contamination Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-origin-uncond-semiparam-standard}
-  \end{figure}
-\end{landscape}
-
-% residuals uncond studentised
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_origin_densities_uncond_residuals_studentised}
-    \caption{Origin period contamination Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-origin-uncond-semiparam-student}
+    \begin{subfigure}{0.5\linewidth}
+      \centering
+      \includegraphics{mack_calendar_densities_cond_residuals_log-normal}
+      \subcaption{Conditional, $c_\mu = 0.5$ and $c_\sigma = 2$}
+      \label{fig:mack-calendar-cond-semiparam-log-normal}
+    \end{subfigure}
+    % residuals uncond log-normal
+    \begin{subfigure}{0.5\linewidth}
+      \centering
+      \includegraphics{mack_calendar_densities_uncond_residuals_log-normal}
+      \subcaption{Unconditional, $c_\mu = c_\sigma = 2$}
+      \label{fig:mack-calendar-uncond-semiparam-log-normal}
+    \end{subfigure}
+    \caption{Density plots of predictive distributions obtained using the semiparametric bootstrap with log-normal residuals on Mack's model for different deviating calendar periods}
   \end{figure}
 \end{landscape}
 
 % parametric cond normal
 \begin{landscape}
   \begin{figure}
-    \centering
-    \includegraphics{mack_origin_densities_cond_parametric_normal}
-    \caption{Origin period contamination Mack model simulation results for the conditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-origin-cond-param}
+    \begin{subfigure}{0.5\linewidth}
+      \centering
+      \includegraphics{mack_calendar_densities_cond_parametric_normal}
+      \subcaption{Conditional, normal distribution, $c_\mu = 0.5$ and $c_\sigma = 1$}
+      \label{fig:mack-calendar-cond-param-normal}
+    \end{subfigure}
+    % parametric uncond gamma
+    \begin{subfigure}{0.5\linewidth}
+      \centering
+      \includegraphics{mack_calendar_densities_uncond_parametric_gamma}
+      \subcaption{Unconditional, gamma distribution, $c_\mu =  2$ and $c_\sigma = 1$}
+      \label{fig:mack-calendar-uncond-param-gamma}
+    \end{subfigure}
+    \caption{Density plots of predictive distributions obtained using the parametric bootstrap on Mack's model for different deviating calendar periods}
   \end{figure}
 \end{landscape}
 
-% parametric uncond normal
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_origin_densities_uncond_parametric_normal}
-    \caption{Origin period contamination Mack model simulation results for the unconditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-origin-uncond-param-normal}
-  \end{figure}
-\end{landscape}
 
-% parametric uncond gamma
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{mack_origin_densities_uncond_parametric_gamma}
-    \caption{Origin period contamination Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
-    \label{fig:mack-origin-uncond-param-gamma}
-  \end{figure}
-\end{landscape}
+% \begin{subfigure}{0.5\linewidth}
+%   \centering
+%   \includegraphics{mack_calendar_densities_cond_parametric_normal}
+%   \caption{Calendar period contamination Mack model simulation results for the conditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
+%   \label{fig:mack-calendar-cond-param}
+% \end{subfigure}
+
+% % parametric uncond normal
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{mack_calendar_densities_uncond_parametric_normal}
+%     \caption{Calendar period contamination Mack model simulation results for the unconditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
+%     \label{fig:mack-calendar-uncond-param-normal}
+%   \end{figure}
+% \end{landscape}
+
+% % parametric uncond gamma
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{mack_calendar_densities_uncond_parametric_gamma}
+%     \caption{Calendar period contamination Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
+%     \label{fig:mack-calendar-uncond-param-gamma}
+%   \end{figure}
+% \end{landscape}
+
+% %% origin
+% % residuals cond standardised
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{mack_origin_densities_cond_residuals_standardised}
+%     \caption{Origin period contamination Mack model simulation results for the conditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
+%     \label{fig:mack-origin-cond-semiparam}
+%   \end{figure}
+% \end{landscape}
+
+% % residuals uncond standardised
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{mack_origin_densities_uncond_residuals_standardised}
+%     \caption{Origin period contamination Mack model simulation results for the unconditional semiparametric bootstrap with standardised residuals, $c_\mu = c_\sigma = 0.75$}
+%     \label{fig:mack-origin-uncond-semiparam-standard}
+%   \end{figure}
+% \end{landscape}
+
+% % residuals uncond studentised
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{mack_origin_densities_uncond_residuals_studentised}
+%     \caption{Origin period contamination Mack model simulation results for the unconditional semiparametric bootstrap with studentised residuals, $c_\mu = c_\sigma = 0.75$}
+%     \label{fig:mack-origin-uncond-semiparam-student}
+%   \end{figure}
+% \end{landscape}
+
+% % parametric cond normal
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{mack_origin_densities_cond_parametric_normal}
+%     \caption{Origin period contamination Mack model simulation results for the conditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
+%     \label{fig:mack-origin-cond-param}
+%   \end{figure}
+% \end{landscape}
+
+% % parametric uncond normal
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{mack_origin_densities_uncond_parametric_normal}
+%     \caption{Origin period contamination Mack model simulation results for the unconditional parametric bootstrap with normal distribution, $c_\mu = c_\sigma = 0.75$}
+%     \label{fig:mack-origin-uncond-param-normal}
+%   \end{figure}
+% \end{landscape}
+
+% % parametric uncond gamma
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{mack_origin_densities_uncond_parametric_gamma}
+%     \caption{Origin period contamination Mack model simulation results for the unconditional parametric bootstrap with gamma distribution, $c_\mu = c_\sigma = 0.75$}
+%     \label{fig:mack-origin-uncond-param-gamma}
+%   \end{figure}
+% \end{landscape}
 
 \restoregeometry
+
+\input{../results/mean_table_1.tex}
+\input{../results/mean_table_2.tex}
 
 \subsection{Overdispersed Poisson GLM}
 
@@ -1945,180 +1945,180 @@ The parametric bootstrap, on the other hand, performs considerably better.
 
 \newgeometry{bottom=0cm}
 
-%% single
-% parametric gamma
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_single_densities_parametric_gamma_1}
-    \caption{Single point contamination ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
-    \label{fig:glm-single-param-gamma}
-  \end{figure}
-\end{landscape}
-
-\begin{landscape}
-  \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
-    \centering
-    \includegraphics{glm_single_densities_parametric_gamma_2}
-    \caption{Single point contamination ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
-  \end{figure}
-\end{landscape}
-
-% parametric normal
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_single_densities_parametric_normal_1}
-    \caption{Single point contamination ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
-    \label{fig:glm-single-param-norm}
-  \end{figure}
-\end{landscape}
-
-\begin{landscape}
-  \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
-    \centering
-    \includegraphics{glm_single_densities_parametric_normal_2}
-    \caption{Single point contamination ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
-  \end{figure}
-\end{landscape}
-
-% parametric poisson
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_single_densities_parametric_poisson_1}
-    \caption{Single point contamination ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
-    \label{fig:glm-single-param-pois}
-  \end{figure}
-\end{landscape}
-
-\begin{landscape}
-  \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
-    \centering
-    \includegraphics{glm_single_densities_parametric_poisson_2}
-    \caption{Single point contamination ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
-  \end{figure}
-\end{landscape}
-
-% residuals
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_single_densities_residuals_1}
-    \caption{Single point contamination ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
-    \label{fig:glm-single-semiparam}
-  \end{figure}
-\end{landscape}
-
-\begin{landscape}
-  \begin{figure}
-    \ContinuedFloat
-    \captionsetup{list=off,format=cont}
-    \centering
-    \includegraphics{glm_single_densities_residuals_2}
-    \caption{Single point contamination ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
-  \end{figure}
-\end{landscape}
-
-% % different factors
+% %% single
+% % parametric gamma
 % \begin{landscape}
 %   \begin{figure}
 %     \centering
-%     \includegraphics{glm_single_by_factor}
-%     \caption{Single point contamination ODP model simulation results for $i = j = 3$ and different values of $c_\lambda$. The predictive distribution based on the cleaned data is shown black.}
-%     \label{fig:glm-single-by-factor}
+%     \includegraphics{glm_single_densities_parametric_gamma_1}
+%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
+%     \label{fig:glm-single-param-gamma}
 %   \end{figure}
 % \end{landscape}
 
-%% calendar
-% parametric gamma
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_calendar_densities_parametric_gamma}
-    \caption{Calendar period contamination ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
-    \label{fig:glm-calendar-param-gamma}
-  \end{figure}
-\end{landscape}
+% \begin{landscape}
+%   \begin{figure}
+%     \ContinuedFloat
+%     \captionsetup{list=off,format=cont}
+%     \centering
+%     \includegraphics{glm_single_densities_parametric_gamma_2}
+%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
+%   \end{figure}
+% \end{landscape}
 
-% parametric normal
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_calendar_densities_parametric_normal}
-    \caption{Calendar period contamination ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
-    \label{fig:glm-calendar-param-norm}
-  \end{figure}
-\end{landscape}
+% % parametric normal
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_single_densities_parametric_normal_1}
+%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
+%     \label{fig:glm-single-param-norm}
+%   \end{figure}
+% \end{landscape}
 
-% parametric poisson
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_calendar_densities_parametric_poisson}
-    \caption{Calendar period contamination ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
-    \label{fig:glm-calendar-param-pois}
-  \end{figure}
-\end{landscape}
+% \begin{landscape}
+%   \begin{figure}
+%     \ContinuedFloat
+%     \captionsetup{list=off,format=cont}
+%     \centering
+%     \includegraphics{glm_single_densities_parametric_normal_2}
+%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
+%   \end{figure}
+% \end{landscape}
 
-% residuals
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_calendar_densities_residuals}
-    \caption{Calendar period contamination ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
-    \label{fig:glm-calendar-semiparam}
-  \end{figure}
-\end{landscape}
+% % parametric poisson
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_single_densities_parametric_poisson_1}
+%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
+%     \label{fig:glm-single-param-pois}
+%   \end{figure}
+% \end{landscape}
 
-%% origin
-% parametric gamma
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_origin_densities_parametric_gamma}
-    \caption{Origin period ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
-    \label{fig:glm-origin-param-gamma}
-  \end{figure}
-\end{landscape}
+% \begin{landscape}
+%   \begin{figure}
+%     \ContinuedFloat
+%     \captionsetup{list=off,format=cont}
+%     \centering
+%     \includegraphics{glm_single_densities_parametric_poisson_2}
+%     \caption{Single point contamination ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
+%   \end{figure}
+% \end{landscape}
 
-% parametric normal
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_origin_densities_parametric_normal}
-    \caption{Origin period ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
-    \label{fig:glm-origin-param-norm}
-  \end{figure}
-\end{landscape}
+% % residuals
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_single_densities_residuals_1}
+%     \caption{Single point contamination ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
+%     \label{fig:glm-single-semiparam}
+%   \end{figure}
+% \end{landscape}
 
-% parametric poisson
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_origin_densities_parametric_poisson}
-    \caption{Origin period ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
-    \label{fig:glm-origin-param-pois}
-  \end{figure}
-\end{landscape}
+% \begin{landscape}
+%   \begin{figure}
+%     \ContinuedFloat
+%     \captionsetup{list=off,format=cont}
+%     \centering
+%     \includegraphics{glm_single_densities_residuals_2}
+%     \caption{Single point contamination ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
+%   \end{figure}
+% \end{landscape}
 
-% residuals
-\begin{landscape}
-  \begin{figure}
-    \centering
-    \includegraphics{glm_origin_densities_residuals}
-    \caption{Origin period ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
-    \label{fig:glm-origin-semiparam}
-  \end{figure}
-\end{landscape}
+% % % different factors
+% % \begin{landscape}
+% %   \begin{figure}
+% %     \centering
+% %     \includegraphics{glm_single_by_factor}
+% %     \caption{Single point contamination ODP model simulation results for $i = j = 3$ and different values of $c_\lambda$. The predictive distribution based on the cleaned data is shown black.}
+% %     \label{fig:glm-single-by-factor}
+% %   \end{figure}
+% % \end{landscape}
 
-\restoregeometry
+% %% calendar
+% % parametric gamma
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_calendar_densities_parametric_gamma}
+%     \caption{Calendar period contamination ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
+%     \label{fig:glm-calendar-param-gamma}
+%   \end{figure}
+% \end{landscape}
+
+% % parametric normal
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_calendar_densities_parametric_normal}
+%     \caption{Calendar period contamination ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
+%     \label{fig:glm-calendar-param-norm}
+%   \end{figure}
+% \end{landscape}
+
+% % parametric poisson
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_calendar_densities_parametric_poisson}
+%     \caption{Calendar period contamination ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
+%     \label{fig:glm-calendar-param-pois}
+%   \end{figure}
+% \end{landscape}
+
+% % residuals
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_calendar_densities_residuals}
+%     \caption{Calendar period contamination ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
+%     \label{fig:glm-calendar-semiparam}
+%   \end{figure}
+% \end{landscape}
+
+% %% origin
+% % parametric gamma
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_origin_densities_parametric_gamma}
+%     \caption{Origin period ODP model simulation results for the parametric bootstrap with gamma distribution, $c_\lambda = 2$}
+%     \label{fig:glm-origin-param-gamma}
+%   \end{figure}
+% \end{landscape}
+
+% % parametric normal
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_origin_densities_parametric_normal}
+%     \caption{Origin period ODP model simulation results for the parametric bootstrap with normal distribution, $c_\lambda = 2$}
+%     \label{fig:glm-origin-param-norm}
+%   \end{figure}
+% \end{landscape}
+
+% % parametric poisson
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_origin_densities_parametric_poisson}
+%     \caption{Origin period ODP model simulation results for the parametric bootstrap with Poisson distribution, $c_\lambda = 2$}
+%     \label{fig:glm-origin-param-pois}
+%   \end{figure}
+% \end{landscape}
+
+% % residuals
+% \begin{landscape}
+%   \begin{figure}
+%     \centering
+%     \includegraphics{glm_origin_densities_residuals}
+%     \caption{Origin period ODP model simulation results for the semiparametric bootstrap with Pearson residuals, $c_\lambda = 2$}
+%     \label{fig:glm-origin-semiparam}
+%   \end{figure}
+% \end{landscape}
+
+% \restoregeometry
 
 \backmatter%
 
