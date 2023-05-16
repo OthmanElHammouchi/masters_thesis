@@ -11,17 +11,24 @@
 
 \begin{document}
 \frontmatter
+
+\thispagestyle{empty}
 \maketitle%
 
-\title{Gevoeligheidsanalyse van stochastische schadereserveringsmodellen aan de hand van bootstrap-simulaties}
-\pretitle{\flushleft{Proefschrift ingediend met het oog op het behalen van de graad van Master of Science in de Wiskunde}}%
-\date{Juni~2023}%
-\promotors{Promotors: dr.\ Robin Van Oirbeek \and prof.\ dr.\ Tim Verdonck \and prof.\ dr.\ Mark Sioen}
-\faculty{Wetenschappen en Bio-ingenieurswetenschappen}%
+\renewcommand\title{Gevoeligheidsanalyse van stochastische schadereserveringsmodellen aan de hand van bootstrap-simulaties}
+\renewcommand\pretitle{\flushleft{Proefschrift ingediend met het oog op het behalen van de graad van Master of Science in de Wiskunde}}%
+\renewcommand\date{Juni~2023}%
+\renewcommand\promotors{Promotors: dr.\ Robin Van Oirbeek \and prof.\ dr.\ Tim Verdonck \and prof.\ dr.\ Mark Sioen}
+\renewcommand\faculty{Wetenschappen en Bio-ingenieurswetenschappen}%
 
+\thispagestyle{empty}
 \maketitle%
 
 \input{footnotes.tex}%
+
+\chapter{Acknowledgements}
+
+It has become almost obligatory to quote the immortal words of John Donne at the start of any paragraph of acknowledgements: "No man is an island." A shibboleth though it may be, yet it does have the considerable virtue of being true, which is why I have allowed myself to indulge in it here. The list of those to whom I have become indebted in the course of writing this thesis could fill a seperate bibliography, so that I can perforce only mention its most significant entries. Chief among these are my parents and sisters, who have been my support and reliance throughout my life; words cannot express the gratitude I feel towards them. I would also like to extend a warm thanks to my active supervisor Dr. Robin Van Oirbeek, whose direction, encouragement and generosity have been absolutely wonderful; it was truly a joy to work with him.
 
 \chapter{\abstractname}
 The problem of estimating the reserve needed to cover outstanding claims liabilities, and of quantifying the uncertainty of such estimates, has been the subject of much research within actuarial science. The insurance sector distinguishes itself from other model-heavy fields in the high degree of deference it accords to expert judgement. Reserving actuaries are reluctant to move away from established techniques, which are based on macro-level models that aggregate claims data over certain periods. The resulting datasets contain relatively few observations, limiting the efficacy of classical diagnostic methods, and making it difficult to verify model assumptions. We investigate the use of the statistical bootstrap to remedy this, studying how the simulatied predictive distribution of the reserve is impacted by the presence of observations which deviate from the assumptions of two major stochastic reserving models: the Mack chain ladder and the Overdispersed Poisson GLM. Our findings indicate that certain types of bootstraps are very promising for the purpose of distinguishing contaminated points from normal observations.
@@ -135,7 +142,7 @@ Our aim in the present study is to investigate whether it is possible to use boo
 
 When using a statistical model to describe a dataset in terms of a reduced number of parameters, we are not only interested in producing point estimates of these parameters, but also in quantifying their \emph{uncertainty}. In classical statistics, the usual approach to achieve this is to start from the model assumptions and derive from them analytically the sampling distribution of the estimators. In most cases (the Gaussian distribution being a notable exception) this leads to intractible calculations, so that one is either forced to rely on approximations and asymptotic results, or make unrealistic simplifying assumptions. Moreover, estimates obtained in this way often heavily depend on their underlying assumptions, which can potentially lead to gross errors if these are violated.
 
-The bootstrap\index{bootstrap} method aims to remedy this problem by using numerical simulations to compute estimates of model uncertainty. At its core, it is premised on the idea that the empirical distribution of the sample forms a good proxy for that the population distribution. Consequently, we can approximate sampling from the population by \emph{resampling our data}\index{resampling}, which, to the uncareful observer, can give the impression that we're 'magically' producing new information, using our single sample to 'pull ourselves up by our own bootstraps', which is where the procedure derives its name from. Let's see how this can be done concretely for a simple estimation problem.
+The bootstrap\index{bootstrap} method aims to remedy this problem by using numerical simulations to compute estimates of uncertainty. At its core, it is premised on the idea that the empirical distribution of the sample forms a good proxy for that the population distribution. Consequently, we can approximate sampling from the population by \emph{resampling our data}\index{resampling}, which, to the uncareful observer, can give the impression that we're 'magically' producing new information, using our single sample to 'pull ourselves up by our own bootstraps', which is where the procedure derives its name from. Let's see how this can be done concretely for a simple estimation problem.
 
 \section{Bootstrapping an estimator}
 
@@ -525,7 +532,7 @@ While this does not directly address our present concern, namely of bootstrappin
 \begin{equation} \label{eq:lower-limit-err}
   \varepsilon_{i, j + 1} > -\frac{f_j \sqrt{C_{ij}}}{\sigma_j} \,.
 \end{equation}
-Clearly, the support of such a distribution has to be bounded from below, and it must moreover allow for normalisation, so that the resulting residuals can be made interchangeable by an algebraic transformation. The only candidate satisfying these conditions which readily springs to mind is the \emph{shifted lognormal distribution}
+Clearly, the support of such a distribution has to be bounded from below, and it must moreover allow for normalisation, so that the resulting residuals can be made interchangeable by an algebraic transformation. A good candidate satisfying these conditions which readily comes to mind is the \emph{shifted lognormal distribution}
 \begin{equation}
   \log(\varepsilon_{i, j + 1} - \xi_{ij}) \sim \mathcal{N}(m_{ij}, s_{ij}^2)
 \end{equation}
@@ -717,7 +724,7 @@ $(C_{ij}, C_{i, j + 1})$ at every development year index $j$. For this procedure
 \begin{displaymath}
   \{ (C^*_{11}, C^*_{12}), \dots, (C^*_{I - j, 1}, C^*_{I - j, 2}) \} \,,
 \end{displaymath}
-this would mean using the generated $C^*_{i2}$ as the regressor column in the second step. However, as the pairs are fundamental i.i.d. unit for this method, we have to ensure that these remain paired to the same response from the third column. In effect, this means that we are forced to permute the rows of the triangle at every stage. But this creates a problem: the last point in the second column does not have a successor in the triangle, and we therefore become stuck in the second step if we had previously drawn it, as illustrated in \cref{fig:uncond-pairs-resample}.
+this would mean using the generated $C^*_{i2}$ as the regressor column in the second step. However, as the pairs are fundamental i.i.d.\ unit for this method, we have to ensure that these remain paired to the same response from the third column. In effect, this means that we are forced to permute the rows of the triangle at every stage. But this creates a problem: the last point in the second column does not have a successor in the triangle, and we therefore become stuck in the second step if we had previously drawn it, as illustrated in \cref{fig:uncond-pairs-resample}.
 \begin{figure}[!htb]
   \centering
   \begin{tikzpicture}
@@ -807,7 +814,7 @@ Hence the only option is to carry out the resampling of each column pairs indepe
   \label{tab:pairs-mack-res}
 \end{table}
 
-Finally, we discuss the parametric bootstrap, in which we simulate directly from the fitted model. Based on \cref{eq:time-series-model}, we might be tempted to simply substitute $\mathcal{N}(0, 1)$-distributed draws from a random number generator for the residuals in \cref{alg:cond-semiparam-mack,alg:uncond-semiparam-mack}. The problem with this approach, is that it doesn't extend easily to other distributions, because it is not possible, in general, to write these as the sum of a mean and a scaled error term. A better idea, then, is to generate bootstrap responses directly from the fitted distribution. Depending on whether the conditional or the unconditional scheme is used, this will either depend on the original triangle observations or the ones generated at the previous step. \Modelref{model:mack} is then refitted to the bootstrapped triangle in order to obtain $\widehat{\bm{f}}^{(b)}$ and $\widehat{\bm{\sigma}}^{(b)}$. The algorithms and results are given in \Cref{alg:cond-param-mack,alg:uncond-param-mack,tab:param-mack-res}.
+Finally, we discuss the parametric bootstrap, in which we simulate directly from the fitted model. Based on \cref{eq:time-series-model}, we might be tempted to simply substitute $\mathcal{N}(0, 1)$-distributed draws from a random number generator for the residuals in \cref{alg:cond-semiparam-mack,alg:uncond-semiparam-mack}. The problem with this approach, is that it doesn't extend easily to other distributions, because it is not possible, in general, to write these as the sum of a mean and a scaled error term. A better idea, then, is to generate bootstrap responses directly from the fitted distribution. Depending on whether the conditional or the unconditional scheme is used, this will either depend on the original triangle observations or the ones generated at the previous step. \Modelref{model:mack} is then refitted to the bootstrapped triangle in order to obtain $\widehat{\bm{f}}^{(b)}$ and $\widehat{\bm{\sigma}}^{(b)}$. The algorithms and results are given in \Cref{alg:cond-param-mack,alg:uncond-param-mack,tab:param-mack-res-norm,tab:param-mack-res-gamma}.
 
 \begin{figure}[p]
   \begin{algorithm}[H]
@@ -943,7 +950,7 @@ for the reserve. The method proposed in \cite{england:dist} is based on \eqref{e
 \newgeometry{bottom=0.1cm}
 \noindent until the final development year $I$ is reached. As noted in \cref{sec:mack-boot} when discussing the semiparametric bootstrap, however, this approach makes it possible to draw negative samples, which is problematic. The remedies available to us here depend on the type of bootstrap employed. It is possible to avoid this difficulty with the semiparametric bootstrap by using the residuals from \cref{eq:log-normal-resids}, which are based on the shifted log-normal distribution. For the parametric bootstrap, we can follow the suggestion from \cite{england:dist}, discussed in the previous section, and use \cref{eq:gamma-sim} to simulate future claim amounts. The solution adopted for the pairs bootstrap will depend on which of the two other variants is used in the simulation step.
 
-In the synthetic example we gave in \cref{sec:boot-proc}, not much difference could be discerned between the fitted and predictive distributions. This stands in stark contrast to \cref{fig:fit-pred-pairs,fig:fit-pred-semiparam,fig:fit-pred-param}, which compare these for the reserve under different bootstrap configurations. We can clearly see that fitted distribution severely underestimates the uncertainty of the reserve in all cases.
+In the synthetic example we gave in \cref{sec:boot-proc}, not much difference could be discerned between the fitted and predictive distributions. This stands in stark contrast to \cref{fig:fit-pred-pairs,fig:fit-pred-param,fig:fit-pred-semiparam-standard,fig:fit-pred-semiparam-student,fig:fit-pred-semiparam-lognormal}, which compare these for the reserve under different bootstrap configurations. We can clearly see that fitted distribution severely underestimates the uncertainty of the reserve in all cases.
 
 \begin{figure}[!htb]
   \begin{subfigure}{0.45 \textwidth}
@@ -971,7 +978,9 @@ In the synthetic example we gave in \cref{sec:boot-proc}, not much difference co
   \label{fig:fit-pred-semiparam-standard}
 \end{figure}
 
-\begin{figure}[!htb]
+\restoregeometry
+
+\begin{figure}[!p]
   \begin{subfigure}{0.45 \textwidth}
     \includegraphics{mack_semiparam_cond_student}
     \subcaption{Conditional}
@@ -984,7 +993,7 @@ In the synthetic example we gave in \cref{sec:boot-proc}, not much difference co
   \label{fig:fit-pred-semiparam-student}
 \end{figure}
 
-\begin{figure}[!htb]
+\begin{figure}[!p]
   \begin{subfigure}{0.45 \textwidth}
     \includegraphics{mack_semiparam_cond_log_normal}
     \subcaption{Conditional}
@@ -994,10 +1003,8 @@ In the synthetic example we gave in \cref{sec:boot-proc}, not much difference co
     \subcaption{Unconditional}
   \end{subfigure}
   \caption{Comparison of the fitted and predictive distribution for the semiparametric bootstrap}
-  \label{fig:fit-pred-semiparam-lognromal}
+  \label{fig:fit-pred-semiparam-lognormal}
 \end{figure}
-
-\restoregeometry
 
 \begin{landscape}
   \begin{figure}
@@ -1655,7 +1662,7 @@ In experiments where a single point has been perturbed, the semiparametric boots
 
 Closer inspection of the simulation reveals the reason for this: standardised and log-normal residuals are not very sensitive to anomalies in a single observation. Consider for instance the triangle in \cref{tab:sim-triangle-example}, which is perturbed in point $(1, 2)$ with $c_\mu = 100$ and $c_\sigma = 1$, leading to hugely inflated values in the first row. The corresponding residual in \cref{tab:resids-log-normal-example,tab:resids-standard-example} does not exhibit a deviation of commensurate severity, however, and so excluding it does.
 
-This stands in stark contrast with the studentised residuals, which are strongly affected by single ;point deviations in the simulated triangle, as can be seen in \cref{tab:resids-studentised-example}. Consequently, the cleaned triangle stands out from the contaminated ones. This is illustrated in \cref{tab:resids-student-res-mean}, which contains the means of the predictive distribution based on different outlier and excluded points with $c_\mu = 2$ and $c_\sigma = 1$. The minimum in each row is highlighted in red. This lines up almost perfectly with diagonal, which means that the predictive reserve mean of the cleaned triangle tends to stand out when using studentised residuals.
+This stands in stark contrast with the studentised residuals, which are strongly affected by single point deviations in the simulated triangle, as can be seen in \cref{tab:resids-studentised-example}. Consequently, the cleaned triangle stands out from the contaminated ones. This is illustrated in \cref{tab:resids-student-res-mean}, which contains the means of the predictive distribution based on different outlier and excluded points with $c_\mu = 2$ and $c_\sigma = 1$. The minimum in each row is highlighted in red. This lines up almost perfectly with diagonal, which means that the predictive reserve mean of the cleaned triangle tends to stand out when using studentised residuals.
 
 The parametric bootstrap shows good performance across the board. The choice of distribution does not appear to have a noticeable impact, although we do observe a substantial difference between the conditional and unconditional approaches, with the latter generally outperforming the former, often drastically, as shown in \cref{fig:mack-single-param}. Lastly, the pairs bootstrap is better at distinguishing contaminated from cleaned data than the semiparametric bootstrap with log-normal or standardised residuals, but does not outperform the one using studentised residuals or the parametric bootstrap. As \cref{tab:resids-pairs-res-mean} shows, the mean of the predictive distribution simulated on the basis of the cleaned data stands out for every outlier point, but often only barely. In all cases, differences tend to be noticeable for later development periods.
 
@@ -2014,7 +2021,7 @@ In the single point simulation, the semiparametric bootstrap performs rather poo
 
 \backmatter%
 
-\chapter{Conclusion} \label{conclusion}
+% \chapter{Conclusion} \label{conclusion}
 
 \printbibliography%
 
