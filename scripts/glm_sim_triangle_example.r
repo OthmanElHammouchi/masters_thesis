@@ -60,8 +60,8 @@ resids <- as.triangle(cbind(long.upper[, 1:2], data.frame(value = resid(model, t
 
 rownames(triangle) <- colnames(triangle) <- seq_len(ndev)
 rownames(resids) <- colnames(triangle) <- seq_len(ndev)
+triangle[triangle == 0] <- NA
 triangle <- round(triangle / 1e3, 2) # in thousands
-
 resids <- round(zapsmall(resids), 2)
 
 latex(triangle,

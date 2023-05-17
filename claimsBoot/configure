@@ -1,6 +1,0 @@
-#! /bin/bash
-
-CC=`R CMD config CC`
-FC=`R CMD config FC`
-
-sed -e "s|@FC@|$FC|" -e "s|@CC@|$CC|" src/Makevars.in > src/Makevars

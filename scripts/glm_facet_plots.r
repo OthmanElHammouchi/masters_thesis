@@ -235,81 +235,189 @@ ggsave(
 
 ## Calendar outlier:
 ###############################################################################
-calendar.res <- as.data.table(readRDS("results/glm_calendar.RDS"))
+calendar.res <- readRDS("results/glm_calendar.RDS")
+
+# Parametric
+# Normal distribution
+bt <- "parametric"
+o <- "normal"
 f <- 2
 
+subset.idxs <- c(1, 6)
+subset <- do.call(rbind, lapply(seq_len(length(subset.idxs)), function(i) {
+  calendar.res[outlier.diagidx == subset.idxs[i]]
+}))
+
+contaminated <- subset[
+  boot.type == bt &
+    opt == o &
+    excl.diagidx != outlier.diagidx &
+    factor == f
+]
+
+cleaned <- subset[
+  boot.type == bt &
+    opt == o &
+    excl.diagidx == outlier.diagidx &
+    factor == f
+]
+
+p <- ggplot() +
+  geom_density(aes(reserve, group = factor(excl.diagidx)), contaminated) +
+  geom_density(mapping = aes(reserve), cleaned, colour = "red") +
+  facet_wrap(
+    vars(factor(outlier.diagidx)),
+    scales = "free",
+    labeller = label_wrap_gen(multi_line = FALSE),
+    ncol = 1,
+    nrow = 2
+  ) +
+  xlab("Reserve") +
+  ylab("Density")
+
+path <- file.path(plot.dir, paste0(paste(
+  "glm_calendar_densities", bt, o, sep = "_"),
+".eps")
+)
+
+ggsave(
+  path,
+  p,
+  units = "mm",
+  height = width.mm, # landscape
+  width = height.mm / 2
+)
+
+# Gamma distribution
 bt <- "parametric"
-opts <- unique(calendar.res[boot.type == bt]$opt)
-for (o in opts[!is.na(opts)]) {
-  contaminated <- calendar.res[
-    boot.type == bt &
-      opt == o &
-      excl.diagidx != outlier.diagidx &
-      factor == f
-  ]
+o <- "gamma"
+f <- 0.5
 
-  uncontaminated <- calendar.res[
-    boot.type == bt &
-      opt == o &
-      excl.diagidx == outlier.diagidx &
-      factor == f
-  ]
+subset.idxs <- c(1, 6)
+subset <- do.call(rbind, lapply(seq_len(length(subset.idxs)), function(i) {
+  calendar.res[outlier.diagidx == subset.idxs[i]]
+}))
 
-  contaminated <- contaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-  uncontaminated <- uncontaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
+contaminated <- subset[
+  boot.type == bt &
+    opt == o &
+    excl.diagidx != outlier.diagidx &
+    factor == f
+]
 
-  p <- ggplot() +
-    geom_density(aes(reserve, group = factor(excl.diagidx)), contaminated) +
-    geom_density(mapping = aes(reserve), uncontaminated, colour = "red") +
-    facet_wrap(
-      vars(factor(outlier.diagidx)),
-      scales = "free",
-      labeller = label_wrap_gen(multi_line = FALSE),
-      ncol = 4,
-      nrow = 2
-    ) +
-    xlab("Reserve") +
-    ylab("Density")
+cleaned <- subset[
+  boot.type == bt &
+    opt == o &
+    excl.diagidx == outlier.diagidx &
+    factor == f
+]
 
-  path <- file.path(plot.dir, paste0(paste(
-    "glm_calendar_densities", bt, o, sep = "_"),
-  ".eps")
-  )
+p <- ggplot() +
+  geom_density(aes(reserve, group = factor(excl.diagidx)), contaminated) +
+  geom_density(mapping = aes(reserve), cleaned, colour = "red") +
+  facet_wrap(
+    vars(factor(outlier.diagidx)),
+    scales = "free",
+    labeller = label_wrap_gen(multi_line = FALSE),
+    ncol = 1,
+    nrow = 2
+  ) +
+  xlab("Reserve") +
+  ylab("Density")
 
-  ggsave(
-    path,
-    p,
-    units = "mm",
-    height = width.mm, # landscape
-    width = height.mm
-  )
-}
+path <- file.path(plot.dir, paste0(paste(
+  "glm_calendar_densities", bt, o, sep = "_"),
+".eps")
+)
+
+ggsave(
+  path,
+  p,
+  units = "mm",
+  height = width.mm, # landscape
+  width = height.mm / 2
+)
+
+# Scaled poisson distribution
+bt <- "parametric"
+o <- "poisson"
+f <- 0.5
+
+subset.idxs <- c(1, 6)
+subset <- do.call(rbind, lapply(seq_len(length(subset.idxs)), function(i) {
+  calendar.res[outlier.diagidx == subset.idxs[i]]
+}))
+
+contaminated <- subset[
+  boot.type == bt &
+    opt == o &
+    excl.diagidx != outlier.diagidx &
+    factor == f
+]
+
+cleaned <- subset[
+  boot.type == bt &
+    opt == o &
+    excl.diagidx == outlier.diagidx &
+    factor == f
+]
+
+p <- ggplot() +
+  geom_density(aes(reserve, group = factor(excl.diagidx)), contaminated) +
+  geom_density(mapping = aes(reserve), cleaned, colour = "red") +
+  facet_wrap(
+    vars(factor(outlier.diagidx)),
+    scales = "free",
+    labeller = label_wrap_gen(multi_line = FALSE),
+    ncol = 1,
+    nrow = 2
+  ) +
+  xlab("Reserve") +
+  ylab("Density")
+
+path <- file.path(plot.dir, paste0(paste(
+  "glm_calendar_densities", bt, o, sep = "_"),
+".eps")
+)
+
+ggsave(
+  path,
+  p,
+  units = "mm",
+  height = width.mm, # landscape
+  width = height.mm / 2
+)
 
 
+# residuals
 bt <- "residuals"
-contaminated <- calendar.res[
+f <- 2
+
+subset.idxs <- c(1, 6)
+subset <- do.call(rbind, lapply(seq_len(length(subset.idxs)), function(i) {
+  calendar.res[outlier.diagidx == subset.idxs[i]]
+}))
+
+contaminated <- subset[
   boot.type == bt &
     excl.diagidx != outlier.diagidx &
     factor == f
 ]
 
-uncontaminated <- calendar.res[
+cleaned <- subset[
   boot.type == bt &
     excl.diagidx == outlier.diagidx &
     factor == f
 ]
 
-contaminated <- contaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-uncontaminated <- uncontaminated[reserve < quantile(reserve, 0.975, na.rm = TRUE)]
-
 p <- ggplot() +
   geom_density(aes(reserve, group = factor(excl.diagidx)), contaminated) +
-  geom_density(mapping = aes(reserve), uncontaminated, colour = "red") +
+  geom_density(mapping = aes(reserve), cleaned, colour = "red") +
   facet_wrap(
     vars(factor(outlier.diagidx)),
     scales = "free",
     labeller = label_wrap_gen(multi_line = FALSE),
-    ncol = 4,
+    ncol = 1,
     nrow = 2
   ) +
   xlab("Reserve") +
@@ -325,5 +433,5 @@ ggsave(
   p,
   units = "mm",
   height = width.mm, # landscape
-  width = height.mm
+  width = height.mm / 2
 )

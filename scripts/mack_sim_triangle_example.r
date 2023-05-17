@@ -1,5 +1,6 @@
 library(claimsBoot)
 suppressPackageStartupMessages(library(ChainLadder))
+library(Hmisc)
 
 triangle <- UKMotor
 boot.types <- c("residuals")
@@ -65,8 +66,6 @@ for (j in 1:(ndev - 1)) {
 
 }
 
-library(Hmisc)
-
 rownames(triangle) <- colnames(triangle) <- seq_len(ndev)
 rownames(resids.ln) <- colnames(resids.ln) <- 2:ndev
 rownames(resids.standard) <- colnames(resids.standard) <- 2:ndev
@@ -77,6 +76,11 @@ resids.ln <- round(resids.ln, 2)
 resids.standard <- round(resids.standard, 2)
 resids.student <- round(resids.student, 2)
 
+triangle[triangle == 0] <- NA
+resids.ln[resids.ln == 0] <- NA
+resids.standard[resids.standard == 0] <- NA
+resids.student[resids.student == 0] <- NA
+
 resids.student[is.nan(resids.student)] <- NA
 resids.standard[is.nan(resids.standard)] <- NA
 
@@ -85,13 +89,10 @@ latex(triangle,
   file = "results/sim_triangle_example.tex",
   cgroup = c("Dev"),
   n.cgroup = c(ndev),
-  caption = "Simulated triangle where observation $C_{12}$ has been perturbed, with $c_\\mu = 100$ and $c_\\sigma = 1$",
-  caption.loc = "bottom",
-  label = "tab:sim-triangle-example",
   booktabs = TRUE,
   rowlabel.just = "r",
   rowlabel = "Origin",
-  where = "!p"
+  table.env = FALSE
 )
 
 latex(resids.standard,
@@ -102,8 +103,7 @@ latex(resids.standard,
   booktabs = TRUE,
   rowlabel.just = "r",
   rowlabel = "Origin",
-  table.env = FALSE,
-  where = "!p"
+  table.env = FALSE
 )
 
 latex(resids.ln,
@@ -114,8 +114,7 @@ latex(resids.ln,
   booktabs = TRUE,
   rowlabel.just = "r",
   rowlabel = "Origin",
-  table.env = FALSE,
-  where = "!p"
+  table.env = FALSE
 )
 
 latex(resids.student,
@@ -123,11 +122,20 @@ latex(resids.student,
   file = "results/resids_studentised_example.tex",
   cgroup = c("Dev"),
   n.cgroup = c(ndev - 1),
-  caption = "Studentised residuals corresponding to the triangle in \\cref{tab:sim-triangle-example}",
-  caption.loc = "bottom",
-  label = "tab:resids-studentised-example",
   booktabs = TRUE,
   rowlabel.just = "r",
   rowlabel = "Origin",
-  where = "!p"
+  table.env = FALSE
 )
+
+for (path in c("results/sim_triangle_example.tex",
+  "results/resids_standardised_example.tex",
+  "results/resids_log_normal_example.tex",
+  "results/resids_studentised_example.tex")) {
+
+  file.conn <- file(path)
+  str <- readLines(file.conn)
+  str <- sub("cline", "cmidrule", str)
+  writeLines(str, file.conn)
+  close(file.conn)
+}
