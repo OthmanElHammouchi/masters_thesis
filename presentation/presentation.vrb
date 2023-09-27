@@ -1,0 +1,26 @@
+\frametitle{Visualisation of the chain ladder}
+\begin{columns}
+    \begin{column}{0.5\linewidth}
+      \begin{tikzpicture}
+        \matrix (m) [matrix of nodes] {
+          $C_{11}$ & $C_{12}$ & $C_{13}$ & $C_{14}$ & $C_{15}$ \\
+          $C_{21}$ & $C_{22}$ & $C_{23}$ & $C_{24}$ & |[red, visible on=<2->]| $C_{25}$\\
+          $C_{31}$ & $C_{32}$ & $C_{33}$ & |[red, visible on=<2->]| $C_{34}$ & |[red, visible on=<2->]| $C_{35}$ \\
+          $C_{41}$ & $C_{42}$ & |[red, visible on=<2->]| $C_{43}$ & |[red, visible on=<2->]| $C_{44}$ & |[red, visible on=<2->]| $C_{45}$ \\
+          $C_{51}$ & |[red, visible on=<2->]| $C_{52}$ & |[red, visible on=<2->]| $C_{53}$ & |[red, visible on=<2->]| $C_{54}$ & |[red, visible on=<2->]| $C_{55}$ \\
+        };
+        \draw[-Stealth] (m-5-1.south) to [bend right, out=-90, in=-90, looseness=2] node [below] {$f_1$} (m-5-2.south west);
+        \draw[-Stealth] (m-5-2.south) to [bend right, out=-90, in=-90, looseness=2] node [below] {$f_2$} (m-5-3.south west);
+        \draw[-Stealth] (m-5-3.south) to [bend right, out=-90, in=-90, looseness=2] node [below] {$f_3$} (m-5-4.south west);
+        \draw[-Stealth] (m-5-4.south) to [bend right, out=-90, in=-90, looseness=2] node [below] {$f_4$} (m-5-5.south west);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.5\linewidth}
+      \begin{popeq}{Column sum average}
+        $\displaystyle \widehat{f}_j = \frac{\sum_{i = 1}^{I - j} C_{i, j + 1}}{\sum_{i = 1}^{I - j} C_{ij}}$
+      \end{popeq}
+      \begin{popeq}{Chain ladder prediction}
+        $\displaystyle {\widehat{C}_{iI} = C_{i, I + 1 - i} \prod_{j = I + 1 - i}^{I - 1} \widehat{f}_j}$
+      \end{popeq}
+    \end{column}
+  \end{columns}
