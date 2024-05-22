@@ -286,16 +286,6 @@
 \end{frame}
 
 \begin{frame}{Detecting assumption violations}
-  \begin{itemize}
-    \item Generate triangles which follow assumptions perfectly
-    \item Apply perturbation
-    \item Remove one point at a time and study impact on reserve
-    \item Significant impact $\Rightarrow$ reverse-engineer
-  \end{itemize}
-\end{frame}
-
-
-\begin{frame}{Detecting assumption violations}
   \begin{popeq}{Wrong point}
     \begin{tikzpicture}[every join/.style={-Stealth}, dot/.style={circle,fill=black,inner sep=0pt, minimum size=5pt}, node distance=2mm and 1cm]
       { [start chain=trunk]
@@ -351,6 +341,15 @@
       }
     \end{tikzpicture}
   \end{popeq}
+\end{frame}
+
+\begin{frame}{Detecting assumption violations}
+  \begin{itemize}
+    \item Generate triangles which follow assumptions perfectly
+    \item Apply perturbation
+    \item Remove one point at a time and study impact on reserve
+    \item Significant impact $\Rightarrow$ reverse-engineer
+  \end{itemize}
 \end{frame}
 
 \begin{frame}{Perturbations}
