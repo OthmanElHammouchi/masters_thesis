@@ -1,0 +1,37 @@
+\renewcommand\nomgroup[1]{%
+  \item[\bfseries
+  \ifstrequal{#1}{A}{Probability \& statistics}{%
+  \ifstrequal{#1}{B}{Mack chain ladder}{%
+  \ifstrequal{#1}{C}{ODP model}{%
+  \ifstrequal{#1}{D}{Other symbols}{}}}}%
+]}
+
+\nomenclature[A, 01]{\(\varepsilon_{ij}\), \(\varepsilon_i\)}{Regression errors}
+\nomenclature[A, 02]{\(r_{ij}\), \(r_i\)}{Regression residuals}
+\nomenclature[A, 03]{\(\mathcal{N}(\mu, \sigma^2)\)}{Normal distribution with mean \(\mu\) and variance \(\sigma^2\)}
+\nomenclature[A, 04]{\(\Gamma(\alpha, \beta)\)}{Gamma distribution with shape parameter \(\alpha\) and rate parameter \(\beta\)}
+\nomenclature[A, 05]{\(\mathrm{Pois}(\lambda)\)}{Poisson distribution with rate parameter \(\lambda\)}
+\nomenclature[A, 06]{\( I \)}{Fisher information matrix}
+\nomenclature[A, 07]{\(l\)}{Log-likelihood function}
+
+\nomenclature[B, 01]{\(f_j\)}{Development factor}
+\nomenclature[B, 02]{\(\sigma_j\)}{Variance parameter}
+\nomenclature[B, 03]{\(\xi_{ij}\)}{Log-normal residuals shift parameter}
+\nomenclature[B, 04]{\(m_{ij}\)}{Log-normal residuals mean parameter}
+\nomenclature[B, 05]{\(s^2_{ij}\)}{Log-normal residuals variance parameter}
+
+\nomenclature[C, 01]{\(\mu_{ij}\)}{Incremental triangle means}
+\nomenclature[C, 02]{\(c\)}{Intercept parameter}
+\nomenclature[C, 03]{\(a_i\)}{Origin period parameters}
+\nomenclature[C, 04]{\(b_j\)}{Development period parameters}
+\nomenclature[C, 05]{\(\phi\)}{Dispersion parameter}
+\nomenclature[C, 06]{\(V\)}{Variance function}
+\nomenclature[C, 07]{\(Q\)}{Quasi-likelihood function}
+
+\nomenclature[D, 01]{\(C_{ij}\)}{Cumulative claim amount}
+\nomenclature[D, 02]{\(X_{ij}\)}{Incremental claim amount}
+\nomenclature[D, 03]{\(\mathcal{D}_I\)}{Claims triangle}
+\nomenclature[D, 04]{\(\mathcal{D}^c_I\)}{Lower triangle of future claims}
+
+\renewcommand{\nomname}{List of Symbols}
+\renewcommand{\nompreamble}{The following list is intended to aid in cross-referencing the most commonly used symbols in the text. As a matter of general notation, an uppercase letter like $X$ denotes a random variable and a lowercase letter such as $c$ is used for a deterministic one. A bold lowercase letter like $\bm{\beta}$ is used for vectors and a bold uppercase one such as $\mathbf{W}$ denotes a matrix; both may or may not be random, which should be clear from the context. Any letter adorned with a hat denotes an estimate.}

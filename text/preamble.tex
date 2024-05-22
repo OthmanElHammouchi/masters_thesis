@@ -1,0 +1,131 @@
+\usepackage{amsmath, amsfonts, amsthm, amssymb, derivative}
+\usepackage{tikz, tikz-cd}
+\usepackage{mathtools}
+\usepackage[nottoc,numbib]{tocbibind}
+\usepackage[l3]{csvsimple}
+\usepackage{etoolbox}
+% \cslet{blx@noerroretextools}\empty
+\usepackage[backend=biber, citestyle=numeric, style=ieee]{biblatex} 
+\usepackage{esint}
+\usepackage{xparse}
+\usepackage{braket}
+\usepackage{setspace}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{array}
+% \usepackage[section]{placeins}
+\usepackage{rotating}
+\usepackage{pdflscape}
+\usepackage{geometry}
+\usepackage{layout}
+\usepackage[export]{adjustbox}
+\usepackage{booktabs, tabularx, longtable, multirow}
+\usepackage{listings}
+\usepackage{paralist, enumitem}
+\usepackage{needspace}
+\usepackage{color, colortbl}
+\usepackage{siunitx}
+\usepackage[main=british, dutch]{babel}
+\usepackage{imakeidx}
+
+\usepackage[mathscr]{euscript}
+\usepackage{mathrsfs}
+\usepackage{comment}
+\usepackage{bm}
+\usepackage[labelfont=bf]{caption}
+\usepackage{subcaption}
+\usepackage[boxed]{algorithm}
+\usepackage{algpseudocode}
+\usepackage{hhline}
+\usepackage{diagbox}
+
+\usepackage{vub}
+\usepackage{sepfootnotes}
+\usepackage{nameref}
+\usepackage[capitalise]{cleveref}
+% \usepackage{autonum}
+\usepackage[intoc]{nomencl}
+
+\sisetup{group-separator = {,}}
+
+\graphicspath{{../plots}{../plots/example}}
+\epstopdfsetup{outdir=../plots/example/}
+
+\DeclareCaptionFormat{cont}{#1 \textbf{(cont.)} #2#3\par}
+
+% \crefname{equation}{}{}
+
+% \makeatletter
+% \autonum@generatePatchedReferenceCSL{Cref}
+% \makeatother
+
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+\newcolumntype{\mcol}[1]{>{\centering\arraybackslash}m{#1}}
+
+\addbibresource{bibliography.bib}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{model}{Model}
+
+\BeforeBeginEnvironment{model}{\needspace{3\baselineskip}}
+
+\newcommand{\modelref}[1]{the \nameref{#1}}
+\newcommand{\Modelref}[1]{The \nameref{#1}}
+
+\crefname{enumi}{\unskip}{\unskip}
+
+\makeatletter
+\def\th@plain{%
+  \thm@notefont{}
+  \itshape
+}
+\def\th@definition{%
+  \thm@notefont{}
+  \normalfont
+}
+\makeatother
+
+\DeclarePairedDelimiterX\condexppx[2]{\lbrack}{\rbrack}%
+{#1\ \delimsize\Vert\ \mathopen{}#2}
+\newcommand{\condexpp}{\mathbb{E}\condexppx}
+
+\DeclarePairedDelimiterX\condexpx[2]{\lbrack}{\rbrack}%
+{#1\ \delimsize\vert\ \mathopen{}#2}
+\newcommand{\condexp}{\mathbb{E}\condexpx}
+
+\DeclarePairedDelimiterX\condvarrx[2]{(}{)}%
+{#1\ \delimsize\Vert\ \mathopen{}#2}
+\newcommand{\condvarr}{\mathrm{Var}\condvarrx}
+
+\DeclarePairedDelimiterX\condvarx[2]{(}{)}%
+{#1\ \delimsize\vert\ \mathopen{}#2}
+\newcommand{\condvar}{\mathrm{Var}\condvarx}
+
+\DeclarePairedDelimiterXPP\expectx[2]{{\ifblank{#1}{\mathbb{E}}{\mathbb{E}_{#1}}}}{\lbrack}{\rbrack}{}{#2}
+\newcommand\expect[2][]{\expectx*{#1}{#2}}
+
+\DeclarePairedDelimiter\varx{(}{)}
+\newcommand{\var}{\mathrm{Var}\varx*}
+
+\newcommand\notation{\mathrel{\overset{\makebox[0pt]{\mbox{\normalfont\tiny\sffamily not.}}}{=}}}
+
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}
+
+\makeatletter
+\newenvironment{procedure}[1][htb]{%
+    \renewcommand{\ALG@name}{Procedure}%
+   \begin{algorithm}[#1]%
+  }{\end{algorithm}}
+\makeatother
+
+\let\Algorithm\algorithm
+\renewcommand\algorithm[1][]{\Algorithm[#1]\setstretch{1.25}}
+
+\makenomenclature
+
+\makeindex
