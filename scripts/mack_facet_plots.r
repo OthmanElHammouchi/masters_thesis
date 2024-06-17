@@ -3,6 +3,7 @@ library(ggforce)
 library(claimsBoot)
 library(data.table)
 suppressPackageStartupMessages(library(ChainLadder))
+library(arrow)
 
 triangle <- UKMotor
 ndev <- ncol(triangle)
@@ -30,7 +31,7 @@ theme_update(
 
 ### Single outlier:
 ###############################################################################
-single.res <- readRDS("results/mack_single.RDS")
+single.res <- read_feather("results/mack_single.feather")
 
 ## Semiparametric
 # Conditional with standardised residuals
@@ -80,13 +81,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm, # landscape
-  width = height.mm
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm, # landscape
+#   width = height.mm
+# )
 
 ## Semiparametric
 # Unconditional with standardised residuals
@@ -136,13 +137,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm, # landscape
-  width = height.mm
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm, # landscape
+#   width = height.mm
+# )
 
 # Conditional with log-normal residuals
 bt <- "residuals"
@@ -191,13 +192,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm, # landscape
-  width = height.mm
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm, # landscape
+#   width = height.mm
+# )
 
 # Unconditional with log-normal residuals
 bt <- "residuals"
@@ -246,13 +247,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm, # landscape
-  width = height.mm
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm, # landscape
+#   width = height.mm
+# )
 
 ## Parametric
 # Conditional with normal distribution
@@ -295,13 +296,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm / 2.5, # landscape
-  width = height.mm / 2
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm / 2.5, # landscape
+#   width = height.mm / 2
+# )
 
 # Unconditional with normal distribution
 bt <- "parametric"
@@ -343,13 +344,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm / 2.5, # landscape
-  width = height.mm / 2
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm / 2.5, # landscape
+#   width = height.mm / 2
+# )
 
 # Conditional with gamma distribution
 bt <- "parametric"
@@ -391,13 +392,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm / 2.5, # landscape
-  width = height.mm / 2
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm / 2.5, # landscape
+#   width = height.mm / 2
+# )
 
 # Unconditional with gamma distribution
 bt <- "parametric"
@@ -439,13 +440,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm / 2.5, # landscape
-  width = height.mm / 2
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm / 2.5, # landscape
+#   width = height.mm / 2
+# )
 
 ## Pairs
 bt <- "pairs"
@@ -489,17 +490,17 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm, # landscape
-  width = height.mm
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm, # landscape
+#   width = height.mm
+# )
 
 ### Calendar outlier:
 ###############################################################################
-calendar.res <- readRDS("results/mack_calendar.RDS")
+calendar.res <- read_feather("results/mack_calendar.feather")
 
 ## Semiparametric
 # Conditional with standardised residuals
@@ -550,13 +551,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm,
-  width = height.mm / 2
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm,
+#   width = height.mm / 2
+# )
 
 # Unconditional with standardised residuals
 bt <- "residuals"
@@ -606,13 +607,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm,
-  width = height.mm / 2
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm,
+#   width = height.mm / 2
+# )
 
 # Conditional with log-normal residuals
 bt <- "residuals"
@@ -662,13 +663,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm,
-  width = height.mm / 2
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm,
+#   width = height.mm / 2
+# )
 
 # Unconditional with log-normal residuals
 bt <- "residuals"
@@ -718,13 +719,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm,
-  width = height.mm / 2
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm,
+#   width = height.mm / 2
+# )
 
 ## Parametric
 # Condition with normal distribution
@@ -775,13 +776,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm,
-  width = height.mm / 2
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm,
+#   width = height.mm / 2
+# )
 
 # Unconditional with gamma distribution
 bt <- "parametric"
@@ -831,13 +832,13 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm,
-  width = height.mm / 2
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm,
+#   width = height.mm / 2
+# )
 
 ## Pairs
 bt <- "pairs"
@@ -881,10 +882,10 @@ path <- file.path(plot.dir, paste0(paste(
 ".eps")
 )
 
-ggsave(
-  path,
-  p,
-  units = "mm",
-  height = width.mm, # landscape
-  width = height.mm
-)
+# ggsave(
+#   path,
+#   p,
+#   units = "mm",
+#   height = width.mm, # landscape
+#   width = height.mm
+# )
