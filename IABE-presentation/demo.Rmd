@@ -1,0 +1,47 @@
+---
+title: "Outlier detection with trngl"
+output: rmarkdown::html_vignette
+---
+
+```{r}
+library(trngl)
+```
+
+```{r}
+triangle <- cum2incr(UKMotor)
+calendarPeriod(triangle) <- calendarPeriod(triangle) * 1.3
+triangle <- incr2cum(triangle)
+res <- mackResidSim(triangle, "calendar",
+  cond = FALSE,
+  resid_type = "studentised",
+  n_boot = 1e3,
+  n_sim = 1e3,
+  progress = TRUE
+)
+plot(res)
+```
+
+```{r}
+triangle <- cum2incr(UKMotor)
+triangle[1, 4] <- 1.5 * triangle[1, 4]
+triangle <- incr2cum(triangle)
+res <- odpParamSim(triangle, "single",
+  dist = "gamma",
+  n_boot = 1e3,
+  n_sim = 1e2,
+  progress = TRUE
+)
+plot(res)
+```
+
+```{r}
+triangle <- cum2incr(UKMotor)
+triangle[2, 2:nrow(triangle)] <- triangle[2, 2:nrow(triangle)] * 1.5
+triangle <- incr2cum(triangle)
+res <- mackPairsSim(triangle, "origin",
+  n_boot = 1e3,
+  n_sim = 1e3,
+  progress = TRUE
+)
+plot(res)
+```
